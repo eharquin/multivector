@@ -1,0 +1,87 @@
+# VGA Requirements
+
+**Status:** Draft for review
+**Date:** 2026-07-22
+**Initial supported dimensions:** 1–9
+**License:** MIT
+
+## 1. Definition
+
+VGA shall be implemented as the parameterized Euclidean family VGA(n), rather
+than as separate 1D, 2D, and 3D engines.
+
+- **VGA-001:** The initial definition shall accept geometric dimensions 1
+  through 9 and use signature `(n, 0, 0)`.
+- **VGA-002:** It shall expose Euclidean generators `e1` through `en` in the
+  canonical order defined by its convention version.
+- **VGA-003:** Evaluation support for a dimension shall be independent of the
+  availability of a geometry interpretation or visualizer.
+- **VGA-004:** The initial conformance suite shall contain independent cases for
+  dimensions 1, 2, and 3 and generalization cases above dimension 3.
+- **VGA-008:** Dimensions 4 through 9 are fully supported textual and
+  computational configurations, not best-effort previews: every mandatory
+  engine capability and every VGA capability advertised for dimensions 1
+  through 3 shall operate over all grades and blades in dimensions 4 through 9,
+  subject only to documented common resource limits.
+- **VGA-009:** The initial milestones make no geometric-classification or
+  visualization guarantee above geometric dimension 3. Lack of such a
+  visualizer shall not reduce the VGA-008 evaluation guarantee.
+- **VGA-010:** Conformance for every dimension 4 through 9 shall include basis
+  cardinality and ordering, signature, generator squares, anti-commutation,
+  representative mixed-grade products, grade projection, coefficient access,
+  reverse, duality, norms, serialization, and dimension-change round trips.
+  Dimensions 8 and 9 shall additionally exercise sparse values without
+  requiring dense allocation.
+
+## 2. Vectors and dimensions
+
+- **VEC-001:** `vector(...)` and tuple syntax shall create one N-dimensional
+  vector abstraction.
+- **VEC-002:** Missing components shall be zero-filled in higher dimensions.
+- **VEC-003:** Excess source components shall remain stored but inactive in
+  lower dimensions.
+- **VEC-004:** Components shall evaluate to pure grade-zero values.
+- **VEC-005:** Dimension changes shall preserve sources, item identities, and
+  inactive components, then deterministically reevaluate the document.
+
+## 3. Operations and conventions
+
+- **VGA-005:** In every dimension 1 through 9, the definition shall provide
+  vector construction, addition, subtraction, scalar multiplication, geometric
+  and outer products, reverse, grade projection, coefficient access, integer
+  powers, inverse and division where mathematically defined, the specified
+  inner and regressive products and contractions, sandwich action, duality, and
+  the primary norm. Scalar elementary functions use the common scalar boundary;
+  a multivector extension is advertised only when separately defined and
+  tested.
+- **VGA-006:** Basis order, duality, inner product, norm, and numerical tolerance
+  conventions shall be versioned and tested.
+- **VGA-007:** A source invalid only because of the active dimension shall remain
+  stored and become valid automatically in a compatible dimension.
+
+## 4. Standard geometry interpretation
+
+- **VGA-INT-001:** MultiVector shall provide one versioned standard VGA
+  interpretation independently of the VGA algebra definition.
+- **VGA-INT-002:** In the standard interpretation, pure grade-one values shall
+  represent vectors; supported higher grades may represent oriented area and
+  volume entities according to geometric dimension.
+- **VGA-INT-003:** The standard interpretation shall use stable semantic entity
+  identifiers independently of user-facing names and appearance.
+- **VGA-INT-004:** Alternative interpretations, including projective readings of
+  VGA values, are not part of the initial VGA milestones and require their own
+  approved requirements.
+
+## 5. Positioned vectors
+
+- **VGA-POS-001:** A visualized VGA vector shall have a position independent of
+  its algebraic value.
+- **VGA-POS-002:** `V.position` shall return its position vector in the active
+  geometric dimension.
+- **VGA-POS-003:** `V.head` shall be read-only and equal `V.position + V`.
+- **VGA-POS-004:** Position shall never enter the vector coefficients.
+- **VGA-POS-005:** Position sources shall use the common language and dependency
+  graph while remaining separate from mathematical source.
+- **VGA-POS-006:** Missing or invalid positions shall render at the origin; an
+  invalid position shall additionally produce a diagnostic without altering the
+  vector value.
