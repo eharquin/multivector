@@ -1,0 +1,34 @@
+# MultiVector
+
+**Interactive geometric algebra constructions for research, exploration, and
+learning.**
+
+MultiVector is a research-driven visual tool for building geometric
+constructions directly with multivector expressions.
+
+It is developed as part of PhD research and is intended to grow into a public,
+open-source tool for the geometric algebra community, with an interface that is
+also approachable for learners.
+
+MultiVector is under active research development.
+
+## Project status
+
+MultiVector is currently in its initial design phase. No public application is
+available yet.
+
+## Documentation
+
+- [Design requirements](docs/design-requirements.md)
+- [Expression language](docs/specifications/language.md)
+- [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)
+- [VGA requirements](docs/requirements/algebras/vga.md)
+- [1D visualization requirements](docs/requirements/visualization/1d.md)
+- Milestones:
+  [language foundation](docs/requirements/milestones/language-foundation.md),
+  [VGA core](docs/requirements/milestones/vga-core.md), and
+  [VGA 1D visual workflow](docs/requirements/milestones/vga-1d-visual-workflow.md)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before proposing substantial changes.
