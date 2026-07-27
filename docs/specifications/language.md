@@ -1,7 +1,7 @@
 # MultiVector Expression Language
 
 **Status:** Draft for review
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 **Initial scope:** VGA core
 **License:** MIT
 
@@ -194,7 +194,7 @@ silent `null` or approximate substitute.
 
 From strongest to weakest, precedence is:
 
-1. primaries, function calls, norm bars `|A|`, indexing, and property postfixes;
+1. primaries, function calls, indexing, and property postfixes;
 2. power `**`;
 3. unary `!`, `~`, `-`, and `+`;
 4. `^`, `&`, `|`, and `<<`;
@@ -221,15 +221,19 @@ unless an algebra capability explicitly defines their multivector extension.
 In particular, an algebra may expose a multivector exponential through `exp`.
 Factorial is not part of the initial language.
 
-`|A|` and `A.norm` denote the same primary norm defined by the active algebra's
-versioned conventions. `A.inorm` is available only for an algebra that explicitly
-defines an ideal norm. The evaluator shall not select a different norm using a
-visual or geometric-classification heuristic. An undefined norm produces a
-diagnostic.
+`A.norm` denotes the primary norm defined by the active algebra's versioned
+conventions. `A.inorm` is available only for an algebra that explicitly defines
+an ideal norm. Norm-bar syntax is not part of language version 1, avoiding
+ambiguity with the infix `|` inner product. The evaluator shall not select a
+different norm using a visual or geometric-classification heuristic. An
+undefined norm produces a diagnostic.
 
 Numerical tolerances are owned and tested by MultiVector, recorded through
 `conventionVersion`, and used only where numerical decisions require them. They
-do not redefine the mathematical operation.
+do not redefine the mathematical operation. Precision and tolerance formulas,
+including magnitude-relative terms where noise scales with magnitude, are
+governed by ALG-031 in the
+[algebra definition requirements](../requirements/algebras/algebra-definition.md).
 
 ## 10. Lists, broadcasting, and indexing
 
@@ -260,16 +264,19 @@ element identities. Reevaluation that preserves those inputs preserves result
 identity.
 
 An element failure fails the complete expression, produces no partial list, and
-identifies the zero-based element index and failing operand. Distributed
-results retain each source element's identity, order, and associated position.
-Any operation that would create a nested list fails in the initial scope.
+identifies the zero-based element index and failing operand. Distributed results
+retain each source element's identity and order. Evaluated-item records preserve
+associated positions across list operations under the
+[document format specification](document-format.md); position is not part of a
+multivector or list value. Any operation that would create a nested list fails
+in the initial scope.
 
 `L[i]` requires a list and a finite, non-negative integer scalar index. Negative,
 fractional, and out-of-range indices are errors. Indexing is zero-based and
-returns the selected multivector, not a singleton list. The selected value
-retains its element identity and associated position. Indexing a non-list is a
-type error. Slices and negative-from-end indexing are not supported in the
-initial scope.
+returns the selected multivector, not a singleton list. Its evaluated-item record
+retains the element identity and associated position without adding either to
+the multivector. Indexing a non-list is a type error. Slices and
+negative-from-end indexing are not supported in the initial scope.
 
 ## 11. Ranges
 
@@ -288,24 +295,27 @@ truncated result.
 
 ## 12. Position and head
 
+This section owns the source-language meaning of `position` and `head`. The
+serialized fields, enablement, dependency nodes, cycle behavior, and
+record-level propagation are owned by the
+[document format specification](document-format.md).
+
 An item's position source is stored separately from its mathematical source and
 is edited in the appearance panel. It uses this language and the shared
 dependency graph and shall evaluate to a VGA vector in the active dimension.
 Top-level property assignments are not language syntax.
 
-For a visualized VGA vector:
-
-```text
-V.position  == position vector in the active dimension
-V.head      == V.position + V
-```
+For a visualized VGA vector, `V.position` returns its position vector in the
+active dimension and `V.head` follows the formula owned by VGA-POS-003 in the
+[VGA requirements](../requirements/algebras/vga.md).
 
 There is no `V.value` property. A missing position defaults to the origin
 without a diagnostic. An invalid position produces a diagnostic and also
 defaults to the origin without altering `V`.
 
 For a list of positioned vectors, `L.position` and `L.head` distribute over the
-elements. Source associations and positions survive distributed operations.
+evaluated element records. Source associations and positions survive distributed
+operations without becoming fields of the mathematical list or multivectors.
 
 ## 13. Dependencies and failures
 

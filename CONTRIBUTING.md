@@ -13,6 +13,8 @@ scientific conventions, and proposed design to be discussed before
 implementation begins.
 
 Small corrections to documentation may be submitted directly as pull requests.
+The complete issue, branch, commit, review, and merge process is documented in
+the [project workflow](docs/project-workflow.md).
 
 ## Reporting issues
 

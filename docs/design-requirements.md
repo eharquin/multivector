@@ -1,7 +1,7 @@
 # MultiVector Design Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 **License:** MIT
 
 ## 1. Purpose
@@ -38,18 +38,19 @@ complete documented user workflow.
 
 ## 3. Scope and progression
 
-Initial engineering proceeds through the language and document foundation, the
-dimension-parameterized VGA core, and the renderer-independent geometry model.
-Product workflows then add VGA visualizers in one, two, and three geometric
-dimensions. Parametric animation, PGA, CGA, and JOSS readiness follow.
+Initial engineering proceeds through the language and document foundation and
+the dimension-parameterized VGA core. The first product workflow adds the
+renderer-independent geometry model and VGA 1D visualizer. Later product
+workflows add VGA 2D and 3D, followed by PGA visual workflows in one, two, and
+three dimensions and CGA visual workflows in one, two, and three dimensions.
+Parametric animation and specialized algebras follow.
 
 The architecture shall also admit fixed research definitions such as 2D CCGA or
 ACGA without assuming that every algebra is a VGA/PGA/CGA family parameterized
 only by dimension. These definitions are future scope, not initial deliverables.
 
-The initial JOSS scope excludes slides, visual LaTeX input, embedding-space
-visualization, collaboration, accounts, a required backend, a public plugin
-system, and a required Rust implementation.
+The first scope excludes slides, visual LaTeX input, embedding-space
+visualization, and a required Rust implementation.
 
 ## 4. Technology baseline
 
@@ -88,6 +89,18 @@ source -> parser and AST -> dependency analysis -> evaluator
 - **ARCH-008:** Algebra definition, geometric interpretation, entity rendering,
   and appearance shall be independently replaceable boundaries.
 
+ARCH-005 means that UI components do not modify document objects directly. An
+edit requests a command such as “replace this source span,” “change this
+appearance property,” or “set this algebra configuration.” The application
+validates and applies that command as one deterministic transition. This gives
+autosave, undo, redo, diagnostics, keyboard interaction, and pointer interaction
+one mutation path; it does not require user-visible command syntax.
+
+ARCH-004 does not prohibit expression-driven cameras. Camera expressions are
+ordinary mathematical sources evaluated to owned values, then interpreted by a
+separate camera adapter. Engines and geometry interpretations remain unaware of
+camera and viewport objects.
+
 ## 6. Algebra definitions and dimensions
 
 An algebra definition may be fixed or parameterized. Its stable identity,
@@ -116,10 +129,15 @@ The initial VGA definition is specified in
 
 ## 7. Document model
 
-A versioned document shall contain `formatVersion`, `languageVersion`,
-`conventionVersion`, algebra definition identity and parameters, metadata,
-expression items, appearance, and view state. Every document and item shall have
-an opaque immutable identity.
+A versioned document shall contain an opaque immutable document identity,
+`formatVersion`, `languageVersion`, an algebra reference with its independent
+definition and convention versions, an optional interpretation reference,
+metadata, expression items, appearance, and view state. Every item shall also
+have an opaque immutable identity.
+
+The normative version-one structure, canonicalization rules, and dependency
+nodes are specified in the
+[document format specification](specifications/document-format.md).
 
 - **DOC-001:** Local, imported, exported, shared, and public documents shall use
   the same format.
@@ -174,6 +192,15 @@ The normative language is specified in
   per-element appearance is outside that workflow.
 - **APP-005:** Position is a separate expression source owned by the item.
   `head` is derived, read-only, and shall never be serialized as appearance.
+- **APP-006:** Document display settings shall cover numeric display precision,
+  axis labels and graduation visibility, grid visibility, object-size scaling,
+  and light, dark, or system theme. They are presentation-only and shall not change
+  mathematical values or evaluation semantics. Persistent display settings are
+  stored in view state and restored under CMD-004.
+- **APP-007:** Position support shall be an explicitly enabled interpretation
+  capability. It is disabled when no visualizer is active and for entity kinds
+  that do not support position. Disabling it shall preserve stored position
+  sources without evaluating them or attaching position diagnostics.
 - **EDIT-001:** Direct manipulation shall resolve a geometric edit into a
   language-aware source edit; visualizers shall never rewrite text directly.
 - **EDIT-002:** A supported edit shall replace the smallest source span whose
@@ -195,7 +222,8 @@ The normative language is specified in
   view state shall be restored.
 - **CMD-005:** A completed pointer or keyboard gesture shall create one undo
   entry. Repeated keyboard changes may coalesce only while they target the same
-  property, remain uninterrupted, and occur within a documented time window.
+  property, remain uninterrupted, and occur within the window specified by the
+  [limits and interaction constants](specifications/limits-and-constants.md).
 - **CMD-006:** Text edits may coalesce while focus, item, and edit kind remain
   unchanged. Selection changes, blur, explicit commands, import, save-as, and
   algebra changes terminate coalescence.
@@ -207,14 +235,18 @@ The normative language is specified in
 - **CTRL-001:** A scalar declaration may expose either a numeric field or a
   slider without changing its mathematical meaning; the stored source remains
   authoritative.
-- **CTRL-002:** Slider minimum, maximum, and step are finite scalar expressions.
-  They shall satisfy `minimum < maximum` and `step > 0`; invalid configuration
-  disables the slider and reports a diagnostic without changing the scalar.
+- **CTRL-002:** Control minimum, maximum, and step are finite scalar expressions
+  shared by slider and animation behavior. They shall satisfy
+  `minimum < maximum` and `step > 0`; invalid configuration disables the slider
+  and animation, leaves numeric-field editing available, and reports a
+  diagnostic without changing the scalar.
 - **CTRL-003:** A control change uses the direct-edit rules and shall not clamp
   a stored value silently. The UI may show an out-of-range state.
 - **CTRL-004:** Animation modes are `once`, `loop`, and `ping-pong`, with an
   explicit direction and positive finite duration. They interpolate from the
   configured minimum to maximum using elapsed time, independent of frame rate.
+  Animation is available in both numeric-field and slider presentation modes;
+  changing the control mode does not change its animation configuration.
 - **ANIM-001:** Animation shall use an injectable clock and elapsed time.
 - **ANIM-002:** Active playback state shall not be persisted.
 - **ANIM-003:** Saving and sharing shall reproduce the visible mathematical
@@ -252,11 +284,21 @@ The normative language is specified in
   creates a local copy; subsequent edits shall not mutate the URL implicitly.
 - **STORE-011:** If a document exceeds the URL limit, sharing shall offer JSON
   export and shall not create a partial URL.
+- **STORE-012:** The application shall export the visible visualization as a
+  deterministic, self-contained figure. SVG is the initial required format;
+  PNG raster export may also be provided, while PDF is future scope. Exported
+  figures shall inline their styles, contain no external references, reproduce
+  the visible scene, and exclude interaction-only chrome. Figure export is not a
+  document mutation and shall not change mathematical or viewport coordinates.
 
 ## 12. Diagnostics, limits, and security
 
 Diagnostics shall contain a stable code, severity, affected item or property,
 safe message, and optional development detail.
+
+Initial numeric bounds, diagnostic codes, keyboard increments, target size, and
+accessible-name policy are specified in
+[limits and interaction constants](specifications/limits-and-constants.md).
 
 - **ERR-001:** Unexpected exceptions shall never become unexplained empty output.
 - **ERR-002:** Correcting a cause shall automatically recover dependants.
@@ -308,7 +350,7 @@ safe message, and optional development detail.
   names, roles, states, and relationships.
 - **A11Y-007:** Pointer gestures shall have keyboard equivalents with documented
   increments; zoom shall not be required to read essential text, and targets
-  shall meet the project's documented minimum size.
+  shall meet the project minimums in the limits and interaction constants.
 - **A11Y-008:** Status announcements shall avoid interrupting typing and
   animation frames. Critical import, save, and evaluation failures shall be
   announced once when their state changes.
@@ -328,19 +370,7 @@ safe message, and optional development detail.
 - **TEST-006:** Equivalent backends shall satisfy deterministic serialization
   and versioned numerical conventions.
 
-## 15. Public development and JOSS
-
-- **JOSS-001:** Development shall remain public through meaningful issues,
-  reviews, releases, and preserved design history.
-- **JOSS-002:** The repository shall maintain its MIT license, citation metadata,
-  contribution guidance, and code of conduct.
-- **JOSS-003:** Scientific releases shall be immutable and archived with a DOI.
-- **JOSS-004:** Documentation shall cover installation, deployment, tutorials,
-  language, conventions, examples, architecture, and contributions.
-- **JOSS-005:** Submission shall wait until the scoped software is stable,
-  tested, documented, and publicly usable.
-
-## 16. Initial milestones
+## 15. Initial milestones
 
 - [Language and Document Foundation](requirements/milestones/language-foundation.md)
   is an engineering milestone.
@@ -348,13 +378,16 @@ safe message, and optional development detail.
   covering VGA dimensions 1 through 9 without requiring visualizers.
 - [VGA 1D Visual Workflow](requirements/milestones/vga-1d-visual-workflow.md) is
   the first product milestone and applies the shared
-  [1D visualization requirements](requirements/visualization/1d.md).
+  [1D visualization requirements](requirements/visualization/1d.md). It also
+  delivers the first renderer-independent geometry entities and
+  render-primitive adapters; no separate initial geometry-model milestone is
+  required.
 
-Later product milestones add 2D and 3D visual workflows. PGA, CGA, parametric
-animation, specialized algebras, and JOSS readiness receive separate approved
-milestone requirements when they enter active design.
+Later product milestones add VGA 2D and 3D, PGA 1D, 2D, and 3D, and CGA 1D, 2D,
+and 3D visual workflows. Parametric animation and specialized algebras receive
+separate approved milestone requirements when they enter active design.
 
-## 17. Lessons from MultiVector Studio
+## 16. Lessons from MultiVector Studio
 
 Studio validated algebra-bound evaluation factories, adapter registries,
 positioned vectors, list broadcasting, scalar controls, direct manipulation,
@@ -366,7 +399,7 @@ mixed value models, algebra-identifier branches in shared panels, duplicated
 list rendering, repeated presentation-layer parsing, and documents coupled to a
 server or backend implementation.
 
-## 18. Documentation structure and evolution
+## 17. Documentation structure and evolution
 
 Requirements state what MultiVector guarantees. Specifications define precise
 normative behavior. Architecture documents explain implementation boundaries.
@@ -376,6 +409,10 @@ Milestones compose requirements instead of duplicating them.
   visualizers.
 - `specifications/language.md` owns normative source syntax and evaluation
   semantics.
+- `specifications/document-format.md` owns the serialized schema,
+  canonicalization, migration boundary, and dependency-node model.
+- `specifications/limits-and-constants.md` owns shared resource bounds and
+  interaction constants.
 - `requirements/algebras/algebra-definition.md` owns the contract implemented
   by algebra definitions and interpretations.
 - `requirements/algebras/vga.md` owns mathematical behavior and conventions
@@ -395,16 +432,32 @@ preserve identifiers whenever possible.
 
 Future documents include 2D/3D visualization requirements, PGA/CGA and
 specialized-algebra requirements, geometry and render specifications,
-architecture, development and deployment guides, tutorials, and JOSS readiness.
+architecture, development and deployment guides, and tutorials.
 They shall be created when their subject enters active design, not as empty
 stubs.
 
-## 19. Future design topics
+## 18. Future design topics
 
 Visual LaTeX editing, sampled parametric functions, nested and filtered lists,
 complex inverse editing, dynamic or per-element appearance, expression-driven
 cameras, higher-dimensional visualization, explicit multi-digit blade syntax,
 Rust/Wasm, user-authored algebra definitions and geometry interpretations,
-configurable constructor names, executable or public plugins, collaboration,
-and hosted short links each require a separate approved design before
-implementation.
+configurable constructor names, and hosted short links each require a separate
+approved design before implementation.
+
+Expression-driven camera design shall cover these initial dimensional profiles:
+
+- a 1D camera uses `camera_position`, interpreted as a 1D VGA vector or a 1D
+  point for point-based interpretations, and a positive scalar `camera_zoom`;
+- a 2D camera uses the corresponding 2D vector or point `camera_position` and a
+  positive scalar `camera_zoom`;
+- a 3D camera uses a 3D vector or point `camera_position` for the eye and a
+  non-zero 3D vector `camera_direction` for its world-space viewing direction.
+
+Camera sources shall use the common language, dependency graph, animation, and
+language-aware inverse-editing rules. Literal camera sources may be rewritten by
+camera gestures; computed sources own the corresponding camera degree of freedom
+and may drive reproducible world-space camera animation. A camera adapter, not
+the algebra engine or geometry interpretation, converts evaluated values into
+viewport state. The detailed design shall define enablement, invalid values,
+defaults, gesture ownership, history, and serialization before implementation.

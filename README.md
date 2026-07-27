@@ -21,6 +21,8 @@ available yet.
 
 - [Design requirements](docs/design-requirements.md)
 - [Expression language](docs/specifications/language.md)
+- [Document format](docs/specifications/document-format.md)
+- [Limits and interaction constants](docs/specifications/limits-and-constants.md)
 - [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)
 - [VGA requirements](docs/requirements/algebras/vga.md)
 - [1D visualization requirements](docs/requirements/visualization/1d.md)
@@ -28,6 +30,8 @@ available yet.
   [language foundation](docs/requirements/milestones/language-foundation.md),
   [VGA core](docs/requirements/milestones/vga-core.md), and
   [VGA 1D visual workflow](docs/requirements/milestones/vga-1d-visual-workflow.md)
+- [Project workflow](docs/project-workflow.md)
+- [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)
 
 ## Contributing
 

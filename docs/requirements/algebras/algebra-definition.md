@@ -1,7 +1,7 @@
 # Algebra Definition Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 **License:** MIT
 
 ## 1. Purpose
@@ -93,6 +93,13 @@ application capabilities and are not implemented by an engine.
 - **ALG-030:** Capability results and failures shall use owned values and common
   diagnostic categories. Backend-specific exceptions and sentinel values shall
   not cross the engine boundary.
+- **ALG-031:** Owned values shall provide at least IEEE 754 binary64 precision.
+  Required precision is part of the versioned convention, never an accidental
+  backend default. Numerical tolerances are MultiVector-owned and shall be
+  magnitude-relative where floating-point noise scales with value magnitude.
+  Definitions shall document the absolute floor, relative term, comparison
+  formula, and operations to which each tolerance applies, as required by
+  ALG-013.
 
 Different definitions may use different conforming backends. A specialized
 sparse engine or future Rust/Wasm backend shall not change document semantics.
@@ -155,5 +162,4 @@ require a separate approved design.
 - **ALG-022:** Equivalent supported backends shall produce results within the
   versioned conventions and tolerances of the definition.
 
-This contract is an internal extension boundary. It does not require a public
-plugin system in the initial product scope.
+This contract is an internal extension boundary between built-in components.

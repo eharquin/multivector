@@ -1,7 +1,7 @@
 # VGA Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 **Initial supported dimensions:** 1–9
 **License:** MIT
 
@@ -55,7 +55,7 @@ than as separate 1D, 2D, and 3D engines.
   a multivector extension is advertised only when separately defined and
   tested.
 - **VGA-006:** Basis order, duality, inner product, norm, and numerical tolerance
-  conventions shall be versioned and tested.
+  conventions shall be versioned and tested under ALG-013 and ALG-031.
 - **VGA-007:** A source invalid only because of the active dimension shall remain
   stored and become valid automatically in a compatible dimension.
 
@@ -74,6 +74,10 @@ than as separate 1D, 2D, and 3D engines.
 
 ## 5. Positioned vectors
 
+This section owns VGA-specific position meaning. The common storage,
+enablement, dependency, and propagation rules are owned by APP-005, APP-007, and
+the [document format specification](../../specifications/document-format.md).
+
 - **VGA-POS-001:** A visualized VGA vector shall have a position independent of
   its algebraic value.
 - **VGA-POS-002:** `V.position` shall return its position vector in the active
@@ -85,3 +89,7 @@ than as separate 1D, 2D, and 3D engines.
 - **VGA-POS-006:** Missing or invalid positions shall render at the origin; an
   invalid position shall additionally produce a diagnostic without altering the
   vector value.
+- **VGA-POS-007:** The standard VGA interpretation shall advertise position
+  support for every visualizable entity kind that has no intrinsic point
+  location. Position translates its rendered placement without entering the
+  entity's multivector coefficients or changing its algebraic interpretation.

@@ -2,14 +2,17 @@
 
 **Status:** Draft for review
 **Kind:** Product milestone
-**Depends on:** VGA Core and 1D Visualization
-**Date:** 2026-07-22
+**Depends on:** VGA Core
+**Applies:** 1D Visualization Requirements
+**Date:** 2026-07-27
 
 ## Objective
 
 Deliver the first complete public workflow by combining the shared core with a
 one-dimensional configuration of MultiVector's standard VGA interpretation and
-the shared 1D visualizer.
+the shared 1D visualizer. This milestone delivers the first
+renderer-independent geometry entities and render-primitive adapters as part of
+that workflow.
 
 ## Required workflow
 
@@ -19,11 +22,13 @@ A user, without developer tools, shall be able to:
 - evaluate expressions and understand diagnostics;
 - visualize positioned vectors and their derived heads;
 - configure appearance and scalar controls;
+- configure the presentation-only display settings governed by APP-006;
 - drag supported literals and direct free-scalar references;
 - animate scalars with deterministic history behavior;
 - undo and redo document mutations;
 - save and restore local documents;
 - import and export canonical JSON;
+- export the visible visualization as a self-contained SVG figure;
 - open and save URL-shared documents;
 - change VGA dimension without losing stored components;
 - follow a documented example;
@@ -89,6 +94,12 @@ every criterion below. A demonstration alone is not completion.
   command passes and the production artifact deploys to GitHub Pages. A smoke
   test loads the deployed URL, completes the documented example, reloads a
   local document, and opens a shared fragment without a backend.
+- **M1D-013 — Display settings:** Acceptance evidence covers every setting
+  governed by APP-006, persistence across reload, and unchanged mathematical
+  values, evaluated results, and non-view document fields.
+- **M1D-014 — Figure export:** A STORE-012 conformance fixture proves that SVG
+  figure export is deterministic, self-contained, free of interaction chrome
+  and external references, and reproduces the visible scene.
 
 The acceptance record shall link each criterion to its automated tests, manual
 check, documentation page, or deployment evidence and record browser and

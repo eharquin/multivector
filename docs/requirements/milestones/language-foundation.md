@@ -2,7 +2,7 @@
 
 **Status:** Draft for review
 **Kind:** Engineering milestone
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 
 ## Objective
 
@@ -16,8 +16,9 @@ requiring React, a browser DOM, or a geometric visualizer.
 - scalars and zero have uniform multivector semantics;
 - declarations, lists, ranges, indexing, broadcasting, and structured
   diagnostics satisfy the language specification;
-- document validation, canonical serialization, migrations, and dimension
-  changes are testable through application services;
+- document validation, canonical serialization, migrations, dependency nodes,
+  and dimension changes satisfy the document format specification and are
+  testable through application services;
 - evaluated values, grades, coefficients, and diagnostics can be inspected in a
   textual development surface;
 - resource limits cover source size, AST depth, dependencies, list generation,

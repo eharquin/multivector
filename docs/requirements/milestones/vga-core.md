@@ -3,7 +3,7 @@
 **Status:** Draft for review
 **Kind:** Engineering milestone
 **Depends on:** Language and Document Foundation
-**Date:** 2026-07-22
+**Date:** 2026-07-27
 
 ## Objective
 
@@ -24,8 +24,8 @@ It shall provide:
 - supported products, reverse, duality, norms, grade and coefficient access;
 - lists, ranges, indexing, and broadcasting over VGA values;
 - deterministic document reevaluation across dimension changes;
-- conformance fixtures for dimensions 1, 2, and 3 plus higher-dimensional
-  generalization cases;
+- conformance fixtures for dimensions 1, 2, and 3 plus the per-dimension
+  higher-dimensional coverage required by VGA-010;
 - explicit diagnostics for unsupported capabilities and exceeded limits.
 
 The common parser shall obtain the normative `vector(...)` constructor through
