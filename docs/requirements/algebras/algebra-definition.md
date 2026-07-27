@@ -44,7 +44,8 @@ PGA, or CGA.
 - **ALG-006:** A definition shall distinguish geometric dimension, generator
   count, and visualization capability.
 - **ALG-007:** It shall declare its metric signature, canonical basis order,
-  source-level blade names, display aliases, and named constants.
+  full canonical-basis Gram matrix, source-level blade names, display aliases,
+  and named constants.
 - **ALG-008:** Algebraic support for a configuration shall not require a
   visualizer for its geometric dimension.
 - **ALG-009:** Derived embedding dimensions shall remain internal unless an
@@ -100,6 +101,39 @@ application capabilities and are not implemented by an engine.
   Definitions shall document the absolute floor, relative term, comparison
   formula, and operations to which each tolerance applies, as required by
   ALG-013.
+- **ALG-032:** A definition shall register every source-level basis vector,
+  compact generator index, blade alias, and named constant that it exposes.
+  Registration includes the stable symbol, owned value or construction rule,
+  supported configurations, and capability identifier. The common parser shall
+  resolve this registry and shall not assume VGA basis names. Registered symbols
+  are reserved against document declarations.
+- **ALG-033:** Every configuration shall declare one canonical computational
+  basis and its complete symmetric Gram matrix. The signature is the inertia of
+  that bilinear form and remains invariant under a valid change of basis. Engine
+  storage, coefficient access, equality, and canonical owned-value serialization
+  shall use the canonical basis independently of source notation.
+- **ALG-034:** A definition may register stable source basis frames. Each frame
+  shall declare its identifier, symbols, and linear map into the canonical
+  basis. A frame advertised as complete shall contain an invertible map;
+  individual derived aliases may form a partial frame. Map coefficients, basis
+  orientation, and normalization factors are versioned conventions.
+- **ALG-035:** Source frames and aliases whose symbol meanings do not conflict
+  shall be available simultaneously and may be mixed in one expression. If two
+  profiles assign different values to the same source symbol, the definition
+  shall expose a validated `basisProfileId` parameter and the document shall
+  select one profile explicitly. Profile changes preserve source and item
+  identities, then deterministically reevaluate without rewriting notation.
+- **ALG-036:** Parsing a registered basis symbol shall construct its canonical
+  owned value before algebra operations begin. Changing the source or display
+  frame shall not change that value. Source text preserves the notation entered
+  by the user; inspection may show canonical coordinates, coordinates in a
+  selected registered frame, or source notation without changing evaluation.
+
+A null basis is therefore not a different metric merely because its Gram matrix
+is off-diagonal. For example, a CGA definition may expose diagonal generators
+and derived null aliases such as `e0` and `einf` simultaneously, with their
+linear combinations, signs, scales, inner product, and orientation fixed by the
+CGA convention version. The future CGA requirements own those concrete formulas.
 
 Different definitions may use different conforming backends. A specialized
 sparse engine or future Rust/Wasm backend shall not change document semantics.

@@ -32,6 +32,10 @@ than as separate 1D, 2D, and 3D engines.
   reverse, duality, norms, serialization, and dimension-change round trips.
   Dimensions 8 and 9 shall additionally exercise sparse values without
   requiring dense allocation.
+- **VGA-011:** VGA shall register `ps` as its pseudoscalar named constant in
+  every supported dimension. It evaluates to the canonical ordered product
+  `e1 * e2 * ... * en` under the active basis and convention version. The name
+  implies neither normalization nor invertibility.
 
 ## 2. Vectors and dimensions
 
@@ -93,3 +97,11 @@ the [document format specification](../../specifications/document-format.md).
   support for every visualizable entity kind that has no intrinsic point
   location. Position translates its rendered placement without entering the
   entity's multivector coefficients or changing its algebraic interpretation.
+- **VGA-POS-008:** The standard VGA interpretation shall register `position` and
+  `head` through the language's capability-property contract. Both properties
+  distribute over lists of positioned entities while preserving evaluated
+  element identity, order, source association, and position metadata.
+
+There is no VGA `value` property. The serialized source, enablement, dependency,
+cycle, and record-propagation rules remain owned by the
+[document format specification](../../specifications/document-format.md).

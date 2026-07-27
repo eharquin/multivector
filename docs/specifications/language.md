@@ -46,9 +46,10 @@ V + e1
 ```
 
 Names match `[A-Za-z_][A-Za-z0-9_]*`, are case-sensitive, and shall be unique
-within a document. Reserved language names, constants, and basis blades cannot
-be redefined. An unnamed expression is evaluated and may be visualized but
-cannot be referenced by another expression.
+within a document. Reserved language names and symbols registered by the active
+algebra definition—including named constants, basis vectors, and blade
+aliases—cannot be redefined. An unnamed expression is evaluated and may be
+visualized but cannot be referenced by another expression.
 
 Item identity is independent of its visible name. Renaming an item does not
 rename its references in the initial scope.
@@ -85,14 +86,37 @@ Implicit multiplication is allowed between a number and a following blade,
 constant, identifier, or parenthesized expression, including `2pi` and
 `3(a+b)`. It is not allowed between two numbers or between two identifiers.
 
-`pi` and `tau` are predefined grade-zero constants.
+## 5. Constants
 
-## 5. Basis blades and grades
+`pi` and `tau` are predefined finite grade-zero language constants. The common
+language defines their names and values independently of the active algebra.
 
-`e` names the scalar blade. Generator indices are definition- and
-dimension-dependent. The initial compact syntax supports source-level indices
-`0` through `9`. A blade using a generator unavailable in the active algebra
-definition is an error.
+All algebraic constants and basis symbols are provided by the active algebra
+definition. Examples include `e1` in VGA, `e0` in PGA and CGA, and `einf` in CGA.
+The common parser resolves these registered symbols without assigning them
+algebra-independent values.
+
+`ps` is the reserved source name requested from the active algebra's registered
+pseudoscalar capability. The language defines only the name and capability
+lookup; the active algebra definition owns its value, basis orientation,
+configuration support, and convention version. If the active algebra does not
+advertise a pseudoscalar, using `ps` produces a capability diagnostic. `ps` does
+not imply that the pseudoscalar is normalized or invertible.
+
+Language constants and registered algebra symbols cannot be redefined by
+document declarations. Algebra-specific constants, basis symbols, and aliases
+are not hard-coded in the common parser.
+
+## 6. Basis blades and grades
+
+`e` names the scalar blade. All non-scalar basis symbols and their values are
+registered by the active algebra definition. A registered symbol such as `e0`,
+`e1`, or `einf` is resolved as one token before ordinary identifier lookup.
+
+The initial compact blade syntax supports definition-registered, single-digit
+generator indices `0` through `9`. A compact blade may use only generators for
+which the active definition advertises compact source syntax. A syntactically
+valid blade using an unavailable generator is an error.
 
 Compact blade names concatenate single-digit generator indices:
 
@@ -101,7 +125,10 @@ e12  == e1 * e2
 e139 == e1 * e3 * e9
 ```
 
-Multi-digit generator indices are not supported by language version 1. The
+Non-numeric generator aliases such as `einf` are complete registered symbols;
+they are not segments in compact concatenated blades and shall be combined
+explicitly with an operator. Multi-digit generator indices are not supported by
+language version 1. The
 character sequence `e{` is lexically reserved through the matching `}` for a
 future explicit blade syntax. In version 1 it always produces the dedicated
 `LANG_RESERVED_BLADE_SYNTAX` diagnostic and shall not be tokenized as an
@@ -141,7 +168,7 @@ Thus `A.g2` in VGA 1D is zero, while `A.e12` is an error because `e12` is not an
 available blade in that configuration. Coefficient extraction and grade
 projection distribute over lists.
 
-## 6. Vectors and tuples
+## 7. Vectors and tuples
 
 Constructor and tuple forms are equivalent vector syntax:
 
@@ -160,7 +187,7 @@ Tuple versus constructor spelling and all component source spans remain
 available to language-aware editing services; source rewriting behavior is
 defined by the common design requirements.
 
-## 7. Operators
+## 8. Operators
 
 The initial language provides:
 
@@ -190,7 +217,7 @@ operator are not part of the initial language.
 Unsupported or undefined operations produce structured diagnostics and never a
 silent `null` or approximate substitute.
 
-## 8. Precedence and associativity
+## 9. Precedence and associativity
 
 From strongest to weakest, precedence is:
 
@@ -212,13 +239,18 @@ R >>> A + B == (R >>> A) + B
 
 Parentheses may always make grouping explicit.
 
-## 9. Built-in functions and norms
+## 10. Built-in functions and norms
 
 The initial VGA core provides `abs`, `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`,
-`asin`,
-`acos`, and `atan`. Scalar-only functions require a pure grade-zero argument
-unless an algebra capability explicitly defines their multivector extension.
-In particular, an algebra may expose a multivector exponential through `exp`.
+`asin`, `acos`, `atan`, `min`, and `max`. Scalar-only functions require pure
+grade-zero arguments unless an algebra capability explicitly defines their
+multivector extension. In particular, an algebra may expose a multivector
+exponential through `exp`.
+
+`min(a, b)` and `max(a, b)` require exactly two finite scalar arguments and
+return a grade-zero multivector. In language version 1 they accept neither list
+arguments nor non-scalar multivectors and do not broadcast or reduce. Variadic,
+elementwise-list, and list-reduction forms require a later language design.
 Factorial is not part of the initial language.
 
 `A.norm` denotes the primary norm defined by the active algebra's versioned
@@ -235,7 +267,7 @@ including magnitude-relative terms where noise scales with magnitude, are
 governed by ALG-031 in the
 [algebra definition requirements](../requirements/algebras/algebra-definition.md).
 
-## 10. Lists, broadcasting, and indexing
+## 11. Lists, broadcasting, and indexing
 
 `[]` is a valid empty list. A list literal is `[expression, ...]`; a trailing
 comma is allowed, but elisions such as `[a,,b]` are not. Lists may contain
@@ -243,7 +275,8 @@ expressions but not lists. Elements evaluate left to right for deterministic
 diagnostic ordering, without observable side effects. Supported unary
 operations, scalar functions, and postfix extractors distribute over lists and
 preserve length and order. A function or operator not advertised as
-distributive rejects a list argument.
+distributive rejects a list argument. `min` and `max` are explicitly
+non-distributive in language version 1.
 
 Binary operations follow these rules:
 
@@ -265,20 +298,20 @@ identity.
 
 An element failure fails the complete expression, produces no partial list, and
 identifies the zero-based element index and failing operand. Distributed results
-retain each source element's identity and order. Evaluated-item records preserve
-associated positions across list operations under the
-[document format specification](document-format.md); position is not part of a
-multivector or list value. Any operation that would create a nested list fails
-in the initial scope.
+retain each source element's identity and order. Propagation of non-language
+metadata on evaluated-item records is governed by the
+[document format specification](document-format.md) and never changes the
+multivector or list value. Any operation that would create a nested list fails in
+the initial scope.
 
 `L[i]` requires a list and a finite, non-negative integer scalar index. Negative,
 fractional, and out-of-range indices are errors. Indexing is zero-based and
 returns the selected multivector, not a singleton list. Its evaluated-item record
-retains the element identity and associated position without adding either to
-the multivector. Indexing a non-list is a type error. Slices and
+retains the element identity and associated non-language metadata without adding
+either to the multivector. Indexing a non-list is a type error. Slices and
 negative-from-end indexing are not supported in the initial scope.
 
-## 11. Ranges
+## 12. Ranges
 
 `[start...end]` and `[start, next...end]` create arithmetic integer sequences.
 The two-term form has step `+1` when `start <= end` and `-1` otherwise. The
@@ -293,31 +326,27 @@ non-zero next term. Cardinality is calculated and checked before allocation. A
 range that would generate more than 10,000 elements fails without producing a
 truncated result.
 
-## 12. Position and head
+## 13. Capability properties
 
-This section owns the source-language meaning of `position` and `head`. The
-serialized fields, enablement, dependency nodes, cycle behavior, and
-record-level propagation are owned by the
-[document format specification](document-format.md).
+Postfix property access has the form `object.property`, where `property` matches
+the identifier grammar. The common language defines the syntax but does not
+hard-code algebra- or interpretation-specific property names or meanings.
+Properties are registered through stable capability descriptors supplied by the
+active algebra definition or geometry interpretation.
 
-An item's position source is stored separately from its mathematical source and
-is edited in the appearance panel. It uses this language and the shared
-dependency graph and shall evaluate to a VGA vector in the active dimension.
-Top-level property assignments are not language syntax.
+Each descriptor declares the receiver kinds it accepts, its result kind, whether
+it distributes over lists, and the capability required for evaluation. An
+unknown property, an invalid receiver, or an unavailable capability produces the
+corresponding structured diagnostic. A distributive property preserves list
+order and evaluated element identity; a non-distributive property rejects a list
+receiver.
 
-For a visualized VGA vector, `V.position` returns its position vector in the
-active dimension and `V.head` follows the formula owned by VGA-POS-003 in the
-[VGA requirements](../requirements/algebras/vga.md).
+Property access is read-only expression syntax. Top-level or nested property
+assignment is not part of language version 1. Specific property semantics belong
+to the requirement document that owns the registering algebra definition or
+geometry interpretation.
 
-There is no `V.value` property. A missing position defaults to the origin
-without a diagnostic. An invalid position produces a diagnostic and also
-defaults to the origin without altering `V`.
-
-For a list of positioned vectors, `L.position` and `L.head` distribute over the
-evaluated element records. Source associations and positions survive distributed
-operations without becoming fields of the mathematical list or multivectors.
-
-## 13. Dependencies and failures
+## 14. Dependencies and failures
 
 Names form an explicit dependency graph. Missing names, duplicate names, cycles,
 syntax failures, domain failures, unsupported capabilities, upstream failures,
@@ -329,7 +358,7 @@ ambiguous reference. Every member of a cycle reports the cycle; downstream
 items report an upstream failure. No last-known-good result remains visible
 silently. Correcting the cause automatically reevaluates dependants.
 
-## 14. Versioning and future syntax
+## 15. Versioning and future syntax
 
 `languageVersion` is a positive integer. An incompatible syntax or semantic
 change increments it. A strictly compatible addition may retain the version only
@@ -338,6 +367,5 @@ migration are explicit and deterministic.
 
 Unknown function calls produce diagnostics. Syntax for user-defined and
 parametric functions is not reserved by the initial language and requires a
-later approved design. Dynamic appearance other than position, factorial,
-slices, nested lists, comprehensions, and higher-order operations are also
-outside this scope.
+later approved design. Dynamic appearance, factorial, slices, nested lists,
+comprehensions, and higher-order operations are also outside this scope.

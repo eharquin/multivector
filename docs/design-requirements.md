@@ -123,6 +123,10 @@ values and may convert them to renderer-independent entities.
   preserve document content and produce a diagnostic, never a silent fallback.
 - **DIM-006:** Multiple geometry interpretations may target the same algebra
   definition, but a document shall select at most one active interpretation.
+- **DIM-007:** The abstract metric, its signature, the canonical computational
+  basis, registered source basis frames, and the basis used for display are
+  distinct concepts. A change of basis shall not be modeled as a change of
+  algebraic value or metric.
 
 The initial VGA definition is specified in
 [VGA requirements](requirements/algebras/vga.md).
