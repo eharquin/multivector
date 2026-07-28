@@ -2,37 +2,28 @@
 
 **Status:** Draft for review
 **Kind:** Product milestone
-**Depends on:** VGA Core
+**Depends on:** VGA 1D Foundation
 **Applies:** 1D Visualization Requirements
-**Date:** 2026-07-27
+**Date:** 2026-07-28
 
 ## Objective
 
-Deliver the first complete public workflow by combining the shared core with a
-one-dimensional configuration of MultiVector's standard VGA interpretation and
-the shared 1D visualizer. This milestone delivers the first
-renderer-independent geometry entities and render-primitive adapters as part of
-that workflow.
+Extend the text-driven VGA 1D Foundation into the complete interactive workflow
+by activating direct manipulation, scalar controls and animation, URL sharing,
+advanced history behavior, and deterministic figure export.
 
 ## Required workflow
 
-A user, without developer tools, shall be able to:
+A user shall retain every VGA 1D Foundation capability and additionally be able
+to:
 
-- create scalars, vectors, lists, and ranges;
-- evaluate expressions and understand diagnostics;
-- visualize positioned vectors and their derived heads;
-- configure appearance and scalar controls;
+- configure scalar controls;
 - configure the presentation-only display settings governed by APP-006;
 - drag supported literals and direct free-scalar references;
 - animate scalars with deterministic history behavior;
-- undo and redo document mutations;
-- save and restore local documents;
-- import and export canonical JSON;
 - export the visible visualization as a self-contained SVG figure;
 - open and save URL-shared documents;
-- change VGA dimension without losing stored components;
-- follow a documented example;
-- use the deployed GitHub Pages application.
+- complete the extended documented workflow in the deployed application.
 
 ## Initial limitations
 

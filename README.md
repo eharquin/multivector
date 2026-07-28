@@ -20,6 +20,8 @@ available yet.
 ## Documentation
 
 - [Design requirements](docs/design-requirements.md)
+- [Requirement identifier convention and registry](docs/requirements/identifier-convention.md)
+- [Technology decisions](docs/architecture/technology-decisions.md)
 - [Expression language](docs/specifications/language.md)
 - [Document format](docs/specifications/document-format.md)
 - [Limits and interaction constants](docs/specifications/limits-and-constants.md)
@@ -28,7 +30,8 @@ available yet.
 - [1D visualization requirements](docs/requirements/visualization/1d.md)
 - Milestones:
   [language foundation](docs/requirements/milestones/language-foundation.md),
-  [VGA core](docs/requirements/milestones/vga-core.md), and
+  [VGA core](docs/requirements/milestones/vga-core.md),
+  [VGA 1D foundation](docs/requirements/milestones/vga-1d-foundation.md), and
   [VGA 1D visual workflow](docs/requirements/milestones/vga-1d-visual-workflow.md)
 - [Project workflow](docs/project-workflow.md)
 - [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)

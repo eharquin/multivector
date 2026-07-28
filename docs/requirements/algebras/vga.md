@@ -1,8 +1,9 @@
 # VGA Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-27
-**Initial supported dimensions:** 1–9
+**Date:** 2026-07-28
+**Initial supported dimensions:** 1–3
+**Planned dimensions:** 4–9
 **License:** MIT
 
 ## 1. Definition
@@ -11,27 +12,34 @@ VGA shall be implemented as the parameterized Euclidean family VGA(n), rather
 than as separate 1D, 2D, and 3D engines.
 
 - **VGA-001:** The initial definition shall accept geometric dimensions 1
-  through 9 and use signature `(n, 0, 0)`.
+  through 3 and use signature `(n, 0, 0)`. Its architecture and serialized
+  configuration shall remain dimension-parameterized rather than encode three
+  separate algebra definitions.
 - **VGA-002:** It shall expose Euclidean generators `e1` through `en` in the
   canonical order defined by its convention version.
 - **VGA-003:** Evaluation support for a dimension shall be independent of the
   availability of a geometry interpretation or visualizer.
 - **VGA-004:** The initial conformance suite shall contain independent cases for
-  dimensions 1, 2, and 3 and generalization cases above dimension 3.
-- **VGA-008:** Dimensions 4 through 9 are fully supported textual and
+  dimensions 1, 2, and 3 and dimension-parameterization cases that detect
+  assumptions tied to one particular dimension.
+
+The following requirements are **Planned** and do not block the initial VGA
+Core or VGA 1D Foundation milestones:
+
+- **VGA-008:** Dimensions 4 through 9 shall become fully supported textual and
   computational configurations, not best-effort previews: every mandatory
   engine capability and every VGA capability advertised for dimensions 1
   through 3 shall operate over all grades and blades in dimensions 4 through 9,
   subject only to documented common resource limits.
-- **VGA-009:** The initial milestones make no geometric-classification or
-  visualization guarantee above geometric dimension 3. Lack of such a
-  visualizer shall not reduce the VGA-008 evaluation guarantee.
-- **VGA-010:** Conformance for every dimension 4 through 9 shall include basis
-  cardinality and ordering, signature, generator squares, anti-commutation,
-  representative mixed-grade products, grade projection, coefficient access,
-  reverse, duality, norms, serialization, and dimension-change round trips.
-  Dimensions 8 and 9 shall additionally exercise sparse values without
-  requiring dense allocation.
+- **VGA-009:** No geometric-classification or visualization guarantee is made
+  above geometric dimension 3. Once VGA-008 is activated by a milestone, lack
+  of such a visualizer shall not reduce its evaluation guarantee.
+- **VGA-010:** Conformance for every activated dimension 4 through 9 shall
+  include basis cardinality and ordering, signature, generator squares,
+  anti-commutation, representative mixed-grade products, grade projection,
+  coefficient access, reverse, duality, norms, serialization, and
+  dimension-change round trips. Dimensions 8 and 9 shall additionally exercise
+  sparse values without requiring dense allocation.
 - **VGA-011:** VGA shall register `ps` as its pseudoscalar named constant in
   every supported dimension. It evaluates to the canonical ordered product
   `e1 * e2 * ... * en` under the active basis and convention version. The name
@@ -50,7 +58,7 @@ than as separate 1D, 2D, and 3D engines.
 
 ## 3. Operations and conventions
 
-- **VGA-005:** In every dimension 1 through 9, the definition shall provide
+- **VGA-005:** In every supported dimension, the definition shall provide
   vector construction, addition, subtraction, scalar multiplication, geometric
   and outer products, reverse, grade projection, coefficient access, integer
   powers, inverse and division where mathematically defined, the specified

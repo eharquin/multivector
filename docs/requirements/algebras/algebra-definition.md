@@ -1,7 +1,7 @@
 # Algebra Definition Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-27
+**Date:** 2026-07-28
 **License:** MIT
 
 ## 1. Purpose
@@ -112,6 +112,10 @@ application capabilities and are not implemented by an engine.
   that bilinear form and remains invariant under a valid change of basis. Engine
   storage, coefficient access, equality, and canonical owned-value serialization
   shall use the canonical basis independently of source notation.
+
+ALG-034 through ALG-036 have **Planned** commitment until a milestone explicitly
+introduces multiple source basis frames or basis profiles:
+
 - **ALG-034:** A definition may register stable source basis frames. Each frame
   shall declare its identifier, symbols, and linear map into the canonical
   basis. A frame advertised as complete shall contain an invertible map;
@@ -193,7 +197,9 @@ require a separate approved design.
   capabilities it advertises.
 - **ALG-021:** Fundamental operations shall use independent reference cases; a
   backend shall not be its own sole oracle.
-- **ALG-022:** Equivalent supported backends shall produce results within the
-  versioned conventions and tolerances of the definition.
+- **ALG-022:** When multiple backends are declared conforming for the same
+  definition and configuration, they shall produce results within the
+  definition's versioned conventions and tolerances. This requirement does not
+  require a milestone to deliver more than one backend.
 
 This contract is an internal extension boundary between built-in components.

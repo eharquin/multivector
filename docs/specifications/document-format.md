@@ -1,7 +1,7 @@
 # MultiVector Document Format
 
 **Status:** Draft for review
-**Date:** 2026-07-27
+**Date:** 2026-07-28
 **Format version:** 1
 **License:** MIT
 
@@ -86,6 +86,10 @@ classDiagram
 Every object listed below is closed: an unknown field is invalid in format
 version 1. A required nullable field shall be present even when its value is
 `null`.
+
+Later format versions may introduce explicitly named extension containers under
+DOC-011. Format version 1 defines none. Implementations shall never treat an
+unknown field as an implicit extension.
 
 ### 2.1 Document
 

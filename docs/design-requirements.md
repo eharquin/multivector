@@ -1,7 +1,7 @@
 # MultiVector Design Requirements
 
 **Status:** Draft for review
-**Date:** 2026-07-27
+**Date:** 2026-07-28
 **License:** MIT
 
 ## 1. Purpose
@@ -54,11 +54,16 @@ visualization, and a required Rust implementation.
 
 ## 4. Technology baseline
 
-- **TECH-001:** The application shall use strict TypeScript, React, and Vite.
-- **TECH-002:** React shall be limited to presentation and interaction
-  composition.
-- **TECH-003:** Domain code shall be testable without React or a browser DOM.
-- **TECH-004:** SVG shall be the initial 1D and 2D rendering technology.
+- **TECH-001:** Production application code shall use strict static typing. The
+  selected language, UI framework, and build tooling are recorded as replaceable
+  architecture decisions rather than permanent product guarantees.
+- **TECH-002:** The selected UI framework shall be limited to presentation and
+  interaction composition.
+- **TECH-003:** Domain code shall be testable without the selected UI framework
+  or a browser DOM.
+- **TECH-004:** The initial rendering technology shall support accessible,
+  deterministic web rendering and the figure-export guarantees activated by a
+  milestone. The selected rendering implementation is an architecture decision.
 - **TECH-005:** Third-party algebra values shall be isolated behind engine
   adapters.
 - **TECH-006:** Engine boundaries shall allow specialized sparse and future
@@ -162,8 +167,10 @@ nodes are specified in the
   `{ algebraId, definitionVersion, conventionVersion, parameters }`, where
   `algebraId` is a stable reverse-DNS identifier, versions are positive
   integers, and `parameters` is a definition-owned JSON object with sorted keys.
-- **DOC-011:** Unknown fields shall be rejected within the current format
-  version; migrations alone may translate fields from older versions.
+- **DOC-011:** Unknown fields shall be rejected within closed normative objects
+  of the current format version. A format version may define explicit extension
+  containers, but extension data shall be size-limited, non-executable, and
+  unable to alter language or evaluation semantics.
 - **DOC-012:** A document whose algebra is unavailable shall open in a
   read-only recovery state that permits inspection and lossless export of its
   stored content, but not evaluation, source mutation, or resaving over the
@@ -205,6 +212,10 @@ The normative language is specified in
   capability. It is disabled when no visualizer is active and for entity kinds
   that do not support position. Disabling it shall preserve stored position
   sources without evaluating them or attaching position diagnostics.
+
+The direct-manipulation requirements below have **Milestone** commitment and
+apply only to milestones that explicitly include interactive source editing.
+
 - **EDIT-001:** Direct manipulation shall resolve a geometric edit into a
   language-aware source edit; visualizers shall never rewrite text directly.
 - **EDIT-002:** A supported edit shall replace the smallest source span whose
@@ -236,6 +247,11 @@ The normative language is specified in
   history entry.
 - **CMD-008:** Undo and redo shall restore source, appearance, controls, algebra
   configuration, and deterministic derived results atomically.
+
+The scalar-control and animation requirements below have **Milestone**
+commitment and apply only to milestones that explicitly include controls or
+animation.
+
 - **CTRL-001:** A scalar declaration may expose either a numeric field or a
   slider without changing its mathematical meaning; the stored source remains
   authoritative.
@@ -262,6 +278,10 @@ The normative language is specified in
   provide equivalent manual scalar controls.
 
 ## 11. Persistence, import, export, and sharing
+
+Local persistence and canonical JSON import/export are **Core**. URL sharing
+requirements STORE-003 and STORE-009 through STORE-011, and figure export
+requirement STORE-012, have **Milestone** commitment.
 
 - **STORE-001:** Persistence shall use an internal storage interface; IndexedDB
   is the preferred initial implementation.
@@ -371,21 +391,24 @@ accessible-name policy are specified in
 - **TEST-004:** Capability conformance suites shall apply to every backend that
   advertises the capability.
 - **TEST-005:** Fixed bugs shall gain permanent regression fixtures.
-- **TEST-006:** Equivalent backends shall satisfy deterministic serialization
-  and versioned numerical conventions.
+- **TEST-006:** When multiple backends are declared conforming for an equivalent
+  supported configuration, they shall satisfy deterministic serialization and
+  versioned numerical conventions. No milestone is required to deliver a second
+  backend unless its capability profile explicitly says so.
 
 ## 15. Initial milestones
 
 - [Language and Document Foundation](requirements/milestones/language-foundation.md)
   is an engineering milestone.
 - [VGA Core](requirements/milestones/vga-core.md) is an engineering milestone
-  covering VGA dimensions 1 through 9 without requiring visualizers.
+  covering VGA dimensions 1 through 3 without requiring visualizers.
+- [VGA 1D Foundation](requirements/milestones/vga-1d-foundation.md) is the first
+  product milestone, delivers the initial text-driven public workflow, and
+  introduces the first renderer-independent geometry entities and
+  render-primitive adapters.
 - [VGA 1D Visual Workflow](requirements/milestones/vga-1d-visual-workflow.md) is
-  the first product milestone and applies the shared
-  [1D visualization requirements](requirements/visualization/1d.md). It also
-  delivers the first renderer-independent geometry entities and
-  render-primitive adapters; no separate initial geometry-model milestone is
-  required.
+  the subsequent interactive product milestone and applies the shared
+  [1D visualization requirements](requirements/visualization/1d.md).
 
 Later product milestones add VGA 2D and 3D, PGA 1D, 2D, and 3D, and CGA 1D, 2D,
 and 3D visual workflows. Parametric animation and specialized algebras receive
@@ -408,6 +431,9 @@ server or backend implementation.
 Requirements state what MultiVector guarantees. Specifications define precise
 normative behavior. Architecture documents explain implementation boundaries.
 Milestones compose requirements instead of duplicating them.
+Requirement and acceptance-criterion identifiers follow the
+[requirement identifier convention](requirements/identifier-convention.md),
+whose prefix registry defines their scope and normative owner.
 
 - This document owns behavior and quality shared across algebras and
   visualizers.
@@ -432,7 +458,8 @@ link to it or state milestone applicability.
 
 Normative documents declare one of: **Planned**, **Draft for review**,
 **Accepted**, **Implemented**, or **Superseded**. Moving requirements should
-preserve identifiers whenever possible.
+follow the identifier lifecycle rules and preserve identifiers whenever their
+meaning and registered scope remain compatible.
 
 Future documents include 2D/3D visualization requirements, PGA/CGA and
 specialized-algebra requirements, geometry and render specifications,

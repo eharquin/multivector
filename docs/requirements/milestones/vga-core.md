@@ -3,7 +3,7 @@
 **Status:** Draft for review
 **Kind:** Engineering milestone
 **Depends on:** Language and Document Foundation
-**Date:** 2026-07-27
+**Date:** 2026-07-28
 
 ## Objective
 
@@ -18,20 +18,23 @@ specification.
 
 It shall provide:
 
-- VGA dimensions 1 through 9;
+- VGA dimensions 1 through 3 through one dimension-parameterized definition;
 - canonical multivector inspection;
 - vector construction with preserved inactive components;
 - supported products, reverse, duality, norms, grade and coefficient access;
 - lists, ranges, indexing, and broadcasting over VGA values;
 - deterministic document reevaluation across dimension changes;
-- conformance fixtures for dimensions 1, 2, and 3 plus the per-dimension
-  higher-dimensional coverage required by VGA-010;
+- conformance fixtures for dimensions 1, 2, and 3, including cases that detect
+  dimension-specific implementation assumptions;
 - explicit diagnostics for unsupported capabilities and exceeded limits.
 
 The common parser shall obtain the normative `vector(...)` constructor through
 the VGA definition's advertised constructor capability. Configurable constructor
 names, custom geometry interpretations, and interpretation editors are not
 deliverables of this milestone.
+
+The planned VGA-008 through VGA-010 guarantees for dimensions 4 through 9 are
+not completion criteria for this milestone.
 
 ## Completion criteria
 
