@@ -2,7 +2,7 @@
 
 **Status:** Draft for review
 **Date:** 2026-07-27
-**Applies to:** Initial language and VGA 1D workflow
+**Applies to:** Initial language and VGA 2D workflow
 **Refines:** SEC-004 through SEC-007, CMD-005, CMD-006, and A11Y-007
 **License:** MIT
 
@@ -95,10 +95,11 @@ Repeated keyboard changes to the same property coalesce when successive accepted
 changes are no more than 750 milliseconds apart. The events named by CMD-005 and
 CMD-006 terminate coalescence regardless of elapsed time.
 
-One-dimensional keyboard manipulation uses `0.1` mathematical coordinate units
+Two-dimensional keyboard manipulation uses `0.1` mathematical coordinate units
 for the small increment and `1` unit for the large increment. The large
-increment is activated with `Shift`. These increments apply before optional
-snapping and use the same source-rewrite path as pointer manipulation.
+increment is activated with `Shift`. They apply independently on each active
+coordinate before optional snapping and use the same source-rewrite path as
+pointer manipulation.
 
 Interactive targets shall have a hit area at least 24 by 24 CSS pixels. When
 adjacent targets cannot each reach that size, their combined target plus

@@ -153,8 +153,8 @@ interpretation and visualizer advertise position support.
 Format version 1 supports these closed `viewport` variants:
 
 - `{ "kind": "none" }` when no visualizer is active;
-- `{ "kind": "one-dimensional", "center": number, "zoom": number }`, where all
-  numbers are finite and `zoom` is positive.
+- `{ "kind": "two-dimensional", "centerX": number, "centerY": number,
+  "zoom": number }`, where all numbers are finite and `zoom` is positive.
 
 `DisplaySettings` has exactly `decimalPlaces`, `axisLabelsVisible`,
 `graduationsVisible`, `gridVisible`, `objectScale`, and `theme`.

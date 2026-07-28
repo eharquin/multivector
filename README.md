@@ -29,12 +29,12 @@ available yet.
 - [VGA convention version 1](docs/specifications/vga-conventions.md)
 - [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)
 - [VGA requirements](docs/requirements/algebras/vga.md)
-- [1D visualization requirements](docs/requirements/visualization/1d.md)
+- [2D visualization requirements](docs/requirements/visualization/2d.md)
 - Milestones:
   [language foundation](docs/requirements/milestones/language-foundation.md),
   [VGA core](docs/requirements/milestones/vga-core.md),
-  [VGA 1D foundation](docs/requirements/milestones/vga-1d-foundation.md), and
-  [VGA 1D visual workflow](docs/requirements/milestones/vga-1d-visual-workflow.md)
+  [VGA 2D foundation](docs/requirements/milestones/vga-2d-foundation.md), and
+  [VGA 2D visual workflow](docs/requirements/milestones/vga-2d-visual-workflow.md)
 - [Project workflow](docs/project-workflow.md)
 - [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)
 

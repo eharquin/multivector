@@ -42,10 +42,10 @@ available for reuse.
 | `VEC` | VGA vector construction and dimension changes | `docs/requirements/algebras/vga.md` |
 | `VGA-INT` | Standard VGA geometry interpretation | `docs/requirements/algebras/vga.md` |
 | `VGA-POS` | Position semantics for interpreted VGA entities | `docs/requirements/algebras/vga.md` |
-| `VIZ1D` | Rendering shared by one-dimensional visualizers | `docs/requirements/visualization/1d.md` |
-| `VIEW1D` | One-dimensional viewport behavior | `docs/requirements/visualization/1d.md` |
-| `INTERACT1D` | One-dimensional selection and manipulation | `docs/requirements/visualization/1d.md` |
+| `VIZ2D` | Rendering shared by two-dimensional visualizers | `docs/requirements/visualization/2d.md` |
+| `VIEW2D` | Two-dimensional viewport behavior | `docs/requirements/visualization/2d.md` |
+| `INTERACT2D` | Two-dimensional selection and manipulation | `docs/requirements/visualization/2d.md` |
 | `LFND` | Acceptance criteria for the Language and Document Foundation milestone | `docs/requirements/milestones/language-foundation.md` |
 | `VGAC` | Acceptance criteria for the VGA Core milestone | `docs/requirements/milestones/vga-core.md` |
-| `F1D` | Acceptance criteria for the VGA 1D foundation milestone | `docs/requirements/milestones/vga-1d-foundation.md` |
-| `M1D` | Acceptance criteria for the VGA 1D visual workflow milestone | `docs/requirements/milestones/vga-1d-visual-workflow.md` |
+| `F2D` | Acceptance criteria for the VGA 2D foundation milestone | `docs/requirements/milestones/vga-2d-foundation.md` |
+| `M2D` | Acceptance criteria for the VGA 2D visual workflow milestone | `docs/requirements/milestones/vga-2d-visual-workflow.md` |

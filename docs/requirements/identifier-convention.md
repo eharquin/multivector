@@ -22,7 +22,7 @@ PREFIX-NNN
 `PREFIX` consists of one or more uppercase ASCII segments separated by hyphens.
 A segment may contain uppercase ASCII letters followed by uppercase letters or
 digits. `NNN` is a zero-padded decimal sequence number from `001` through `999`.
-Examples include `DOC-010`, `VIZ1D-004`, and `VGA-POS-002`.
+Examples include `DOC-010`, `VIZ2D-004`, and `VGA-POS-002`.
 
 The final numeric segment is the sequence number. All preceding segments form
 the prefix. Requirement identifiers are case-sensitive and shall not contain

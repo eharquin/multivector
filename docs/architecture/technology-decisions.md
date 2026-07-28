@@ -18,7 +18,7 @@ The initial application uses:
 - React for presentation and interaction composition, as required by TECH-001
   and TECH-002;
 - Vite for development and production builds, as required by TECH-001;
-- SVG for the initial one-dimensional visualizer and deterministic figure
+- SVG for the initial two-dimensional visualizer and deterministic figure
   export.
 
 SVG is a replaceable implementation choice under TECH-004. Domain code remains

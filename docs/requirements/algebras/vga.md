@@ -28,7 +28,7 @@ than as separate 1D, 2D, and 3D engines.
   implies neither normalization nor invertibility.
 
 The following requirements are **Planned** and do not block the initial VGA
-Core or VGA 1D Foundation milestones:
+Core or VGA 2D Foundation milestones:
 
 - **VGA-008:** Dimensions 4 through 9 shall become fully supported textual and
   computational configurations, not best-effort previews: every mandatory
