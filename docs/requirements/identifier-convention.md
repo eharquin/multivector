@@ -82,26 +82,7 @@ Commitment changes are normative changes. Before **Accepted**, they may occur
 through ordinary design review. After **Accepted**, tightening or relaxing a
 commitment requires an explicit recorded decision and compatibility review.
 
-## 5. Design review checkboxes
-
-Every identified normative requirement and milestone acceptance criterion is
-presented as a GitHub task-list item:
-
-```text
-- [ ] **PREFIX-NNN:** Requirement text.
-```
-
-An unchecked box means that the requirement still awaits explicit design
-approval. A checked box means that its wording and inclusion in the design have
-been reviewed and accepted. Checking a box does not claim implementation,
-conformance evidence, milestone completion, or release readiness.
-
-A materially edited requirement shall be unchecked until the revised wording is
-reviewed again. Document status remains authoritative for the lifecycle of the
-document as a whole; individual checkboxes record requirement-level design
-approval within that lifecycle.
-
-## 6. Prefix registry
+## 5. Prefix registry
 
 | Prefix | Scope | Normative owner |
 | --- | --- | --- |
@@ -133,7 +114,7 @@ approval within that lifecycle.
 | `F1D` | Acceptance criteria for the VGA 1D foundation milestone | `docs/requirements/milestones/vga-1d-foundation.md` |
 | `M1D` | Acceptance criteria for the VGA 1D visual workflow milestone | `docs/requirements/milestones/vga-1d-visual-workflow.md` |
 
-## 7. Review and validation
+## 6. Review and validation
 
 Design review shall verify identifier syntax, uniqueness, registered ownership,
 scope, and references. Automated documentation checks should enforce these
