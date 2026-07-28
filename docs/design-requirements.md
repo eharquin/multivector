@@ -101,10 +101,9 @@ visualization, and a required Rust implementation.
 
 - **TECH-001:** The primary production application and domain code shall use
   TypeScript with strict type checking. The initial user interface shall use
-  React, and the application shall be developed and built with Vite. A selected
-  language runtime and specialized computation backends may use other languages
-  behind the frontend and engine boundaries defined by LANG-008, TECH-005, and
-  TECH-006; their public contracts remain MultiVector-owned TypeScript data.
+  React, and the application shall be developed and built with Vite. Specialized
+  computation backends may use other languages behind the engine boundary
+  defined by TECH-005 and TECH-006.
 - **TECH-002:** React shall be limited to presentation and interaction
   composition.
 - **TECH-003:** Domain code shall be testable without React or a browser DOM.
@@ -117,31 +116,20 @@ visualization, and a required Rust implementation.
   Rust/Wasm backends without changing documents or geometric entities.
 - **TECH-007:** Runtime validation shall complement TypeScript's static type
   checking at external data boundaries.
-- **TECH-008:** Before the language and document format are frozen, the initial
-  language/runtime stack shall be selected through the candidate comparison in
-  [technology-decisions.md](architecture/technology-decisions.md). A candidate
-  shall satisfy the common conformance, security, deployment, reproducibility,
-  accessibility, and interaction requirements. The initial product shall not
-  be required to ship multiple language/runtime stacks.
+- **TECH-008:** The initial source language shall be the MultiVector-owned
+  expression language, and the initial built-in VGA implementation shall use
+  ganja.js behind the algebra-engine adapter boundary. Ganja.js values, APIs,
+  generated code, serialization, conventions, and failure behavior shall not
+  become part of the document format or MultiVector-owned domain contracts.
+  The application shall invoke explicit adapter operations and shall not pass
+  document source to ganja.js inline translation.
 
-The restricted-Python candidate uses CPython syntax and AST locations, a
-MultiVector-owned accepted subset and evaluator, immutable Python-backed list
-records, and Kingdon through an adapter in a bundled Pyodide worker. It reduces
-project-owned grammar work and offers a path to pure functions and
-comprehensions, but adds a Python runtime, cross-language protocol, packaging
-cost, source-location conversion, and Python-specific security review.
-
-The owned-language candidate retains the project tokenizer, AST, recovery,
-GA-specific syntax, list rules, and direct-edit spans, then invokes ganja.js
-through explicit TypeScript adapter operations. It avoids a Python runtime and
-keeps complete syntax and diagnostic control, but makes MultiVector responsible
-for every grammar, function, comprehension, and evaluator extension.
-
-Both candidates require MultiVector-owned values, lists, dependency behavior,
-diagnostics, limits, and conventions. Neither raw Python lists, JavaScript
-arrays, Kingdon broadcasting, nor ganja.js inline translation may define those
-public guarantees. TECH-008 shall be resolved from common evidence rather than
-from third-party feature demonstrations.
+The language choice is durable and versioned through `languageVersion`; the
+ganja.js engine choice remains replaceable under TECH-005 and TECH-006.
+MultiVector Studio is behavioral evidence for ganja.js coverage, but its direct
+use of ganja.js values throughout evaluation, classification, and rendering is
+not an architectural precedent. A Python runtime is not part of the initial
+production application.
 
 ## 5. Architecture
 
@@ -255,16 +243,10 @@ nodes are specified in the
 
 ## 8. Language and evaluation
 
-The common guarantees below apply to either candidate language/runtime stack.
-The owned-language candidate is specified in
-[language.md](specifications/language.md), and the restricted-Python candidate
-is specified in
-[python-expression-profile.md](specifications/python-expression-profile.md).
-Neither candidate specification is normative until TECH-008 is resolved.
+The normative language is specified in
+[language.md](specifications/language.md).
 
-- **LANG-001:** Source analysis, dependency analysis, and evaluation shall be
-  separate boundaries. The selected frontend may use an implementation-runtime
-  parser, but evaluation shall accept only its validated source plan.
+- **LANG-001:** Parsing, dependency analysis, and evaluation shall be separate.
 - **LANG-002:** Names shall form an explicit dependency graph.
 - **LANG-003:** Every numeric result, including a scalar, shall be a multivector.
 - **LANG-004:** Missing names, duplicates, cycles, syntax, domain, capability,
@@ -279,9 +261,9 @@ Neither candidate specification is normative until TECH-008 is resolved.
 - **LANG-008:** A language frontend shall return MultiVector-owned declarations,
   dependency references, source locations, limit charges, and diagnostics.
   Frontend-native tokens or AST nodes shall remain derived internal data.
-- **LANG-009:** The initial document format shall select one language profile.
-  Supporting documents in multiple source languages requires a separately
-  approved language-identity and migration design.
+- **LANG-009:** `languageVersion` shall select a version of the MultiVector
+  expression language. Supporting another source language requires a separately
+  approved language-identity, persistence, and migration design.
 
 ## 9. Appearance and direct manipulation
 
@@ -554,11 +536,10 @@ The current prefixes, their scope, and their normative owner are listed in the
 
 - This document owns behavior and quality shared across algebras and
   visualizers.
-- `specifications/language.md` specifies the owned-language candidate.
-- `specifications/python-expression-profile.md` specifies the restricted-Python
-  candidate.
-- `architecture/technology-decisions.md` owns the candidate comparison,
-  evidence requirements, and eventual selection record.
+- `specifications/language.md` owns normative source syntax and evaluation
+  semantics.
+- `architecture/technology-decisions.md` records the selected initial language
+  and backend technologies and their replacement boundaries.
 - `specifications/document-format.md` owns the serialized schema,
   canonicalization, migration boundary, and dependency-node model.
 - `specifications/limits-and-constants.md` owns shared resource bounds and

@@ -1,21 +1,15 @@
-# MultiVector Owned Expression Language Candidate
+# MultiVector Expression Language
 
-**Status:** Candidate; not normative
+**Status:** Draft for review
 **Date:** 2026-07-27
 **Initial scope:** VGA core
 **License:** MIT
 
 ## 1. Purpose and authority
 
-This document specifies the project-owned language candidate for the initial
-VGA core. It is compared with the restricted-Python candidate in
-[technology-decisions.md](../architecture/technology-decisions.md). Neither
-candidate defines the initial normative language until TECH-008 is resolved.
-
-If this candidate is selected, this specification becomes the normative source
-language. Examples from MultiVector Studio remain behavioral references only;
-where Studio differs from the selected specification, the selected
-specification takes precedence.
+This document specifies the normative source language required by the initial
+VGA core. Examples from MultiVector Studio are behavioral references only;
+where Studio differs from this document, this document takes precedence.
 
 A document stores source text and `languageVersion`. Tokens and abstract syntax
 trees are derived data, are rebuilt on load and dimension changes, and are not

@@ -23,9 +23,7 @@ available yet.
 - [Requirement identifier convention](docs/requirements/identifier-convention.md)
 - [Requirement prefix registry](docs/requirements/requirement-prefix-registry.md)
 - [Technology decisions](docs/architecture/technology-decisions.md)
-- Language candidates:
-  [owned expression language](docs/specifications/language.md) and
-  [restricted Python expression profile](docs/specifications/python-expression-profile.md)
+- [Expression language](docs/specifications/language.md)
 - [Document format](docs/specifications/document-format.md)
 - [Limits and interaction constants](docs/specifications/limits-and-constants.md)
 - [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)

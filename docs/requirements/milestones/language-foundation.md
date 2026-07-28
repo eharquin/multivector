@@ -11,8 +11,8 @@ requiring React, a browser DOM, or a geometric visualizer.
 
 ## Required outcomes
 
-- the selected language frontend analyzes source into a validated dependency
-  and evaluation plan, then evaluates it deterministically;
+- source text is tokenized, parsed into an owned AST, dependency-analyzed, and
+  deterministically evaluated;
 - scalars and zero have uniform multivector semantics;
 - declarations, lists, ranges, indexing, broadcasting, and structured
   diagnostics satisfy the language specification;
@@ -23,9 +23,6 @@ requiring React, a browser DOM, or a geometric visualizer.
   textual development surface;
 - resource limits cover source size, AST depth, dependencies, list generation,
   and evaluation work.
-
-The milestone cannot begin until TECH-008 selects one candidate stack. It does
-not require implementing or shipping the rejected candidate.
 
 ## Completion criteria
 
