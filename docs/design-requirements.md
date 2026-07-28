@@ -41,10 +41,10 @@ complete documented user workflow.
 MultiVector is planned to progress through the following engineering and product
 milestones:
 
-1. **Language and Document Foundation — Engineering:** Deliver the parser, owned
-   AST, dependency analysis, deterministic evaluation, diagnostics, canonical
-   document format, validation, migrations, and resource limits without
-   requiring a visualizer.
+1. **Language and Document Foundation — Engineering:** Deliver the selected
+   language frontend, dependency analysis, deterministic evaluation,
+   diagnostics, canonical document format, validation, migrations, and resource
+   limits without requiring a visualizer.
 
 2. **VGA Core — Engineering:** Deliver one dimension-parameterized VGA
    definition with complete textual and computational support for dimensions 1
@@ -101,9 +101,10 @@ visualization, and a required Rust implementation.
 
 - **TECH-001:** The primary production application and domain code shall use
   TypeScript with strict type checking. The initial user interface shall use
-  React, and the application shall be developed and built with Vite. Specialized
-  computation backends may use other languages behind the engine boundary
-  defined by TECH-005 and TECH-006.
+  React, and the application shall be developed and built with Vite. A selected
+  language runtime and specialized computation backends may use other languages
+  behind the frontend and engine boundaries defined by LANG-008, TECH-005, and
+  TECH-006; their public contracts remain MultiVector-owned TypeScript data.
 - **TECH-002:** React shall be limited to presentation and interaction
   composition.
 - **TECH-003:** Domain code shall be testable without React or a browser DOM.
@@ -116,15 +117,36 @@ visualization, and a required Rust implementation.
   Rust/Wasm backends without changing documents or geometric entities.
 - **TECH-007:** Runtime validation shall complement TypeScript's static type
   checking at external data boundaries.
-- **TECH-008:** The initial built-in VGA implementation shall use ganja.js
-  behind the algebra-engine adapter boundary. Ganja.js values, APIs,
-  serialization, conventions, and failure behavior shall not become part of the
-  document format or MultiVector-owned domain contracts.
+- **TECH-008:** Before the language and document format are frozen, the initial
+  language/runtime stack shall be selected through the candidate comparison in
+  [technology-decisions.md](architecture/technology-decisions.md). A candidate
+  shall satisfy the common conformance, security, deployment, reproducibility,
+  accessibility, and interaction requirements. The initial product shall not
+  be required to ship multiple language/runtime stacks.
+
+The restricted-Python candidate uses CPython syntax and AST locations, a
+MultiVector-owned accepted subset and evaluator, immutable Python-backed list
+records, and Kingdon through an adapter in a bundled Pyodide worker. It reduces
+project-owned grammar work and offers a path to pure functions and
+comprehensions, but adds a Python runtime, cross-language protocol, packaging
+cost, source-location conversion, and Python-specific security review.
+
+The owned-language candidate retains the project tokenizer, AST, recovery,
+GA-specific syntax, list rules, and direct-edit spans, then invokes ganja.js
+through explicit TypeScript adapter operations. It avoids a Python runtime and
+keeps complete syntax and diagnostic control, but makes MultiVector responsible
+for every grammar, function, comprehension, and evaluator extension.
+
+Both candidates require MultiVector-owned values, lists, dependency behavior,
+diagnostics, limits, and conventions. Neither raw Python lists, JavaScript
+arrays, Kingdon broadcasting, nor ganja.js inline translation may define those
+public guarantees. TECH-008 shall be resolved from common evidence rather than
+from third-party feature demonstrations.
 
 ## 5. Architecture
 
 ```text
-source -> parser and AST -> dependency analysis -> evaluator
+source -> LanguageFrontend -> dependency plan -> controlled evaluator
        -> AlgebraEngine -> owned values
        -> optional GeometryInterpretation -> geometric entities
        -> render primitives -> optional visualizer
@@ -145,6 +167,9 @@ source -> parser and AST -> dependency analysis -> evaluator
 - **ARCH-007:** Algebra definitions shall negotiate capabilities explicitly.
 - **ARCH-008:** Algebra definition, geometric interpretation, entity rendering,
   and appearance shall be independently replaceable boundaries.
+- **ARCH-009:** Language-frontend parse structures, backend-native values,
+  generated code, runtime exceptions, and third-party serialization shall not
+  become authoritative document data or public domain contracts.
 
 ARCH-005 means that UI components do not modify document objects directly. An
 edit requests a command such as “replace this source span,” “change this
@@ -230,10 +255,16 @@ nodes are specified in the
 
 ## 8. Language and evaluation
 
-The normative language is specified in
-[language.md](specifications/language.md).
+The common guarantees below apply to either candidate language/runtime stack.
+The owned-language candidate is specified in
+[language.md](specifications/language.md), and the restricted-Python candidate
+is specified in
+[python-expression-profile.md](specifications/python-expression-profile.md).
+Neither candidate specification is normative until TECH-008 is resolved.
 
-- **LANG-001:** Parsing, dependency analysis, and evaluation shall be separate.
+- **LANG-001:** Source analysis, dependency analysis, and evaluation shall be
+  separate boundaries. The selected frontend may use an implementation-runtime
+  parser, but evaluation shall accept only its validated source plan.
 - **LANG-002:** Names shall form an explicit dependency graph.
 - **LANG-003:** Every numeric result, including a scalar, shall be a multivector.
 - **LANG-004:** Missing names, duplicates, cycles, syntax, domain, capability,
@@ -242,6 +273,15 @@ The normative language is specified in
   independent graph branches continue evaluating.
 - **LANG-006:** Lists, individual values, and scalar extraction boundaries shall
   have uniform documented semantics.
+- **LANG-007:** The selected language shall define its accepted source forms,
+  precedence, name binding, source locations, list behavior, capability access,
+  and future-extension boundary independently of backend accidents.
+- **LANG-008:** A language frontend shall return MultiVector-owned declarations,
+  dependency references, source locations, limit charges, and diagnostics.
+  Frontend-native tokens or AST nodes shall remain derived internal data.
+- **LANG-009:** The initial document format shall select one language profile.
+  Supporting documents in multiple source languages requires a separately
+  approved language-identity and migration design.
 
 ## 9. Appearance and direct manipulation
 
@@ -405,9 +445,14 @@ accessible-name policy are specified in
 - **SEC-007:** URL decompression, JSON parsing, migration, dependency analysis,
   range expansion, products, and formatting shall each be bounded. Limits and
   their diagnostic codes shall be documented and tested at the boundary.
-- **SEC-008:** The application shall use no dynamic code evaluation. External
-  links shall be treated as untrusted, downloads shall use inert data, and a
-  deployable content-security policy shall prohibit inline script execution.
+- **SEC-008:** Document source shall never be passed to a general-purpose
+  dynamic evaluator or interpolated into generated host-language code. Trusted
+  backend-internal code generation is permitted only inside an isolated worker
+  when it consumes validated owned structures rather than source text or user
+  identifiers, is covered by security review and conformance tests, and remains
+  compatible with the deployable content-security policy. External links shall
+  be treated as untrusted, downloads shall use inert data, and the policy shall
+  prohibit inline script execution.
 - **SEC-009:** Storage and computation failures shall not corrupt the current
   in-memory source. Recovery shall include copying source and exporting any
   structurally valid document.
@@ -509,8 +554,11 @@ The current prefixes, their scope, and their normative owner are listed in the
 
 - This document owns behavior and quality shared across algebras and
   visualizers.
-- `specifications/language.md` owns normative source syntax and evaluation
-  semantics.
+- `specifications/language.md` specifies the owned-language candidate.
+- `specifications/python-expression-profile.md` specifies the restricted-Python
+  candidate.
+- `architecture/technology-decisions.md` owns the candidate comparison,
+  evidence requirements, and eventual selection record.
 - `specifications/document-format.md` owns the serialized schema,
   canonicalization, migration boundary, and dependency-node model.
 - `specifications/limits-and-constants.md` owns shared resource bounds and

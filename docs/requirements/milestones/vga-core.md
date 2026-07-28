@@ -28,14 +28,14 @@ It shall provide:
   dimension-specific implementation assumptions;
 - explicit diagnostics for unsupported capabilities and exceeded limits.
 
-The common parser shall obtain the normative `vector(...)` constructor through
-the VGA definition's advertised constructor capability. Configurable constructor
-names, custom geometry interpretations, and interpretation editors are not
-deliverables of this milestone.
+The selected language frontend shall obtain the normative `vector(...)`
+constructor through the VGA definition's advertised constructor capability.
+Configurable constructor names, custom geometry interpretations, and
+interpretation editors are not deliverables of this milestone.
 
-The initial VGA implementation uses the built-in ganja.js adapter under
-TECH-008. Milestone completion depends on MultiVector's engine and VGA
-conformance suites, not on ganja.js tests or demonstrations alone.
+The initial VGA implementation uses the language/runtime stack selected under
+TECH-008. Milestone completion depends on MultiVector's common engine and VGA
+conformance suites, not on third-party tests or demonstrations alone.
 
 The planned VGA-008 through VGA-010 guarantees for dimensions 4 through 9 are
 not completion criteria for this milestone.

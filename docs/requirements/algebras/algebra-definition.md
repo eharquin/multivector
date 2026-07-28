@@ -104,9 +104,9 @@ application capabilities and are not implemented by an engine.
 - **ALG-032:** A definition shall register every source-level basis vector,
   compact generator index, blade alias, and named constant that it exposes.
   Registration includes the stable symbol, owned value or construction rule,
-  supported configurations, and capability identifier. The common parser shall
-  resolve this registry and shall not assume VGA basis names. Registered symbols
-  are reserved against document declarations.
+  supported configurations, and capability identifier. The selected language
+  frontend shall resolve this registry and shall not assume VGA basis names.
+  Registered symbols are reserved against document declarations.
 - **ALG-033:** Every configuration shall declare one canonical computational
   basis and its complete symmetric Gram matrix. The signature is the inertia of
   that bilinear form and remains invariant under a valid change of basis. Engine
@@ -127,7 +127,7 @@ introduces multiple source basis frames or basis profiles:
   shall expose a validated `basisProfileId` parameter and the document shall
   select one profile explicitly. Profile changes preserve source and item
   identities, then deterministically reevaluate without rewriting notation.
-- **ALG-036:** Parsing a registered basis symbol shall construct its canonical
+- **ALG-036:** Resolving a registered basis symbol shall construct its canonical
   owned value before algebra operations begin. Changing the source or display
   frame shall not change that value. Source text preserves the notation entered
   by the user; inspection may show canonical coordinates, coordinates in a
@@ -154,7 +154,8 @@ sparse engine or future Rust/Wasm backend shall not change document semantics.
 - **ALG-017:** An algebra configuration shall remain evaluable and textually
   inspectable without a geometry interpretation or visualizer.
 - **ALG-018:** Definition-specific constructors and named constants shall be
-  registered as explicit capabilities, not hard-coded in the common parser.
+  registered as explicit capabilities, not hard-coded in the selected language
+  frontend.
 
 Interpretation profiles form a separate internal contract:
 
