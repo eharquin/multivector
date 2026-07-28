@@ -38,58 +38,58 @@ designs.
 Completion requires a versioned acceptance fixture and recorded evidence for
 every criterion below. A demonstration alone is not completion.
 
-- **M1D-001 — Authoring:** From an empty document, a keyboard-only user can
+- [ ] **M1D-001 — Authoring:** From an empty document, a keyboard-only user can
   create named and unnamed scalars, vectors, lists, ascending and descending
   ranges, indexed expressions, and annotations; results and source-localized
   diagnostics update without reloading.
-- **M1D-002 — Evaluation and recovery:** Fixtures cover syntax, missing-name,
+- [ ] **M1D-002 — Evaluation and recovery:** Fixtures cover syntax, missing-name,
   duplicate, cycle, domain, capability, upstream, internal, and resource-limit
   failures. Independent branches remain visible, stale failed values disappear,
   and correcting each primary cause restores its dependants.
-- **M1D-003 — Geometry and appearance:** A user can visualize an individual and
+- [ ] **M1D-003 — Geometry and appearance:** A user can visualize an individual and
   a list of VGA(1) positioned vectors, inspect their positions and derived
   heads, and change visibility, label visibility, and common list style. Zero
   vectors, unsupported entities, and render truncation have textual states.
-- **M1D-004 — Manipulation:** Pointer and keyboard operations can translate a
+- [ ] **M1D-004 — Manipulation:** Pointer and keyboard operations can translate a
   supported position and edit a supported vector head. Literal, signed literal,
   tuple/constructor component, and direct free-scalar-reference fixtures prove
   minimal source rewriting; ambiguous and compound cases prove refusal without
   mutation.
-- **M1D-005 — Controls and animation:** Numeric-field and slider modes validate
+- [ ] **M1D-005 — Controls and animation:** Numeric-field and slider modes validate
   scalar bounds and steps. `once`, `loop`, and `ping-pong` modes pass
   injectable-clock tests, pause/cancel semantics, reduced-motion behavior, and
   one-entry history coalescence.
-- **M1D-006 — History:** Source, appearance, position, controls, and algebra
+- [ ] **M1D-006 — History:** Source, appearance, position, controls, and algebra
   configuration round-trip through undo and redo. Gesture and text
   coalescence, redo invalidation, and exclusion of view/playback previews have
   automated tests.
-- **M1D-007 — Persistence:** Local save and restore survive reload; a simulated
+- [ ] **M1D-007 — Persistence:** Local save and restore survive reload; a simulated
   failed write retains the last valid revision. Canonical JSON export/import is
   a byte-stable round trip, and identity collisions require explicit handling.
-- **M1D-008 — Sharing and recovery:** A within-limit document round-trips
+- [ ] **M1D-008 — Sharing and recovery:** A within-limit document round-trips
   through a versioned fragment URL without network or automatic local writes.
   Oversized, malformed, integrity-failing, and unavailable-algebra documents
   follow the specified export and read-only recovery paths without data loss.
-- **M1D-009 — Dimension preservation:** Moving a fixture through VGA dimensions
+- [ ] **M1D-009 — Dimension preservation:** Moving a fixture through VGA dimensions
   1, 2, 3, and back to 1 preserves item identity, all component sources, and
   inactive components while reevaluating dimension-dependent diagnostics.
-- **M1D-010 — Accessibility:** Automated checks report no accepted violations,
+- [ ] **M1D-010 — Accessibility:** Automated checks report no accepted violations,
   and a recorded manual pass covers complete keyboard operation, focus order,
   accessible names and diagnostics, non-color state, 200% zoom, target size,
   reduced motion, and one supported screen-reader/browser combination.
-- **M1D-011 — Documentation:** Public documentation contains one end-to-end VGA
+- [ ] **M1D-011 — Documentation:** Public documentation contains one end-to-end VGA
   1D tutorial, the language and convention references it uses, persistence and
   sharing limitations, keyboard instructions, and recovery guidance. Every
   example is exercised by an automated fixture.
-- **M1D-012 — Release:** From a clean checkout, the canonical verification
+- [ ] **M1D-012 — Release:** From a clean checkout, the canonical verification
   command passes and TEST-007 through TEST-011 remain satisfied. The
   post-deployment smoke test loads the deployed URL, completes the extended
   documented example, reloads a local document, and opens a shared fragment
   without a backend.
-- **M1D-013 — Display settings:** Acceptance evidence covers every setting
+- [ ] **M1D-013 — Display settings:** Acceptance evidence covers every setting
   governed by APP-006, persistence across reload, and unchanged mathematical
   values, evaluated results, and non-view document fields.
-- **M1D-014 — Figure export:** A STORE-012 conformance fixture proves that SVG
+- [ ] **M1D-014 — Figure export:** A STORE-012 conformance fixture proves that SVG
   figure export is deterministic, self-contained, free of interaction chrome
   and external references, and reproduces the visible scene.
 
