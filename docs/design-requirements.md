@@ -100,12 +100,13 @@ visualization, and a required Rust implementation.
 ## 4. Technology baseline
 
 - **TECH-001:** The primary production application and domain code shall use
-  TypeScript with strict type checking. Specialized computation backends may use
-  other languages behind the engine boundary defined by TECH-005 and TECH-006.
-- **TECH-002:** The selected UI framework shall be limited to presentation and
-  interaction composition.
-- **TECH-003:** Domain code shall be testable without the selected UI framework
-  or a browser DOM.
+  TypeScript with strict type checking. The initial user interface shall use
+  React, and the application shall be developed and built with Vite. Specialized
+  computation backends may use other languages behind the engine boundary
+  defined by TECH-005 and TECH-006.
+- **TECH-002:** React shall be limited to presentation and interaction
+  composition.
+- **TECH-003:** Domain code shall be testable without React or a browser DOM.
 - **TECH-004:** The initial rendering technology shall support accessible,
   deterministic web rendering and the figure-export guarantees activated by a
   milestone. The selected rendering implementation is an architecture decision.
@@ -115,6 +116,10 @@ visualization, and a required Rust implementation.
   Rust/Wasm backends without changing documents or geometric entities.
 - **TECH-007:** Runtime validation shall complement TypeScript's static type
   checking at external data boundaries.
+- **TECH-008:** The initial built-in VGA implementation shall use ganja.js
+  behind the algebra-engine adapter boundary. Ganja.js values, APIs,
+  serialization, conventions, and failure behavior shall not become part of the
+  document format or MultiVector-owned domain contracts.
 
 ## 5. Architecture
 
@@ -125,7 +130,9 @@ source -> parser and AST -> dependency analysis -> evaluator
        -> render primitives -> optional visualizer
 ```
 
-- **ARCH-001:** Backend values shall not cross the engine boundary.
+- **ARCH-001:** Backend-native values and APIs shall not cross the engine
+  boundary; only MultiVector-owned values, diagnostics, and capability
+  descriptors may cross it.
 - **ARCH-002:** React types shall not appear in the domain model.
 - **ARCH-003:** Visualizers shall not parse expressions, calculate algebra, or
   branch on algebra identifiers.
