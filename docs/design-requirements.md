@@ -99,9 +99,9 @@ visualization, and a required Rust implementation.
 
 ## 4. Technology baseline
 
-- **TECH-001:** Production application code shall use strict static typing. The
-  selected language, UI framework, and build tooling are recorded as replaceable
-  architecture decisions rather than permanent product guarantees.
+- **TECH-001:** The primary production application and domain code shall use
+  TypeScript with strict type checking. Specialized computation backends may use
+  other languages behind the engine boundary defined by TECH-005 and TECH-006.
 - **TECH-002:** The selected UI framework shall be limited to presentation and
   interaction composition.
 - **TECH-003:** Domain code shall be testable without the selected UI framework
@@ -113,8 +113,8 @@ visualization, and a required Rust implementation.
   adapters.
 - **TECH-006:** Engine boundaries shall allow specialized sparse and future
   Rust/Wasm backends without changing documents or geometric entities.
-- **TECH-007:** Runtime validation shall complement TypeScript at external data
-  boundaries.
+- **TECH-007:** Runtime validation shall complement TypeScript's static type
+  checking at external data boundaries.
 
 ## 5. Architecture
 

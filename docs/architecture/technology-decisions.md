@@ -5,23 +5,26 @@
 
 ## Purpose
 
-This document records replaceable implementation choices. It is not a product
-requirement: changing a choice here does not change document semantics,
-scientific conventions, or public guarantees as long as the applicable
-requirements remain satisfied.
+This document records implementation choices within the applicable technology
+requirements. Choices identified as replaceable may change without affecting
+document semantics, scientific conventions, or public guarantees.
 
 ## Initial application stack
 
 The initial application uses:
 
-- strict TypeScript for production code;
+- strict TypeScript for the primary production application and domain code, as
+  required by TECH-001;
 - React for presentation and interaction composition;
 - Vite for development and production builds;
 - SVG for the initial one-dimensional visualizer and deterministic figure
   export.
 
-These choices implement TECH-001 through TECH-004. Domain code remains testable
-without React or a browser DOM, and React types do not enter the domain model.
+React, Vite, and SVG are replaceable implementation choices under TECH-002
+through TECH-004. Domain code remains testable without React or a browser DOM,
+and React types do not enter the domain model. A specialized computation backend
+may use another language only behind the boundary defined by TECH-005 and
+TECH-006.
 
 ## Automation platform
 
