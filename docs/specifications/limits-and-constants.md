@@ -3,6 +3,7 @@
 **Status:** Draft for review
 **Date:** 2026-07-27
 **Applies to:** Initial language and VGA 1D workflow
+**Refines:** SEC-004 through SEC-007, CMD-005, CMD-006, and A11Y-007
 **License:** MIT
 
 ## 1. Purpose and evolution

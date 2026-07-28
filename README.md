@@ -26,6 +26,7 @@ available yet.
 - [Expression language](docs/specifications/language.md)
 - [Document format](docs/specifications/document-format.md)
 - [Limits and interaction constants](docs/specifications/limits-and-constants.md)
+- [VGA convention version 1](docs/specifications/vga-conventions.md)
 - [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)
 - [VGA requirements](docs/requirements/algebras/vga.md)
 - [1D visualization requirements](docs/requirements/visualization/1d.md)

@@ -3,7 +3,8 @@
 **Status:** Draft for review
 **Kind:** Product milestone
 **Depends on:** VGA 1D Foundation
-**Applies:** 1D Visualization Requirements
+**Applies:** 1D Visualization Requirements; APP-006; CMD-003, CMD-005, and
+CMD-006
 **Date:** 2026-07-28
 
 ## Objective

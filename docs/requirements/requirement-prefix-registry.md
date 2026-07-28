@@ -45,5 +45,7 @@ available for reuse.
 | `VIZ1D` | Rendering shared by one-dimensional visualizers | `docs/requirements/visualization/1d.md` |
 | `VIEW1D` | One-dimensional viewport behavior | `docs/requirements/visualization/1d.md` |
 | `INTERACT1D` | One-dimensional selection and manipulation | `docs/requirements/visualization/1d.md` |
+| `LFND` | Acceptance criteria for the Language and Document Foundation milestone | `docs/requirements/milestones/language-foundation.md` |
+| `VGAC` | Acceptance criteria for the VGA Core milestone | `docs/requirements/milestones/vga-core.md` |
 | `F1D` | Acceptance criteria for the VGA 1D foundation milestone | `docs/requirements/milestones/vga-1d-foundation.md` |
 | `M1D` | Acceptance criteria for the VGA 1D visual workflow milestone | `docs/requirements/milestones/vga-1d-visual-workflow.md` |

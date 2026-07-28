@@ -22,6 +22,10 @@ than as separate 1D, 2D, and 3D engines.
 - **VGA-004:** The initial conformance suite shall contain independent cases for
   dimensions 1, 2, and 3 and dimension-parameterization cases that detect
   assumptions tied to one particular dimension.
+- **VGA-011:** VGA shall register `ps` as its pseudoscalar named constant in
+  every supported dimension. It evaluates to the canonical ordered product
+  `e1 * e2 * ... * en` under the active basis and convention version. The name
+  implies neither normalization nor invertibility.
 
 The following requirements are **Planned** and do not block the initial VGA
 Core or VGA 1D Foundation milestones:
@@ -40,10 +44,6 @@ Core or VGA 1D Foundation milestones:
   coefficient access, reverse, duality, norms, serialization, and
   dimension-change round trips. Dimensions 8 and 9 shall additionally exercise
   sparse values without requiring dense allocation.
-- **VGA-011:** VGA shall register `ps` as its pseudoscalar named constant in
-  every supported dimension. It evaluates to the canonical ordered product
-  `e1 * e2 * ... * en` under the active basis and convention version. The name
-  implies neither normalization nor invertibility.
 
 ## 2. Vectors and dimensions
 
@@ -67,11 +67,18 @@ Core or VGA 1D Foundation milestones:
   a multivector extension is advertised only when separately defined and
   tested.
 - **VGA-006:** Basis order, duality, inner product, norm, and numerical tolerance
-  conventions shall be versioned and tested under ALG-013 and ALG-031.
+  conventions shall follow the version selected by `conventionVersion`. The
+  initial behavior is defined by the
+  [VGA convention version 1 specification](../../specifications/vga-conventions.md)
+  and shall be tested under ALG-013 and ALG-031.
 - **VGA-007:** A source invalid only because of the active dimension shall remain
   stored and become valid automatically in a compatible dimension.
 
 ## 4. Standard geometry interpretation
+
+The requirements in this section have **Milestone** commitment and apply only
+to milestones that explicitly include the standard VGA geometry
+interpretation.
 
 - **VGA-INT-001:** MultiVector shall provide one versioned standard VGA
   interpretation independently of the VGA algebra definition.

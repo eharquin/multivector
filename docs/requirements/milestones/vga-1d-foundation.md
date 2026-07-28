@@ -3,7 +3,7 @@
 **Status:** Draft for review
 **Kind:** Product milestone
 **Depends on:** VGA Core
-**Applies:** Core 1D Visualization Requirements
+**Applies:** Core 1D Visualization Requirements; VGA-INT-001 through VGA-INT-004
 **Date:** 2026-07-28
 
 ## Objective

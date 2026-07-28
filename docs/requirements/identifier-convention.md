@@ -30,8 +30,9 @@ spaces, underscores, or punctuation other than prefix-separating hyphens.
 
 ## 3. Allocation and lifecycle
 
-- Every normative requirement and milestone acceptance criterion shall have
-  exactly one identifier registered to one prefix.
+- Every product, engineering, architecture, or quality requirement and every
+  milestone acceptance criterion shall have exactly one identifier registered
+  to one prefix.
 - An identifier shall be unique across the repository, not merely within its
   owning document.
 - Each prefix shall have one owning document and one scope recorded in the
@@ -61,7 +62,25 @@ spaces, underscores, or punctuation other than prefix-separating hyphens.
 Existing identifiers predate this convention. They remain valid even where a
 new identifier might now be named differently.
 
-## 4. Commitment levels
+## 4. Normative specification clauses
+
+A normative specification refines identified requirements into precise syntax,
+schemas, formulas, processing rules, constants, or other implementation-neutral
+behavior. Its detailed clauses may be cited by document and section and do not
+each require a requirement identifier.
+
+Every normative specification shall declare the requirement identifiers it
+primarily refines. A specification clause requires its own registered
+requirement identifier only when it is independently activated by a milestone,
+tracked as a separate product or engineering commitment, or normatively reused
+outside the requirements that its specification refines.
+
+Specifications shall not silently introduce a new product capability,
+commitment level, or milestone boundary. Such a guarantee requires an identified
+requirement in the appropriate normative owner before the specification refines
+it.
+
+## 5. Commitment levels
 
 Every normative requirement has one of these commitment levels:
 
@@ -83,7 +102,7 @@ Commitment changes are normative changes. Before **Accepted**, they may occur
 through ordinary design review. After **Accepted**, tightening or relaxing a
 commitment requires an explicit recorded decision and compatibility review.
 
-## 5. Review and validation
+## 6. Review and validation
 
 Design review shall verify identifier syntax, uniqueness, registered ownership,
 scope, and references. Automated documentation checks should enforce these

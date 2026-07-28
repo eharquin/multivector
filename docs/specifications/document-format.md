@@ -3,6 +3,7 @@
 **Status:** Draft for review
 **Date:** 2026-07-28
 **Format version:** 1
+**Refines:** DOC-001 through DOC-012
 **License:** MIT
 
 ## 1. Purpose and authority
@@ -180,16 +181,37 @@ byte-stable.
 
 ## 4. Validation and migration
 
-Processing order is:
+Shared fragments and raw JSON imports have distinct bounded preprocessing
+pipelines.
 
-1. enforce the encoded-size limit;
-2. decode and enforce the decoded-size limit;
-3. parse JSON while rejecting duplicate keys and invalid scalar values;
-4. read only `formatVersion` to select a trusted migration;
-5. migrate one version at a time without evaluating source;
-6. validate the complete current schema and resource limits;
-7. resolve the algebra and optional interpretation;
-8. build dependency nodes, parse source, and evaluate.
+A shared fragment is processed in this order:
+
+1. enforce the encoded shared-fragment size limit before decoding;
+2. decode the bounded share envelope and validate its version and declared
+   compression/encoding identifier;
+3. verify the envelope integrity check before decompressing or interpreting its
+   payload as a document;
+4. decompress, when applicable, while enforcing both the expansion-ratio and
+   decoded-document-size limits;
+5. obtain the complete JSON bytes.
+
+A raw JSON import is processed in this order:
+
+1. enforce the decoded-document-size limit directly on the input bytes;
+2. decode those bytes as strict UTF-8.
+
+Both paths then enter the same document-processing pipeline:
+
+1. parse JSON while rejecting duplicate keys and invalid scalar values;
+2. read only `formatVersion` to select a trusted migration;
+3. migrate one version at a time without evaluating source;
+4. validate the complete current schema and resource limits;
+5. resolve the algebra and optional interpretation;
+6. build dependency nodes, parse source, and evaluate.
+
+The encoded shared-fragment limit does not apply to raw JSON imports. Neither
+preprocessing path may pass partial, integrity-failing, malformed, or
+over-limit JSON to the common pipeline.
 
 All bounds used by these steps are owned by the
 [limits and interaction constants](limits-and-constants.md).

@@ -200,6 +200,8 @@ values and may convert them to renderer-independent entities.
 
 The initial VGA definition is specified in
 [VGA requirements](requirements/algebras/vga.md).
+Its initial mathematical and numerical conventions are specified in
+[VGA convention version 1](specifications/vga-conventions.md).
 
 ## 7. Document model
 
@@ -277,6 +279,10 @@ The normative language is specified in
   per-element appearance is outside that workflow.
 - **APP-005:** Position is a separate expression source owned by the item.
   `head` is derived, read-only, and shall never be serialized as appearance.
+
+APP-006 has **Milestone** commitment and applies only to milestones that
+explicitly include configurable display settings.
+
 - **APP-006:** Document display settings shall cover numeric display precision,
   axis labels and graduation visibility, grid visibility, object-size scaling,
   and light, dark, or system theme. They are presentation-only and shall not change
@@ -303,6 +309,9 @@ apply only to milestones that explicitly include interactive source editing.
   textual reason; it shall not fall back to replacing the whole expression.
 
 ## 10. Commands, undo, and animation
+
+CMD-003, CMD-005, and CMD-006 have **Milestone** commitment and apply only to
+milestones that explicitly include advanced history behavior.
 
 - **CMD-001:** Commands shall produce deterministic state transitions.
 - **CMD-002:** Undo and redo shall operate on documents, not UI component state.

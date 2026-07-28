@@ -3,6 +3,7 @@
 **Status:** Draft for review
 **Date:** 2026-07-27
 **Initial scope:** VGA core
+**Refines:** LANG-001 through LANG-009
 **License:** MIT
 
 ## 1. Purpose and authority
@@ -55,7 +56,11 @@ Item identity is independent of its visible name. Renaming an item does not
 rename its references in the initial scope.
 
 An item whose first non-whitespace character is `#` is an annotation. It has no
-value and no dependencies. Inline trailing comments are not supported.
+value and no dependencies. Everything after that first `#` is annotation text,
+not expression syntax, and may contain any valid Unicode text, including further
+`#` characters, accented characters, symbols, and emoji, subject only to the
+common source-length and document-validity limits. For example, `# était sympa`
+is a valid annotation. Inline trailing comments are not supported.
 
 ## 4. Numeric literals and implicit multiplication
 
@@ -70,7 +75,9 @@ exponent sign:
 The unary signs `+` and `-` are operators, not parts of a literal. `NaN`,
 infinities, hexadecimal and binary literals, and numeric `_` separators are not
 supported. A literal shall evaluate to a finite IEEE 754 number. Negative zero
-is normalized to zero when source is rewritten or a document is serialized.
+evaluates as scalar zero, while stored source preserves the spelling entered by
+the user. When an explicit source-rewrite command emits a numeric literal, it
+emits `0` rather than `-0`.
 
 An unsigned `e` suffix is not scientific notation because it denotes implicit
 multiplication by a basis blade:
