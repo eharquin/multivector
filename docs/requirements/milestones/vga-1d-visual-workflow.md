@@ -82,9 +82,10 @@ every criterion below. A demonstration alone is not completion.
   sharing limitations, keyboard instructions, and recovery guidance. Every
   example is exercised by an automated fixture.
 - **M1D-012 — Release:** From a clean checkout, the canonical verification
-  command passes and the production artifact deploys to GitHub Pages. A smoke
-  test loads the deployed URL, completes the documented example, reloads a
-  local document, and opens a shared fragment without a backend.
+  command passes and TEST-007 through TEST-011 remain satisfied. The
+  post-deployment smoke test loads the deployed URL, completes the extended
+  documented example, reloads a local document, and opens a shared fragment
+  without a backend.
 - **M1D-013 — Display settings:** Acceptance evidence covers every setting
   governed by APP-006, persistence across reload, and unchanged mathematical
   values, evaluated results, and non-view document fields.

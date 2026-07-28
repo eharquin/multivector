@@ -101,7 +101,7 @@ commitment requires an explicit recorded decision and compatibility review.
 | `ERR` | Diagnostics, recovery, and failure containment | `docs/design-requirements.md` |
 | `SEC` | Security and resource-limit guarantees | `docs/design-requirements.md` |
 | `A11Y` | Accessibility guarantees and evidence | `docs/design-requirements.md` |
-| `TEST` | Project-wide verification and conformance | `docs/design-requirements.md` |
+| `TEST` | Project-wide verification, continuous integration, conformance, and milestone deployment guarantees | `docs/design-requirements.md` |
 | `ALG` | Algebra-definition and engine contract | `docs/requirements/algebras/algebra-definition.md` |
 | `INT` | Common geometry-interpretation contract | `docs/requirements/algebras/algebra-definition.md` |
 | `VGA` | VGA-family definition and mathematical behavior | `docs/requirements/algebras/vga.md` |

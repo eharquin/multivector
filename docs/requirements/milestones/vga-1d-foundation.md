@@ -68,10 +68,9 @@ every criterion below.
   non-color state, 200% zoom, and target size.
 - **F1D-008 — Documentation and release:** Public documentation contains one
   end-to-end VGA 1D foundation tutorial, language and convention references,
-  persistence limitations, keyboard instructions, and recovery guidance. From
-  a clean checkout, the canonical verification command passes; the production
-  artifact deploys to GitHub Pages; and a smoke test completes the tutorial and
-  reloads a local document without a backend.
+  persistence limitations, keyboard instructions, and recovery guidance.
+  TEST-007 through TEST-011 are satisfied, and the post-deployment smoke test
+  completes the tutorial and reloads a local document without a backend.
 
 The acceptance record shall link each criterion to its automated tests, manual
 check, documentation page, or deployment evidence. Completion does not claim

@@ -395,6 +395,25 @@ accessible-name policy are specified in
   supported configuration, they shall satisfy deterministic serialization and
   versioned numerical conventions. No milestone is required to deliver a second
   backend unless its capability profile explicitly says so.
+- **TEST-007:** The canonical verification command shall run automatically on
+  every pull request targeting the primary branch and on every push to that
+  branch.
+- **TEST-008:** A change shall not be eligible for merge when its required
+  automated verification fails or has not completed.
+- **TEST-009:** Local and continuous-integration verification shall invoke the
+  same project-owned commands and shall not rely on tests available only in the
+  continuous-integration environment.
+
+The following deployment requirements have **Milestone** commitment and apply
+only to milestones that deliver a public application:
+
+- **TEST-010:** A successful revision selected for public release shall deploy
+  its production artifact to the configured GitHub Pages environment through an
+  automated, reproducible workflow.
+- **TEST-011:** A failed build or pre-deployment validation shall not replace
+  the last successfully deployed production artifact. A failed deployment or
+  post-deployment smoke test shall report failure and retain the revision and
+  evidence required to restore the last successful deployment.
 
 ## 15. Initial milestones
 

@@ -23,6 +23,13 @@ The initial application uses:
 These choices implement TECH-001 through TECH-004. Domain code remains testable
 without React or a browser DOM, and React types do not enter the domain model.
 
+## Automation platform
+
+GitHub Actions is the initial implementation choice for pull-request
+verification and GitHub Pages deployment. Workflows shall invoke the same
+project-owned verification and build commands used locally. This platform may
+be replaced without changing TEST-007 through TEST-011.
+
 ## Review triggers
 
 A technology decision should be reconsidered only when measurements or a
