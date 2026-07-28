@@ -38,18 +38,63 @@ complete documented user workflow.
 
 ## 3. Scope and progression
 
-Initial engineering proceeds through the language and document foundation and
-the dimension-parameterized VGA core. The first product workflow adds the
-renderer-independent geometry model and VGA 1D visualizer. Later product
-workflows add VGA 2D and 3D, followed by PGA visual workflows in one, two, and
-three dimensions and CGA visual workflows in one, two, and three dimensions.
-Parametric animation and specialized algebras follow.
+MultiVector is planned to progress through the following engineering and product
+milestones:
 
-The architecture shall also admit fixed research definitions such as 2D CCGA or
-ACGA without assuming that every algebra is a VGA/PGA/CGA family parameterized
-only by dimension. These definitions are future scope, not initial deliverables.
+1. **Language and Document Foundation — Engineering:** Deliver the parser, owned
+   AST, dependency analysis, deterministic evaluation, diagnostics, canonical
+   document format, validation, migrations, and resource limits without
+   requiring a visualizer.
 
-The first scope excludes slides, visual LaTeX input, embedding-space
+2. **VGA Core — Engineering:** Deliver one dimension-parameterized VGA
+   definition with complete textual and computational support for dimensions 1
+   through 3, independently of geometric interpretation and rendering.
+
+3. **VGA 1D Foundation — Product:** Deliver the first public, text-driven
+   workflow with renderer-independent geometry entities, the VGA 1D visualizer,
+   local persistence, canonical JSON import and export, accessibility, and
+   GitHub Pages deployment.
+
+4. **VGA 1D Interactive Workflow — Product:** Add direct manipulation, inverse
+   source editing, scalar controls, animation, URL sharing, advanced history
+   behavior, and deterministic figure export to the VGA 1D foundation.
+
+5. **VGA 2D Visual Workflow — Product:** Extend the standard VGA interpretation,
+   renderer-independent geometry model, interaction model, and visualization
+   pipeline to two-dimensional geometry.
+
+6. **VGA 3D Visual Workflow — Product:** Extend the same architecture to
+   three-dimensional VGA geometry, including the required camera and
+   interaction design.
+
+7. **Higher-Dimensional VGA Evaluation — Engineering:** Activate and verify
+   textual and computational VGA support for dimensions 4 through 9 without
+   requiring corresponding geometric visualizers.
+
+8. **PGA Visual Workflows — Product:** Introduce versioned PGA definitions and
+   interpretations, followed by independently scoped 1D, 2D, and 3D visual
+   workflows.
+
+9. **CGA Visual Workflows — Product:** Introduce versioned CGA definitions,
+   source basis conventions, interpretations, and independently scoped 1D, 2D,
+   and 3D visual workflows.
+
+10. **Parametric Constructions — Product:** Add sampled parametric expressions,
+    animation beyond scalar controls, and the associated evaluation, history,
+    rendering, and resource-limit behavior.
+
+11. **Specialized Research Algebras — Research and Product:** Admit fixed
+    definitions such as 2D CCGA or ACGA without assuming that every algebra is a
+    dimension-parameterized member of the VGA, PGA, or CGA families.
+
+Milestones 1 through 4 define the currently approved initial progression.
+Milestones 5 through 11 are planned directions whose detailed scope,
+requirements, ordering, and delivery boundaries require separate review before
+implementation. The numbering expresses the present progression model, not a
+permanent release number or a commitment to implement every later milestone in
+strict sequence.
+
+The initial scope excludes slides, visual LaTeX input, embedding-space
 visualization, and a required Rust implementation.
 
 ## 4. Technology baseline
