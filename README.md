@@ -20,7 +20,8 @@ available yet.
 ## Documentation
 
 - [Design requirements](docs/design-requirements.md)
-- [Requirement identifier convention and registry](docs/requirements/identifier-convention.md)
+- [Requirement identifier convention](docs/requirements/identifier-convention.md)
+- [Requirement prefix registry](docs/requirements/requirement-prefix-registry.md)
 - [Technology decisions](docs/architecture/technology-decisions.md)
 - [Expression language](docs/specifications/language.md)
 - [Document format](docs/specifications/document-format.md)

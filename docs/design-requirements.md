@@ -451,8 +451,9 @@ Requirements state what MultiVector guarantees. Specifications define precise
 normative behavior. Architecture documents explain implementation boundaries.
 Milestones compose requirements instead of duplicating them.
 Requirement and acceptance-criterion identifiers follow the
-[requirement identifier convention](requirements/identifier-convention.md),
-whose prefix registry defines their scope and normative owner.
+[requirement identifier convention](requirements/identifier-convention.md).
+The current prefixes, their scope, and their normative owner are listed in the
+[requirement prefix registry](requirements/requirement-prefix-registry.md).
 
 - This document owns behavior and quality shared across algebras and
   visualizers.
