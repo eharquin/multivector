@@ -1,6 +1,208 @@
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
+import { createVga2Engine } from './algebra/vgaEngine'
+import {
+  evaluateSource,
+  type EvaluationState,
+} from './application/evaluateSource'
+import {
+  addExpression,
+  deleteExpression,
+  expressionDocument,
+  MAX_EXPRESSION_ITEMS,
+  updateExpression,
+  type ExpressionItem,
+} from './document/expressionDocument'
+import { toScreen, type Viewport2d } from './visualization/viewport'
 import './App.css'
 
+const engine = createVga2Engine()
+const MIN_PANEL_WIDTH = 240
+const MAX_PANEL_WIDTH = 720
+
+const viewport: Viewport2d = {
+  width: 640,
+  height: 480,
+  centerX: 0,
+  centerY: 0,
+  pixelsPerUnit: 72,
+}
+
+type EvaluatedDocumentItem = Readonly<{
+  item: ExpressionItem
+  position: number
+  evaluation: EvaluationState | null
+}>
+
 function App() {
+  const [expressionDoc, setExpressionDoc] = useState(() =>
+    expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }]),
+  )
+  const nextId = useRef(2)
+  const inputRefs = useRef(new Map<string, HTMLInputElement>())
+  const pendingFocus = useRef<string | null>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  const resizeDrag = useRef<Readonly<{ startX: number; startWidth: number }> | null>(
+    null,
+  )
+  const [panelWidth, setPanelWidth] = useState(340)
+
+  const evaluatedItems = useMemo<readonly EvaluatedDocumentItem[]>(
+    () =>
+      expressionDoc.items.map((item, index) => ({
+        item,
+        position: index + 1,
+        evaluation:
+          item.source.trim() === ''
+            ? null
+            : evaluateSource(item.source, engine, `Vector ${index + 1}`),
+      })),
+    [expressionDoc],
+  )
+
+  const origin = toScreen(viewport, { x: 0, y: 0 })
+  const renderedVectors = evaluatedItems.flatMap((evaluated) => {
+    const primitive =
+      evaluated.evaluation?.status === 'valid'
+        ? evaluated.evaluation.primitive
+        : null
+    if (!primitive) return []
+    return [
+      {
+        id: evaluated.item.id,
+        primitive,
+        end: toScreen(viewport, primitive.end),
+      },
+    ]
+  })
+
+  useEffect(() => {
+    const id = pendingFocus.current
+    if (!id) return
+    inputRefs.current.get(id)?.focus()
+    pendingFocus.current = null
+  }, [expressionDoc])
+
+  useEffect(() => {
+    const resize = (clientX: number) => {
+      const drag = resizeDrag.current
+      if (!drag) return
+      const availableWidth = Math.max(
+        MIN_PANEL_WIDTH,
+        window.innerWidth - 280,
+      )
+      const maximum = Math.min(MAX_PANEL_WIDTH, availableWidth)
+      setPanelWidth(
+        Math.max(
+          MIN_PANEL_WIDTH,
+          Math.min(maximum, drag.startWidth + clientX - drag.startX),
+        ),
+      )
+    }
+    const handlePointerMove = (event: PointerEvent) => resize(event.clientX)
+    const handlePointerUp = () => {
+      resizeDrag.current = null
+      document.body.classList.remove('resizing-panel')
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      document.body.classList.remove('resizing-panel')
+    }
+  }, [])
+
+  const beginPanelResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    resizeDrag.current = {
+      startX: event.clientX,
+      startWidth: panelWidth,
+    }
+    document.body.classList.add('resizing-panel')
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.preventDefault()
+  }
+
+  const resizePanelWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    const maximum = Math.min(
+      MAX_PANEL_WIDTH,
+      Math.max(MIN_PANEL_WIDTH, window.innerWidth - 280),
+    )
+    let next = panelWidth
+    if (event.key === 'ArrowLeft') next -= 16
+    else if (event.key === 'ArrowRight') next += 16
+    else if (event.key === 'Home') next = MIN_PANEL_WIDTH
+    else if (event.key === 'End') next = maximum
+    else return
+
+    event.preventDefault()
+    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(maximum, next)))
+  }
+
+  const insertExpression = (afterId?: string) => {
+    if (expressionDoc.items.length >= MAX_EXPRESSION_ITEMS) return
+    const id = `item-${nextId.current++}`
+    pendingFocus.current = id
+    setExpressionDoc((current) =>
+      addExpression(current, { id, source: '' }, afterId),
+    )
+  }
+
+  const removeExpression = (id: string) => {
+    const index = expressionDoc.items.findIndex((item) => item.id === id)
+    const neighbor =
+      expressionDoc.items[index - 1] ??
+      expressionDoc.items[index + 1] ??
+      null
+    pendingFocus.current = neighbor?.id ?? null
+    setExpressionDoc((current) => deleteExpression(current, id))
+    if (!neighbor) {
+      requestAnimationFrame(() => addButtonRef.current?.focus())
+    }
+  }
+
+  const handleItemKeyDown = (
+    event: KeyboardEvent<HTMLInputElement>,
+    item: ExpressionItem,
+    index: number,
+  ) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      insertExpression(item.id)
+    } else if (event.key === 'Backspace' && item.source === '') {
+      event.preventDefault()
+      removeExpression(item.id)
+    } else if (event.key === 'ArrowUp' && index > 0) {
+      event.preventDefault()
+      inputRefs.current.get(expressionDoc.items[index - 1].id)?.focus()
+    } else if (
+      event.key === 'ArrowDown' &&
+      index < expressionDoc.items.length - 1
+    ) {
+      event.preventDefault()
+      inputRefs.current.get(expressionDoc.items[index + 1].id)?.focus()
+    }
+  }
+
+  const canvasDescription =
+    renderedVectors.length === 0
+      ? `No vectors are visible from ${expressionDoc.items.length} expressions.`
+      : `${renderedVectors.length} ${
+          renderedVectors.length === 1 ? 'vector is' : 'vectors are'
+        } visible. ${renderedVectors
+          .map(
+            ({ primitive }) =>
+              `${primitive.accessibleName} runs from the origin to ${primitive.end.x}, ${primitive.end.y}.`,
+          )
+          .join(' ')}`
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -11,52 +213,191 @@ function App() {
         >
           MultiVector
         </a>
+        <span className="algebra-badge">VGA · 2D</span>
         <span className="app-status">Research preview</span>
       </header>
 
-      <main className="welcome">
-        <section className="welcome-copy" aria-labelledby="welcome-title">
-          <h1 id="welcome-title">
-            Create, evaluate, and visualize multivector expressions
-          </h1>
-          <p className="welcome-summary">
-            MultiVector is a research-driven environment for creating,
-            evaluating, and visualizing reproducible geometric algebra
-            constructions.
-          </p>
-          <p className="project-origin">
-            MultiVector is an open-source project developed as part of PhD
-            research in geometric algebra and scientific visualization.
-          </p>
-        </section>
+      <main className="workspace">
+        <aside
+          className="expression-panel"
+          aria-label="Expressions"
+          style={{ width: panelWidth }}
+        >
+          <div className="expression-toolbar">
+            <button
+              ref={addButtonRef}
+              type="button"
+              className="add-expression"
+              onClick={() => insertExpression()}
+              disabled={
+                expressionDoc.items.length >= MAX_EXPRESSION_ITEMS
+              }
+              aria-label="Add expression"
+            >
+              <span aria-hidden="true">+</span>
+              <span>Add expression</span>
+            </button>
+          </div>
 
-        <section className="algebras" aria-label="Geometric algebra models">
-          <article className="algebra-card">
-            <p className="algebra-symbol">VGA</p>
-            <h2>Vector geometric algebra</h2>
-            <p>
-              Euclidean vectors, products, and transformations in a
-              dimension-parameterized algebra.
-            </p>
-          </article>
+          <div className="expression-list">
+            {evaluatedItems.map(({ item, position, evaluation }, index) => {
+              const feedbackId = `expression-feedback-${item.id}`
+              const inputId = `expression-source-${item.id}`
+              const invalid = evaluation?.status === 'invalid'
 
-          <article className="algebra-card">
-            <p className="algebra-symbol">PGA</p>
-            <h2>Projective geometric algebra</h2>
-            <p>
-              Homogeneous models for points, lines, planes, and Euclidean
-              transformations.
-            </p>
-          </article>
+              return (
+                <article
+                  className={`expression-item ${invalid ? 'has-error' : ''}`}
+                  key={item.id}
+                >
+                  <div className="expression-input-row">
+                    <input
+                      ref={(element) => {
+                        if (element) inputRefs.current.set(item.id, element)
+                        else inputRefs.current.delete(item.id)
+                      }}
+                      id={inputId}
+                      className="expression-source"
+                      aria-label={`Expression ${position}`}
+                      value={item.source}
+                      onChange={(event) =>
+                        setExpressionDoc((current) =>
+                          updateExpression(current, item.id, event.target.value),
+                        )
+                      }
+                      onKeyDown={(event) =>
+                        handleItemKeyDown(event, item, index)
+                      }
+                      aria-describedby={evaluation ? feedbackId : undefined}
+                      aria-invalid={invalid}
+                      spellCheck={false}
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      className="delete-expression"
+                      onClick={() => removeExpression(item.id)}
+                      aria-label={`Delete expression ${position}`}
+                    >
+                      ×
+                    </button>
+                  </div>
 
-          <article className="algebra-card">
-            <p className="algebra-symbol">CGA</p>
-            <h2>Conformal geometric algebra</h2>
-            <p>
-              Conformal models for round geometry, incidence, and
-              transformations.
-            </p>
-          </article>
+                  {evaluation ? (
+                    <div
+                      id={feedbackId}
+                      className="expression-feedback"
+                      role={invalid ? 'alert' : 'status'}
+                    >
+                      {evaluation.status === 'valid' ? (
+                        <>
+                          <output>{evaluation.inspection}</output>
+                          {evaluation.visualization.status === 'unsupported' && (
+                            <span className="item-visualization-note">
+                              No supported 2D interpretation
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="feedback-label">
+                            {evaluation.diagnostic.code}
+                          </span>
+                          <span>{evaluation.diagnostic.message}</span>
+                          <span className="source-location">
+                            Source characters{' '}
+                            {evaluation.diagnostic.span.start + 1}–
+                            {Math.max(
+                              evaluation.diagnostic.span.start + 1,
+                              evaluation.diagnostic.span.end,
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="expression-empty-state">
+                      Enter an expression, or press Backspace to remove this row.
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+        </aside>
+
+        <div
+          className="panel-resize"
+          role="separator"
+          aria-label="Resize expression panel"
+          aria-orientation="vertical"
+          aria-valuemin={MIN_PANEL_WIDTH}
+          aria-valuemax={MAX_PANEL_WIDTH}
+          aria-valuenow={panelWidth}
+          tabIndex={0}
+          onPointerDown={beginPanelResize}
+          onKeyDown={resizePanelWithKeyboard}
+        />
+
+        <section className="visualizer" aria-label="VGA 2D viewport">
+          <div className="canvas-frame">
+            <svg
+              className="canvas"
+              viewBox={`0 0 ${viewport.width} ${viewport.height}`}
+              role="img"
+              aria-labelledby="canvas-title canvas-description"
+            >
+              <title id="canvas-title">Two-dimensional vector viewport</title>
+              <desc id="canvas-description">{canvasDescription}</desc>
+              <defs>
+                <marker
+                  id="arrowhead"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 8 4 L 0 8 z" />
+                </marker>
+              </defs>
+
+              <line
+                className="axis"
+                x1="0"
+                y1={origin.y}
+                x2={viewport.width}
+                y2={origin.y}
+              />
+              <line
+                className="axis"
+                x1={origin.x}
+                y1="0"
+                x2={origin.x}
+                y2={viewport.height}
+              />
+              <circle
+                className="origin"
+                cx={origin.x}
+                cy={origin.y}
+                r="3"
+              />
+
+              {renderedVectors.map(({ id, primitive, end }) => (
+                <line
+                  key={id}
+                  className="vector"
+                  x1={origin.x}
+                  y1={origin.y}
+                  x2={end.x}
+                  y2={end.y}
+                  markerEnd="url(#arrowhead)"
+                  aria-label={primitive.accessibleName}
+                />
+              ))}
+            </svg>
+          </div>
         </section>
       </main>
     </div>
