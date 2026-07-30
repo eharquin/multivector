@@ -15,15 +15,15 @@ describe('expression tokenizer', () => {
     })
   })
 
-  it('rejects unavailable names with their complete source range', () => {
-    expect(tokenize('e3')).toEqual({
-      ok: false,
-      diagnostic: {
-        code: 'LANG_SYNTAX',
-        severity: 'error',
-        message: 'Unknown name “e3”.',
-        span: { start: 0, end: 2 },
-      },
+  it('retains user identifiers for document-level name resolution', () => {
+    expect(tokenize('V1 = e3')).toMatchObject({
+      ok: true,
+      tokens: [
+        { kind: 'identifier', text: 'V1', span: { start: 0, end: 2 } },
+        { kind: 'equals', text: '=', span: { start: 3, end: 4 } },
+        { kind: 'identifier', text: 'e3', span: { start: 5, end: 7 } },
+        { kind: 'end' },
+      ],
     })
   })
 

@@ -1,7 +1,7 @@
 # MultiVector Expression Language
 
 **Status:** Draft for review
-**Date:** 2026-07-27
+**Date:** 2026-07-30
 **Initial scope:** VGA core
 **Refines:** LANG-001 through LANG-009
 **License:** MIT
@@ -15,6 +15,20 @@ where Studio differs from this document, this document takes precedence.
 A document stores source text and `languageVersion`. Tokens and abstract syntax
 trees are derived data, are rebuilt on load and dimension changes, and are not
 serialized as authoritative document content.
+
+### Current implementation subset
+
+The application currently implements one declaration or anonymous expression
+per row, case-sensitive identifier references, forward-reference resolution,
+and document-level diagnostics for missing names, duplicate declarations,
+cycles, and invalid dependencies. It supports these features for the current
+VGA(2) scalar, vector-constructor, compact-blade, unary-sign, addition,
+subtraction, and geometric-product subset.
+
+Lists, annotations, properties, the remaining operators and functions,
+serialization, and the generalized algebra-symbol registry in this
+specification remain planned. This section records implementation evidence; it
+does not narrow the normative language.
 
 ## 2. Semantic values
 

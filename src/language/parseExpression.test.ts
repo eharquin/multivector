@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { parseExpression } from './parseExpression'
+import {
+  parseDocumentExpression,
+  parseExpression,
+} from './parseExpression'
 
 describe('minimal expression parser', () => {
   it('parses a scalar literal as a complete expression', () => {
@@ -107,6 +110,35 @@ describe('minimal expression parser', () => {
         message: 'Vector components must be scalar expressions.',
         span: { start: 7, end: 9 },
       },
+    })
+  })
+
+  it('parses an optional declaration and identifier references', () => {
+    expect(parseDocumentExpression(' B = V1 * V2 ')).toMatchObject({
+      ok: true,
+      source: {
+        declaration: {
+          name: 'B',
+          span: { start: 1, end: 2 },
+        },
+        expression: {
+          kind: 'binary-expression',
+          operator: '*',
+          left: { kind: 'reference', name: 'V1' },
+          right: { kind: 'reference', name: 'V2' },
+        },
+      },
+    })
+  })
+
+  it('keeps built-in names reserved from declarations', () => {
+    expect(parseDocumentExpression('e1 = 2')).toMatchObject({
+      ok: false,
+      diagnostic: { code: 'LANG_SYNTAX' },
+    })
+    expect(parseDocumentExpression('vector = 2')).toMatchObject({
+      ok: false,
+      diagnostic: { code: 'LANG_SYNTAX' },
     })
   })
 })

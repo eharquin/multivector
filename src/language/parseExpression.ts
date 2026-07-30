@@ -10,11 +10,21 @@ export type {
   BinaryExpressionNode,
   ScalarLiteralNode,
   SurfaceExpressionNode,
+  ReferenceNode,
   VectorConstructorNode,
 } from './ast'
 
 export type ParseResult =
   | Readonly<{ ok: true; expression: SurfaceExpressionNode }>
+  | Readonly<{ ok: false; diagnostic: Diagnostic }>
+
+export type ParsedDocumentExpression = Readonly<{
+  declaration: Readonly<{ name: string; span: SourceSpan }> | null
+  expression: SurfaceExpressionNode
+}>
+
+export type DocumentExpressionParseResult =
+  | Readonly<{ ok: true; source: ParsedDocumentExpression }>
   | Readonly<{ ok: false; diagnostic: Diagnostic }>
 
 type NodeResult =
@@ -56,6 +66,8 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
     case 'basis-blade':
     case 'vector-constructor':
       return false
+    case 'reference':
+      return true
   }
 }
 
@@ -82,6 +94,35 @@ class Parser {
       }
     }
     return { ok: true, expression: expression.node }
+  }
+
+  parseDocumentExpression(): DocumentExpressionParseResult {
+    let declaration: ParsedDocumentExpression['declaration'] = null
+    if (
+      this.current().kind === 'identifier' &&
+      this.tokens[this.offset + 1]?.kind === 'equals'
+    ) {
+      const identifier = this.current()
+      this.offset += 2
+      declaration = { name: identifier.text, span: identifier.span }
+    }
+
+    const expression = this.parseAdditive()
+    if (!expression.ok) return expression
+    const trailing = this.current()
+    if (trailing.kind !== 'end') {
+      return {
+        ok: false,
+        diagnostic: syntaxDiagnostic(
+          'Unexpected source after the expression.',
+          trailing.span,
+        ),
+      }
+    }
+    return {
+      ok: true,
+      source: { declaration, expression: expression.node },
+    }
   }
 
   private current(): Token {
@@ -212,6 +253,17 @@ class Parser {
       }
     }
 
+    if (this.consume('identifier')) {
+      return {
+        ok: true,
+        node: {
+          kind: 'reference',
+          name: token.text,
+          span: token.span,
+        },
+      }
+    }
+
     if (this.consume('vector')) return this.parseVector(token)
 
     const leftParenthesis = this.consume('left-parenthesis')
@@ -323,4 +375,13 @@ export function parseExpression(source: string): ParseResult {
   const tokenized = tokenize(source)
   if (!tokenized.ok) return tokenized
   return new Parser(tokenized.tokens).parse()
+}
+
+/** Parses an optional named declaration followed by an expression. */
+export function parseDocumentExpression(
+  source: string,
+): DocumentExpressionParseResult {
+  const tokenized = tokenize(source)
+  if (!tokenized.ok) return tokenized
+  return new Parser(tokenized.tokens).parseDocumentExpression()
 }

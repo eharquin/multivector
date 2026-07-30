@@ -64,8 +64,8 @@ React.
 
 ## Evaluation and rendering flow
 
-For each item in the current ordered expression document, data crosses the
-boundaries in this order:
+The current application parses every non-empty item, builds document-level name
+and dependency information, then evaluates valid branches in dependency order:
 
 ```mermaid
 flowchart TD
@@ -73,6 +73,7 @@ flowchart TD
     SOURCE["Item source text"]
     TOKENS["Owned tokens<br/>with source spans"]
     AST["Owned syntax tree<br/>with source spans"]
+    GRAPH["Declaration table and<br/>dependency graph"]
     CORE["Core algebra AST<br/>with surface origins"]
     VALUE["Owned multivector"]
     ENTITY["Optional renderer-independent<br/>VGA 2D entity"]
@@ -81,9 +82,11 @@ flowchart TD
     TEXT["Textual state"]
     OUTPUT["React and SVG output"]
 
-    DOCUMENT -->|"each item independently"| SOURCE
+    DOCUMENT --> SOURCE
     SOURCE -->|"tokenize"| TOKENS
-    TOKENS -->|"parseExpression"| AST
+    TOKENS -->|"parseDocumentExpression"| AST
+    AST -->|"collect declarations<br/>and references"| GRAPH
+    GRAPH -->|"valid dependency order"| CORE
     AST -->|"lowerExpression"| CORE
     CORE -->|"evaluateExpression<br/>through VgaEngine"| VALUE
     VALUE -->|"interpretVga2"| ENTITY
@@ -95,12 +98,16 @@ flowchart TD
     UNSUPPORTED --> OUTPUT
 ```
 
-Parsing failures stop the flow and return an owned, source-associated
-diagnostic. A successful evaluation never exposes the ganja.js object used
-inside the algebra adapter. An unsupported interpretation remains a valid
-evaluation with its owned value and inspection text; only its visualization
-state is unsupported. A valid scalar has a standard semantic interpretation
-and textual state but no spatial render primitive.
+Parsing and dependency failures stop only the affected graph branch and return
+owned, source-associated diagnostics. Missing names, duplicate declarations,
+cycles, and invalid upstream dependencies are distinct states. Independent
+branches continue evaluating, and editing or deleting a declaration recomputes
+its transitive dependants from current source; stale values are not retained. A
+successful evaluation never exposes the ganja.js object used inside the algebra
+adapter. An unsupported interpretation remains a valid evaluation with its
+owned value and inspection text; only its visualization state is unsupported.
+A valid scalar has a standard semantic interpretation and textual state but no
+spatial render primitive.
 
 Standard geometric interpretation depends only on the owned multivector value.
 Equivalent expressions therefore receive the same semantic entity:
@@ -109,9 +116,11 @@ classified canonically as scalar zero.
 
 Expression item identities are independent of their source and list position.
 Adding, editing, or deleting one item preserves sibling identities. Items are
-currently evaluated independently, and their supported primitives are composed
-in document order. Named declarations, reference resolution, and dependency
-ordering are intentionally deferred to the dependency-analysis increment.
+parsed independently, then named declarations and anonymous expressions are
+evaluated against one document-level declaration table. References may point
+forward or backward in row order. Declaration names are unique and
+case-sensitive; built-in VGA names remain reserved. Supported primitives are
+composed in document order, regardless of evaluation order.
 
 The surface AST preserves constructor and operator syntax for diagnostics and
 future language-aware editing. Lowering removes syntax sugar before evaluation;
@@ -126,13 +135,13 @@ operations. Compact blades also lower through generator products: `e12` becomes
 | Location | Owns | Does not own |
 | --- | --- | --- |
 | `src/document` | Stable expression item identities, ordered item updates, and the document item-count boundary | Parsing, evaluation, dependencies, persistence, or React focus |
-| `src/language` | Tokenization, surface syntax, lowering to the core algebra AST, source spans, and language diagnostics | Algebra computation, geometric meaning, rendering, or React state |
-| `src/evaluation` | Evaluation of owned syntax against explicit algebra capabilities | Parsing, backend construction, display formatting, or viewport behavior |
+| `src/language` | Tokenization, declaration and expression syntax, reference nodes, lowering to the core algebra AST, source spans, and syntax diagnostics | Document-wide name resolution, algebra computation, geometric meaning, rendering, or React state |
+| `src/evaluation` | Evaluation of owned core syntax against explicit algebra capabilities and resolved reference values | Parsing, dependency planning, backend construction, display formatting, or viewport behavior |
 | `src/algebra` | The algebra-engine interface and ganja.js adaptation | Public source semantics, UI state, geometric interpretation, or rendering |
 | `src/domain` | Backend-independent mathematical values and shared diagnostics | Backend objects, SVG primitives, browser APIs, or React types |
 | `src/geometry` | Conversion from owned algebra values to renderer-independent semantic entities | Parsing, backend operations, screen coordinates, or SVG |
 | `src/visualization` | Renderer-neutral primitives and explicit mathematical-to-screen transforms | Algebra identifiers, backend values, source parsing, or application state |
-| `src/application` | Use-case orchestration and conversion of failures into application states | React rendering, DOM events, backend-specific operations, or CSS |
+| `src/application` | Document-wide declaration resolution, dependency ordering, use-case orchestration, and conversion of failures into application states | React rendering, DOM events, backend-specific operations, or CSS |
 | `src/App.tsx` and styles | User input, accessible presentation, and SVG composition from application state | Language rules, algebra semantics, or backend value inspection |
 | `src/types` | Narrow declarations for untyped external packages | Domain models or feature behavior |
 
@@ -186,6 +195,8 @@ coverage a current delivery requirement.
 8. Diagnostics retain source spans across the parsing and application
    boundaries and are presented textually rather than inferred again in the
    UI.
+9. Dependency order is derived from references, not row position. Invalid graph
+   branches have no value, while independent branches continue evaluating.
 
 These rules implement the replacement boundaries described in
 [Technology Decisions](technology-decisions.md) and the ownership constraints
@@ -199,8 +210,9 @@ their responsibilities should fit the existing dependency direction:
 
 - document state expands its current stable identities and source ownership to
   include algebra configuration, appearance, and persisted revisions;
-- dependency analysis consumes parsed items and produces an evaluation order or
-  source-associated dependency diagnostics;
+- dependency analysis expands from the current declaration table and acyclic
+  traversal into bounded reusable planning nodes for every persisted source
+  property;
 - commands own validated document changes and history boundaries rather than
   allowing UI components to mutate domain state directly;
 - persistence owns canonical JSON, migration, local storage, and failed-write

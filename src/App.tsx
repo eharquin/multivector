@@ -7,10 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { createVga2Engine } from './algebra/vgaEngine'
-import {
-  evaluateSource,
-  type EvaluationState,
-} from './application/evaluateSource'
+import { evaluateDocument } from './application/evaluateDocument'
 import {
   addExpression,
   deleteExpression,
@@ -34,12 +31,6 @@ const viewport: Viewport2d = {
   pixelsPerUnit: 72,
 }
 
-type EvaluatedDocumentItem = Readonly<{
-  item: ExpressionItem
-  position: number
-  evaluation: EvaluationState | null
-}>
-
 function App() {
   const [expressionDoc, setExpressionDoc] = useState(() =>
     expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }]),
@@ -53,16 +44,8 @@ function App() {
   )
   const [panelWidth, setPanelWidth] = useState(340)
 
-  const evaluatedItems = useMemo<readonly EvaluatedDocumentItem[]>(
-    () =>
-      expressionDoc.items.map((item, index) => ({
-        item,
-        position: index + 1,
-        evaluation:
-          item.source.trim() === ''
-            ? null
-            : evaluateSource(item.source, engine, `Vector ${index + 1}`),
-      })),
+  const evaluatedItems = useMemo(
+    () => evaluateDocument(expressionDoc, engine),
     [expressionDoc],
   )
 
