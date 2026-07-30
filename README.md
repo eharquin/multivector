@@ -14,14 +14,27 @@ MultiVector is under active research development.
 
 ## Project status
 
-MultiVector is currently in its initial design phase. No public application is
-available yet.
+MultiVector is under active research development. The current implementation is
+an initial VGA(2) vertical slice: users can create, edit, and delete an ordered
+list of independent scalar, compact-blade (`e1`, `e2`, `e12`, `e21`), or
+`vector(x, y)` expressions. Each expression is tokenized, parsed, lowered to
+core algebra operations, evaluated through an isolated algebra-engine adapter,
+inspected as an owned multivector value, and given a value-based standard
+interpretation. Supported vectors render together in list order; scalars,
+bivectors, and mixed-grade values retain textual states when the viewport has
+no spatial interpretation for them.
+
+Declarations, dependency graphs, persistence, positioning, direct manipulation,
+animation, and additional algebras remain planned work.
+The current slice is implementation evidence toward the VGA 2D Foundation, not
+a completed public release.
 
 ## Documentation
 
 - [Design requirements](docs/design-requirements.md)
 - [Requirement identifier convention](docs/requirements/identifier-convention.md)
 - [Requirement prefix registry](docs/requirements/requirement-prefix-registry.md)
+- [Application architecture](docs/architecture/application-architecture.md)
 - [Technology decisions](docs/architecture/technology-decisions.md)
 - [Expression language](docs/specifications/language.md)
 - [Document format](docs/specifications/document-format.md)

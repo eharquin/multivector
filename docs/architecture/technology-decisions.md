@@ -9,6 +9,9 @@ This document records implementation choices within the applicable technology
 requirements. Choices identified as replaceable may change without affecting
 document semantics, scientific conventions, or public guarantees.
 
+The current code ownership, dependency direction, and boundary rules are
+described in [Application Architecture](application-architecture.md).
+
 ## Initial application stack
 
 The initial application uses:

@@ -3,9 +3,9 @@
 **Status:** Draft for review
 **Kind:** Product milestone
 **Depends on:** VGA Core
-**Applies:** VIZ2D-001 through VIZ2D-006; VIEW2D-001 through VIEW2D-003;
+**Applies:** VIZ2D-001 through VIZ2D-007; VIEW2D-001 through VIEW2D-003;
 VGA-INT-001 through VGA-INT-004
-**Date:** 2026-07-29
+**Date:** 2026-07-30
 
 ## Objective
 
@@ -47,8 +47,9 @@ only after the foundation slice supplies implementation evidence.
   documented example, and fixtures cover its syntax, evaluation, dependency,
   capability, and resource-limit failures with recovery after correction.
 - **F2D-003 — Geometry:** Fixtures and the deployed workflow cover individual,
-  listed, positioned, and zero VGA(2) vectors, including textual unsupported and
-  truncation states.
+  listed, and positioned nonzero VGA(2) vectors and canonical scalar-zero
+  interpretation, including textual non-spatial, unsupported, and truncation
+  states.
 - **F2D-004 — Persistence:** Local save and reload preserve the example.
   Canonical JSON export and import round-trip without losing source or
   identities, and a failed write retains the last valid revision.
