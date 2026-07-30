@@ -128,6 +128,40 @@ describe('VGA 2D vertical slice', () => {
     )
   })
 
+  it('re-evaluates named expressions and their transitive dependents', () => {
+    render(<App />)
+
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'V1 = vector(1, 1)' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const second = screen.getByRole('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'V2 = vector(2, 1)' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const third = screen.getByRole('textbox', { name: 'Expression 3' })
+    fireEvent.change(third, { target: { value: 'B = V1 * V2' } })
+
+    expect(screen.getByText('3 - e12', { selector: 'output' })).toBeInTheDocument()
+    expect(screen.getByLabelText('V1')).toBeInTheDocument()
+    expect(screen.getByLabelText('V2')).toBeInTheDocument()
+
+    fireEvent.change(first, { target: { value: 'V1 = vector(3, 0)' } })
+
+    expect(screen.getByText('6 + 3e12', { selector: 'output' })).toBeInTheDocument()
+  })
+
+  it('shows document-level undefined-name diagnostics', () => {
+    render(<App />)
+
+    const input = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(input, { target: { value: 'B = Missing * e1' } })
+
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('alert')).toHaveTextContent('LANG_UNDEFINED_NAME')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The name “Missing” is not defined.',
+    )
+  })
+
   it('inserts after the active row with Enter and deletes an empty row', () => {
     render(<App />)
 

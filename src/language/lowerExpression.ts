@@ -53,6 +53,12 @@ export function lowerExpression(
       return scalar(expression.value, expression.span)
     case 'basis-blade':
       return lowerBlade(expression.name, expression.span)
+    case 'reference':
+      return {
+        kind: 'reference',
+        name: expression.name,
+        origin: expression.span,
+      }
     case 'unary-expression': {
       const operand = lowerExpression(expression.operand)
       return expression.operator === '+'

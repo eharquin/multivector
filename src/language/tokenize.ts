@@ -4,6 +4,8 @@ export type TokenKind =
   | 'number'
   | 'vector'
   | 'blade'
+  | 'identifier'
+  | 'equals'
   | 'plus'
   | 'minus'
   | 'star'
@@ -91,9 +93,10 @@ export function tokenize(source: string): TokenizeResult {
           span: { start: offset, end },
         })
       } else {
-        return diagnostic(`Unknown name “${text}”.`, {
-          start: offset,
-          end,
+        tokens.push({
+          kind: 'identifier',
+          text,
+          span: { start: offset, end },
         })
       }
       offset = end
@@ -107,6 +110,7 @@ export function tokenize(source: string): TokenizeResult {
       '(': 'left-parenthesis',
       ')': 'right-parenthesis',
       ',': 'comma',
+      '=': 'equals',
     }
     const kind = punctuation[source[offset]]
     if (!kind) {

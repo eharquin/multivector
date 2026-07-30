@@ -12,6 +12,12 @@ export type BasisBladeNode = Readonly<{
   span: SourceSpan
 }>
 
+export type ReferenceNode = Readonly<{
+  kind: 'reference'
+  name: string
+  span: SourceSpan
+}>
+
 export type UnaryExpressionNode = Readonly<{
   kind: 'unary-expression'
   operator: '+' | '-'
@@ -37,6 +43,7 @@ export type VectorConstructorNode = Readonly<{
 export type SurfaceExpressionNode =
   | ScalarLiteralNode
   | BasisBladeNode
+  | ReferenceNode
   | UnaryExpressionNode
   | BinaryExpressionNode
   | VectorConstructorNode
@@ -56,6 +63,11 @@ export type CoreExpressionNode =
       Readonly<{
         kind: 'basis-blade'
         name: 'e1' | 'e2'
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'reference'
+        name: string
       }>)
   | (CoreNodeBase &
       Readonly<{
