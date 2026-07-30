@@ -548,6 +548,8 @@ The current prefixes, their scope, and their normative owner are listed in the
   visualizers.
 - `specifications/language.md` owns normative source syntax and evaluation
   semantics.
+- `architecture/application-architecture.md` describes current code ownership,
+  dependency direction, and implementation boundaries.
 - `architecture/technology-decisions.md` records the selected initial language
   and backend technologies and their replacement boundaries.
 - `specifications/document-format.md` owns the serialized schema,
