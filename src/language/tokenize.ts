@@ -4,6 +4,7 @@ export type TokenKind =
   | 'number'
   | 'vector'
   | 'pseudoscalar'
+  | 'constant'
   | 'blade'
   | 'identifier'
   | 'equals'
@@ -11,6 +12,9 @@ export type TokenKind =
   | 'plus'
   | 'minus'
   | 'star'
+  | 'slash'
+  | 'power'
+  | 'sandwich'
   | 'caret'
   | 'pipe'
   | 'ampersand'
@@ -82,7 +86,9 @@ export function tokenize(source: string): TokenizeResult {
     if (identifier) {
       const end = IDENTIFIER_PATTERN.lastIndex
       const text = identifier[0]
-      if (text === 'vector') {
+      if (text === 'pi' || text === 'tau') {
+        tokens.push({ kind: 'constant', text, span: { start: offset, end } })
+      } else if (text === 'vector') {
         tokens.push({
           kind: 'vector',
           text,
@@ -116,10 +122,22 @@ export function tokenize(source: string): TokenizeResult {
       continue
     }
 
+    if (source.startsWith('>>>', offset)) {
+      tokens.push({ kind: 'sandwich', text: '>>>', span: { start: offset, end: offset + 3 } })
+      offset += 3
+      continue
+    }
+    if (source.startsWith('**', offset)) {
+      tokens.push({ kind: 'power', text: '**', span: { start: offset, end: offset + 2 } })
+      offset += 2
+      continue
+    }
+
     const punctuation: Partial<Record<string, TokenKind>> = {
       '+': 'plus',
       '-': 'minus',
       '*': 'star',
+      '/': 'slash',
       '^': 'caret',
       '|': 'pipe',
       '&': 'ampersand',

@@ -58,6 +58,10 @@ function firstReference(
         firstReference(expression.components[0]) ??
         firstReference(expression.components[1])
       )
+    case 'call-expression':
+      return expression.arguments
+        .map(firstReference)
+        .find((reference) => reference !== null) ?? null
     case 'scalar-literal':
     case 'basis-blade':
     case 'pseudoscalar':

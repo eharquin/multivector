@@ -39,6 +39,11 @@ vectorPart = (1 + V1 + 3e12).g1
 involuted = (1 + V1 + 3e12).involution
 ```
 
+VGA(2) rotor support includes scalar trigonometric and hyperbolic functions,
+closed-form multivector exponentials, integer powers, inverse and division,
+the primary norm, explicit normalization, and the sandwich action. For example,
+`exp(-(pi/4) * e12) >>> e1` rotates `e1` to `e2`.
+
 The document evaluator resolves forward references, evaluates acyclic
 dependencies in dependency order, and reports source-localized missing-name,
 duplicate-name, cycle, and invalid-dependency diagnostics while independent

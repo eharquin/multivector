@@ -296,4 +296,22 @@ describe('document dependency evaluation', () => {
       { status: 'valid', inspection: 'e12' },
     ])
   })
+
+  it('resolves named scalar parameters inside rotor expressions', () => {
+    const results = evaluate(
+      'alpha = pi/2',
+      'R = exp(-(alpha/2)e12)',
+      'V = R >>> e1',
+    )
+
+    expect(results[1].evaluation).toMatchObject({
+      status: 'valid',
+      entity: { kind: 'rotor-2d' },
+    })
+    const vector = results[2].evaluation
+    expect(vector).toMatchObject({ status: 'valid', entity: { kind: 'vector-2d' } })
+    if (vector?.status !== 'valid' || vector.entity.kind !== 'vector-2d') return
+    expect(vector.entity.x).toBeCloseTo(0, 14)
+    expect(vector.entity.y).toBeCloseTo(1, 14)
+  })
 })

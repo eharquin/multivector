@@ -143,4 +143,65 @@ describe('VGA engine adapter', () => {
     expect(Object.isFrozen(value)).toBe(true)
     expect(Object.isFrozen(value.coefficients)).toBe(true)
   })
+
+  it('constructs the quarter-turn rotor and applies the specified sandwich', () => {
+    const engine = createVga2Engine()
+    const exponent = engine.multiply(engine.scalar(-Math.PI / 4), engine.pseudoscalar())
+    const rotated = engine.sandwich(engine.exp(exponent), engine.basisBlade('e1'))
+
+    expect(rotated.coefficients[1]).toBeCloseTo(0, 14)
+    expect(rotated.coefficients[2]).toBeCloseTo(1, 14)
+  })
+
+  it('uses all three closed multivector exponential forms', () => {
+    const engine = createVga2Engine()
+    const nilpotent = engine.add(engine.basisBlade('e1'), engine.pseudoscalar())
+
+    expect(engine.exp(engine.pseudoscalar()).coefficients).toEqual([
+      Math.cos(1), 0, 0, Math.sin(1),
+    ])
+    expect(engine.exp(engine.basisBlade('e1')).coefficients).toEqual([
+      Math.cosh(1), Math.sinh(1), 0, 0,
+    ])
+    expect(engine.exp(nilpotent).coefficients).toEqual([1, 1, 0, 1])
+
+    const twiceBivector = engine.multiply(engine.scalar(2), engine.pseudoscalar())
+    expect(engine.exp(twiceBivector).coefficients).toEqual([
+      Math.cos(2), 0, 0, Math.sin(2),
+    ])
+  })
+
+  it('supports inverse, division, integer powers, norm, and normalization', () => {
+    const engine = createVga2Engine()
+    const value = engine.add(engine.scalar(2), engine.pseudoscalar())
+
+    expect(engine.multiply(value, engine.inverse(value)).coefficients).toEqual([1, 0, 0, 0])
+    expect(engine.divide(value, value).coefficients).toEqual([1, 0, 0, 0])
+    expect(engine.power(engine.pseudoscalar(), -1).coefficients).toEqual([0, 0, 0, -1])
+    expect(engine.norm(value).coefficients).toEqual([Math.sqrt(5), 0, 0, 0])
+    const normalized = engine.normalize(value)
+    expect(normalized.status).toBe('normalized')
+    expect(engine.norm(normalized.value).coefficients[0]).toBeCloseTo(1, 14)
+  })
+
+  it('rejects singular inverses and non-scalar elementary functions', () => {
+    const engine = createVga2Engine()
+    const singular = engine.add(engine.scalar(1), engine.basisBlade('e1'))
+
+    expect(() => engine.inverse(singular)).toThrow('not invertible')
+    expect(() => engine.scalarFunction('sin', engine.basisBlade('e1'))).toThrow('requires a scalar')
+    expect(engine.normalize(engine.scalar(0))).toEqual({
+      status: 'unavailable',
+      value: engine.scalar(0),
+    })
+    expect(() => engine.exp(singular)).toThrow('outside the supported closed forms')
+  })
+
+  it('rejects non-finite intermediate inverse and norm calculations', () => {
+    const engine = createVga2Engine()
+    const large = engine.scalar(Number.MAX_VALUE)
+
+    expect(() => engine.inverse(large)).toThrow('non-finite intermediate')
+    expect(() => engine.norm(large)).toThrow('non-finite intermediate')
+  })
 })

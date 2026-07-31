@@ -80,6 +80,17 @@ export function lowerExpression(
       if (expression.operator === '*') {
         return multiply(left, right, expression.span)
       }
+      if (expression.operator === '/' || expression.operator === '>>>') {
+        return {
+          kind: expression.operator === '/' ? 'divide' : 'sandwich',
+          left,
+          right,
+          origin: expression.span,
+        }
+      }
+      if (expression.operator === '**') {
+        return { kind: 'power', base: left, exponent: right, origin: expression.span }
+      }
       if (
         expression.operator === '^' ||
         expression.operator === '|' ||
@@ -121,20 +132,40 @@ export function lowerExpression(
         expression.span,
       )
     }
+    case 'call-expression': {
+      const operand = lowerExpression(expression.arguments[0])
+      if (expression.callee === 'exp') {
+        return { kind: 'exp', operand, origin: expression.span }
+      }
+      const scalarFunctions = ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'] as const
+      if (scalarFunctions.some((name) => name === expression.callee)) {
+        return {
+          kind: 'scalar-function',
+          name: expression.callee as (typeof scalarFunctions)[number],
+          operand,
+          origin: expression.span,
+        }
+      }
+      return {
+        kind: 'unsupported-function',
+        name: expression.callee,
+        origin: expression.span,
+      }
+    }
     case 'property-expression': {
       const operand = lowerExpression(expression.object)
       if (
         expression.property === 'dual' ||
         expression.property === 'reverse' ||
-        expression.property === 'involution'
+        expression.property === 'involution' ||
+        expression.property === 'inverse' ||
+        expression.property === 'norm'
       ) {
         return {
-          kind:
-            expression.property === 'dual'
-              ? 'dual'
-              : expression.property === 'reverse'
-                ? 'reverse'
-                : 'grade-involution',
+          kind: expression.property === 'dual' ? 'dual'
+            : expression.property === 'reverse' ? 'reverse'
+              : expression.property === 'involution' ? 'grade-involution'
+                : expression.property === 'inverse' ? 'inverse' : 'norm',
           operand,
           origin: expression.span,
         }

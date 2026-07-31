@@ -202,21 +202,31 @@ an epsilon.
 
 ## 8. Exponential
 
-Scalar `exp` uses the common scalar function. When the VGA multivector
-exponential capability is requested, it is the power-series exponential under
-the geometric product:
+Scalar `exp` uses the common scalar function. Mathematically, the VGA
+multivector exponential is the power-series exponential under the geometric
+product:
 
 ```text
 exp(A) = sum(A**k / k!), k = 0 through infinity
 ```
 
-The implementation may use a mathematically equivalent deterministic algorithm.
-It shall obey the common work and finiteness limits. For a unit Euclidean
-bivector `B`, where `B**2 = -1`,
+An implementation may advertise a bounded exponential capability rather than
+the general series, provided unsupported inputs receive a capability or domain
+diagnostic. The initial VGA(2) profile supports finite `X` when `X` is scalar or
+when `X**2 = s` is exactly scalar. It uses the following closed forms:
 
 ```text
-exp(t * B) = cos(t) + sin(t) * B
+exp(X) = cos(q)  + (sin(q)/q)  * X, when s < 0 and q = sqrt(-s)
+exp(X) = 1 + X,                         when s = 0
+exp(X) = cosh(q) + (sinh(q)/q) * X, when s > 0 and q = sqrt(s)
 ```
+
+Consequently, for finite scalar `a` and an `M` satisfying one of the stated
+unit or nilpotent square conditions, these specialize to
+`cos(a) + sin(a)M` when `M**2 = -1`, `cosh(a) + sinh(a)M` when
+`M**2 = 1`, and `1 + aM` when `M**2 = 0`. Whether `X**2` is scalar is an exact
+algebraic decision; numerical tolerances apply only when comparing analytical
+fixtures involving transcendental results.
 
 ## 9. Owned values and canonical inspection
 

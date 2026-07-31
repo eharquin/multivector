@@ -85,6 +85,8 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
       return collectReferences(expression.object)
     case 'vector-constructor':
       return expression.components.flatMap(collectReferences)
+    case 'call-expression':
+      return expression.arguments.flatMap(collectReferences)
     case 'scalar-literal':
     case 'basis-blade':
     case 'pseudoscalar':
