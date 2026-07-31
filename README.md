@@ -30,13 +30,16 @@ The document evaluator resolves forward references, evaluates acyclic
 dependencies in dependency order, and reports source-localized missing-name,
 duplicate-name, cycle, and invalid-dependency diagnostics while independent
 branches continue evaluating. Values pass through the isolated algebra-engine
-adapter and value-based standard interpretation. Supported vectors render
-together in list order. Each row also owns an optional position expression;
-positioned vectors render from that position to their derived head, while
-`V.position` and `V.head` may be referenced by other expressions. Position
-metadata remains separate from the vector's multivector coefficients. Scalars,
-bivectors, and mixed-grade values retain textual states when the viewport has
-no spatial interpretation for them.
+adapter and value-based standard interpretation. The expression panel identifies
+scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
+canonical values. Supported vectors render together in list order. Each vector
+or bivector row also owns an optional position expression; positioned vectors
+render from that position to their derived head, while bivectors retain their
+position for later visualization support. `V.position` and `V.head`, and
+`B.position`, may be referenced by other expressions. Position metadata remains
+separate from multivector coefficients. Scalars, bivectors, rotors, and
+mixed-grade values retain textual states when the viewport has no spatial
+visualization for them.
 
 Persistence, lists, appearance controls, direct manipulation, animation, and
 additional algebras remain planned work.

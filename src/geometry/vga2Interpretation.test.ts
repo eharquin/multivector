@@ -11,8 +11,10 @@ describe('standard VGA 2D interpretation', () => {
     })
   })
 
-  it('does not reinterpret mixed-grade values as vectors', () => {
-    expect(interpretVga2(ownedMultivector([1, 2, 1, 0]))).toBeNull()
+  it('classifies a value spanning odd and even grades as mixed', () => {
+    expect(interpretVga2(ownedMultivector([1, 2, 1, 0]))).toEqual({
+      kind: 'mixed-multivector',
+    })
   })
 
   it('classifies the all-zero multivector canonically as scalar zero', () => {
@@ -26,6 +28,21 @@ describe('standard VGA 2D interpretation', () => {
     expect(interpretVga2(ownedMultivector([12, 0, 0, 0]))).toEqual({
       kind: 'scalar',
       value: 12,
+    })
+  })
+
+  it('maps a pure grade-two value to a semantic bivector', () => {
+    expect(interpretVga2(ownedMultivector([0, 0, 0, -3]))).toEqual({
+      kind: 'bivector-2d',
+      value: -3,
+    })
+  })
+
+  it('maps a non-pure even value to a semantic rotor', () => {
+    expect(interpretVga2(ownedMultivector([1, 0, 0, -1]))).toEqual({
+      kind: 'rotor-2d',
+      scalar: 1,
+      bivector: -1,
     })
   })
 })

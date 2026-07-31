@@ -252,9 +252,10 @@ h2 {
   white-space: nowrap;
 }
 
-.item-visualization-note {
-  color: var(--muted);
-  font-size: 0.7rem;
+.object-kind {
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 650;
 }
 
 .expression-empty-state {

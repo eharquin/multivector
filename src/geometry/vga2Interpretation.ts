@@ -13,7 +13,44 @@ export type ScalarEntity = Readonly<{
   value: number
 }>
 
-export type StandardVga2Entity = ScalarEntity | Vector2dEntity
+/** A signed oriented area with no intrinsic location. */
+export type Bivector2dEntity = Readonly<{
+  kind: 'bivector-2d'
+  value: number
+}>
+
+/** An even-grade VGA(2) value with scalar and bivector parts. */
+export type Rotor2dEntity = Readonly<{
+  kind: 'rotor-2d'
+  scalar: number
+  bivector: number
+}>
+
+/** A valid value spanning object kinds with no single standard reading. */
+export type MixedMultivectorEntity = Readonly<{
+  kind: 'mixed-multivector'
+}>
+
+export type StandardVga2Entity =
+  | ScalarEntity
+  | Vector2dEntity
+  | Bivector2dEntity
+  | Rotor2dEntity
+  | MixedMultivectorEntity
+
+export function describeVga2Entity(entity: StandardVga2Entity): string {
+  switch (entity.kind) {
+    case 'scalar': return 'Scalar'
+    case 'vector-2d': return 'Vector'
+    case 'bivector-2d': return 'Bivector'
+    case 'rotor-2d': return 'Rotor'
+    case 'mixed-multivector': return 'Mixed multivector'
+  }
+}
+
+export function supportsVga2Position(entity: StandardVga2Entity): boolean {
+  return entity.kind === 'vector-2d' || entity.kind === 'bivector-2d'
+}
 
 /**
  * Applies the canonical standard VGA(2) interpretation to an owned value.
@@ -24,7 +61,7 @@ export type StandardVga2Entity = ScalarEntity | Vector2dEntity
  */
 export function interpretVga2(
   value: OwnedMultivector,
-): StandardVga2Entity | null {
+): StandardVga2Entity {
   const [scalar, x, y, bivector] = value.coefficients
   if (x === 0 && y === 0 && bivector === 0) {
     return Object.freeze({
@@ -33,11 +70,25 @@ export function interpretVga2(
     })
   }
 
-  if (scalar !== 0 || bivector !== 0) return null
+  if (scalar === 0 && bivector === 0) {
+    return Object.freeze({
+      kind: 'vector-2d' as const,
+      x,
+      y,
+    })
+  }
 
-  return Object.freeze({
-    kind: 'vector-2d' as const,
-    x,
-    y,
-  })
+  if (scalar === 0 && x === 0 && y === 0) {
+    return Object.freeze({ kind: 'bivector-2d' as const, value: bivector })
+  }
+
+  if (x === 0 && y === 0) {
+    return Object.freeze({
+      kind: 'rotor-2d' as const,
+      scalar,
+      bivector,
+    })
+  }
+
+  return Object.freeze({ kind: 'mixed-multivector' as const })
 }

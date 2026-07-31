@@ -20,7 +20,9 @@ and undo or redo stacks are derived or session state and are never serialized.
 
 The in-memory expression document currently owns stable item identities, value
 source, and an optional separate position source. Value and position sources
-are evaluated as distinct dependency nodes. Serialization, canonical JSON,
+are evaluated as distinct dependency nodes for interpreted vectors and
+bivectors; other value kinds preserve position source without activating it.
+Serialization, canonical JSON,
 migration, appearance, controls, and the remaining format-version-one fields
 are not implemented yet. This note records implementation evidence and does not
 change the normative serialized structure below.

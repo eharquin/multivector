@@ -9,6 +9,10 @@ import {
 import { createVga2Engine } from './algebra/vgaEngine'
 import { evaluateDocument } from './application/evaluateDocument'
 import {
+  describeVga2Entity,
+  supportsVga2Position,
+} from './geometry/vga2Interpretation'
+import {
   addExpression,
   deleteExpression,
   expressionDocument,
@@ -242,7 +246,7 @@ function App() {
                 positionEvaluation?.status === 'invalid'
               const supportsPosition =
                 evaluation?.status === 'valid' &&
-                evaluation.entity?.kind === 'vector-2d'
+                supportsVga2Position(evaluation.entity)
 
               return (
                 <article
@@ -284,12 +288,10 @@ function App() {
                         >
                           {evaluation?.status === 'valid' ? (
                             <>
+                              <span className="object-kind">
+                                {describeVga2Entity(evaluation.entity)}
+                              </span>
                               <output>{evaluation.inspection}</output>
-                              {evaluation.visualization.status === 'unsupported' && (
-                                <span className="item-visualization-note">
-                                  No supported 2D interpretation
-                                </span>
-                              )}
                             </>
                           ) : evaluation?.status === 'invalid' ? (
                             <>
