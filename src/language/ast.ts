@@ -41,7 +41,7 @@ export type UnaryExpressionNode = Readonly<{
 
 export type BinaryExpressionNode = Readonly<{
   kind: 'binary-expression'
-  operator: '+' | '-' | '*' | '^' | '|' | '&'
+  operator: '+' | '-' | '*' | '/' | '**' | '^' | '|' | '&' | '>>>'
   left: SurfaceExpressionNode
   right: SurfaceExpressionNode
   implicit: boolean
@@ -54,6 +54,13 @@ export type VectorConstructorNode = Readonly<{
   span: SourceSpan
 }>
 
+export type CallExpressionNode = Readonly<{
+  kind: 'call-expression'
+  callee: string
+  arguments: readonly SurfaceExpressionNode[]
+  span: SourceSpan
+}>
+
 export type SurfaceExpressionNode =
   | ScalarLiteralNode
   | BasisBladeNode
@@ -63,6 +70,7 @@ export type SurfaceExpressionNode =
   | UnaryExpressionNode
   | BinaryExpressionNode
   | VectorConstructorNode
+  | CallExpressionNode
 
 type CoreNodeBase = Readonly<{
   /** Span of the surface expression responsible for this core operation. */
@@ -89,13 +97,39 @@ export type CoreExpressionNode =
       }>)
   | (CoreNodeBase &
       Readonly<{
-        kind: 'add' | 'multiply' | 'outer' | 'inner' | 'regressive'
+        kind:
+          | 'add'
+          | 'multiply'
+          | 'divide'
+          | 'outer'
+          | 'inner'
+          | 'regressive'
+          | 'sandwich'
         left: CoreExpressionNode
         right: CoreExpressionNode
       }>)
   | (CoreNodeBase &
       Readonly<{
-        kind: 'negate' | 'reverse' | 'dual' | 'grade-involution'
+        kind: 'power'
+        base: CoreExpressionNode
+        exponent: CoreExpressionNode
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind:
+          | 'negate'
+          | 'reverse'
+          | 'dual'
+          | 'grade-involution'
+          | 'inverse'
+          | 'norm'
+          | 'exp'
+        operand: CoreExpressionNode
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'scalar-function'
+        name: 'sin' | 'cos' | 'tan' | 'sinh' | 'cosh' | 'tanh'
         operand: CoreExpressionNode
       }>)
   | (CoreNodeBase &
@@ -116,4 +150,9 @@ export type CoreExpressionNode =
         operand: CoreExpressionNode
         property: string
         propertyOrigin: SourceSpan
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'unsupported-function'
+        name: string
       }>)

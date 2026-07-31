@@ -276,7 +276,7 @@ Parentheses may always make grouping explicit.
 ## 10. Built-in functions and norms
 
 The initial VGA core provides `abs`, `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`,
-`asin`, `acos`, `atan`, `min`, and `max`. Scalar-only functions require pure
+`sinh`, `cosh`, `tanh`, `asin`, `acos`, `atan`, `min`, and `max`. Scalar-only functions require pure
 grade-zero arguments unless an algebra capability explicitly defines their
 multivector extension. In particular, an algebra may expose a multivector
 exponential through `exp`.
@@ -286,6 +286,11 @@ return a grade-zero multivector. In language version 1 they accept neither list
 arguments nor non-scalar multivectors and do not broadcast or reduce. Variadic,
 elementwise-list, and list-reduction forms require a later language design.
 Factorial is not part of the initial language.
+
+Scalar transcendental functions reject non-finite results. `tan` also produces
+a domain diagnostic at its representable poles using the convention-version
+numeric comparison bound; this numerical boundary check does not alter any
+multivector grade or algebraic-domain classification.
 
 `A.norm` denotes the primary norm defined by the active algebra's versioned
 conventions. `A.inorm` is available only for an algebra that explicitly defines

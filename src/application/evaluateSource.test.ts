@@ -140,4 +140,41 @@ describe('source evaluation pipeline', () => {
       },
     })
   })
+
+  it('evaluates a rotor quarter-turn through source syntax', () => {
+    const result = evaluateSource('exp(-(pi/4)e12) >>> e1', engine)
+    expect(result).toMatchObject({ status: 'valid', entity: { kind: 'vector-2d' } })
+    if (result.status !== 'valid' || result.entity.kind !== 'vector-2d') return
+    expect(result.entity.x).toBeCloseTo(0, 14)
+    expect(result.entity.y).toBeCloseTo(1, 14)
+  })
+
+  it.each([
+    ['sin(pi/2)', 1],
+    ['cos(pi)', -1],
+    ['sinh(0)', 0],
+    ['cosh(0)', 1],
+    ['tanh(0)', 0],
+  ])('evaluates scalar function %s', (source, expected) => {
+    expect(validValue(source).coefficients[0]).toBeCloseTo(expected, 14)
+  })
+
+  it('reports singular and scalar-domain failures with source spans', () => {
+    expect(evaluateSource('(1 + e1).inverse', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'ALG_SINGULAR', span: { start: 0, end: 16 } },
+    })
+    expect(evaluateSource('sin(e1)', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'ALG_DOMAIN', span: { start: 0, end: 7 } },
+    })
+    expect(evaluateSource('tan(pi/2)', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'ALG_DOMAIN' },
+    })
+    expect(evaluateSource('unknown(1)', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' },
+    })
+  })
 })

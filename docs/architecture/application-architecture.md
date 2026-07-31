@@ -147,6 +147,14 @@ the pseudoscalar lower to dedicated core operations. Their implementation remain
 engine boundary; convention fixtures use project-owned analytical results
 rather than treating ganja.js as the expected-result authority.
 
+Function calls remain generic in the surface tree so source spans and future
+definition registration do not require one parser node per function. Lowering
+maps supported calls to explicit core operations. Expected algebra failures
+cross the engine boundary as owned operation errors; evaluation attaches the
+originating source span before application presentation. Owned multivectors
+reject non-finite coefficients at construction, so `NaN` and infinities cannot
+enter interpretation or rendering state.
+
 ## Directory responsibilities
 
 | Location | Owns | Does not own |

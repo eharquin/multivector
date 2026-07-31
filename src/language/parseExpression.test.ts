@@ -173,6 +173,10 @@ describe('minimal expression parser', () => {
       ok: false,
       diagnostic: { code: 'LANG_SYNTAX' },
     })
+    expect(parseDocumentExpression('sin = 2')).toMatchObject({
+      ok: false,
+      diagnostic: { code: 'LANG_SYNTAX' },
+    })
   })
 
   it('parses read-only position and head properties', () => {
@@ -258,6 +262,42 @@ describe('minimal expression parser', () => {
             property: 'dual',
           },
         },
+      },
+    })
+  })
+
+  it('parses generic calls, powers, division, and sandwich precedence', () => {
+    expect(parseExpression('exp(-(pi/4) * e12) >>> e1 + e2**2')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'binary-expression',
+        operator: '+',
+        left: {
+          kind: 'binary-expression',
+          operator: '>>>',
+          left: { kind: 'call-expression', callee: 'exp' },
+        },
+        right: { kind: 'binary-expression', operator: '**' },
+      },
+    })
+  })
+
+  it('accepts a parenthesized scalar coefficient before a blade', () => {
+    expect(parseExpression('exp(-(pi/4)e12)')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'call-expression',
+        arguments: [{ kind: 'binary-expression', operator: '*', implicit: true }],
+      },
+    })
+  })
+
+  it('keeps geometric power right-associative', () => {
+    expect(parseExpression('A**B**2')).toMatchObject({
+      ok: true,
+      expression: {
+        operator: '**',
+        right: { operator: '**' },
       },
     })
   })

@@ -19,6 +19,9 @@ export type OwnedMultivector = Readonly<{
 export function ownedMultivector(
   coefficients: readonly number[],
 ): OwnedMultivector {
+  if (coefficients.some((coefficient) => !Number.isFinite(coefficient))) {
+    throw new RangeError('Multivector coefficients must be finite.')
+  }
   return Object.freeze({
     kind: 'multivector' as const,
     coefficients: Object.freeze(

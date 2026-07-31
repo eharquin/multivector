@@ -15,6 +15,8 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     entries: [
       ['A + B, A - B', 'addition and subtraction'],
       ['A * B', 'geometric product'],
+      ['A / B', 'division when B is invertible'],
+      ['A**n', 'integer geometric power'],
       ['A ^ B', 'outer product'],
       ['A | B', 'inner product'],
       ['A & B', 'regressive product'],
@@ -22,12 +24,15 @@ export const EXPRESSION_REFERENCE = Object.freeze([
       ['~A, A.reverse', 'reverse'],
       ['!A, A.dual', 'dual'],
       ['A.involution', 'grade involution'],
+      ['R >>> A', 'sandwich action R * A * ~R'],
     ],
   },
   {
     title: 'Properties',
     entries: [
       ['A.g0, A.g1, A.g2', 'project onto one grade'],
+      ['A.inverse', 'inverse when it exists'],
+      ['A.norm', 'primary VGA norm'],
       ['A.e, A.e1, A.e2, A.e12', 'extract one coefficient as a scalar'],
       ['V.position', 'position of a named vector'],
       ['B.position', 'position of a named bivector'],
@@ -35,12 +40,23 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     ],
   },
   {
+    title: 'Functions',
+    entries: [
+      ['exp(A)', 'scalar or supported closed-form multivector exponential'],
+      ['sin(a), cos(a), tan(a)', 'scalar trigonometric functions'],
+      ['sinh(a), cosh(a), tanh(a)', 'scalar hyperbolic functions'],
+      ['pi, tau', 'predefined scalar constants'],
+    ],
+  },
+  {
     title: 'Precedence',
     entries: [
-      ['(...) and properties', 'strongest'],
+      ['(...) calls and properties', 'strongest'],
+      ['A**n', 'right-associative geometric power'],
       ['!A, ~A, +A, -A', 'unary operations'],
       ['A ^ B, A & B, A | B', 'geometric derived products'],
-      ['A * B', 'geometric product'],
+      ['A * B, A / B', 'geometric product and division'],
+      ['R >>> A', 'sandwich action'],
       ['A + B, A - B', 'weakest'],
     ],
   },

@@ -31,6 +31,10 @@ type NodeResult =
   | Readonly<{ ok: true; node: SurfaceExpressionNode }>
   | Readonly<{ ok: false; diagnostic: Diagnostic }>
 
+const RESERVED_FUNCTION_NAMES = new Set([
+  'exp', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh',
+])
+
 function syntaxDiagnostic(message: string, span: SourceSpan): Diagnostic {
   return {
     code: 'LANG_SYNTAX',
@@ -45,11 +49,7 @@ function insertionAt(token: Token): SourceSpan {
 }
 
 function isImplicitCoefficient(expression: SurfaceExpressionNode): boolean {
-  return (
-    expression.kind === 'scalar-literal' ||
-    (expression.kind === 'unary-expression' &&
-      expression.operand.kind === 'scalar-literal')
-  )
+  return isScalarExpression(expression)
 }
 
 function isScalarExpression(expression: SurfaceExpressionNode): boolean {
@@ -70,6 +70,10 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
     case 'vector-constructor':
     case 'pseudoscalar':
       return false
+    case 'call-expression':
+      return expression.callee === 'exp'
+        ? isScalarExpression(expression.arguments[0])
+        : true
     case 'property-expression':
       return (
         expression.property === 'e' ||
@@ -116,6 +120,15 @@ class Parser {
     ) {
       const identifier = this.current()
       this.offset += 2
+      if (RESERVED_FUNCTION_NAMES.has(identifier.text)) {
+        return {
+          ok: false,
+          diagnostic: syntaxDiagnostic(
+            `The built-in name “${identifier.text}” cannot be redefined.`,
+            identifier.span,
+          ),
+        }
+      }
       declaration = { name: identifier.text, span: identifier.span }
     }
 
@@ -149,7 +162,7 @@ class Parser {
   }
 
   private parseAdditive(): NodeResult {
-    let left = this.parseMultiplicative()
+    let left = this.parseSandwich()
     if (!left.ok) return left
 
     while (
@@ -158,7 +171,7 @@ class Parser {
     ) {
       const operator = this.current()
       this.offset += 1
-      const right = this.parseMultiplicative()
+      const right = this.parseSandwich()
       if (!right.ok) return right
       left = {
         ok: true,
@@ -178,16 +191,35 @@ class Parser {
     return left
   }
 
+  private parseSandwich(): NodeResult {
+    let left = this.parseMultiplicative()
+    if (!left.ok) return left
+    while (this.consume('sandwich')) {
+      const right = this.parseMultiplicative()
+      if (!right.ok) return right
+      left = {
+        ok: true,
+        node: {
+          kind: 'binary-expression', operator: '>>>', left: left.node,
+          right: right.node, implicit: false,
+          span: { start: left.node.span.start, end: right.node.span.end },
+        },
+      }
+    }
+    return left
+  }
+
   private parseMultiplicative(): NodeResult {
     let left = this.parseGeometric()
     if (!left.ok) return left
 
     while (true) {
-      const explicit = this.consume('star')
+      const explicit = this.consume('star') ?? this.consume('slash')
       const implicit: boolean =
         !explicit &&
         isImplicitCoefficient(left.node) &&
         (this.current().kind === 'blade' ||
+          this.current().kind === 'constant' ||
           this.current().kind === 'pseudoscalar')
 
       if (!explicit && !implicit) break
@@ -198,7 +230,7 @@ class Parser {
         ok: true,
         node: {
           kind: 'binary-expression',
-          operator: '*',
+          operator: explicit?.kind === 'slash' ? '/' : '*',
           left: left.node,
           right: right.node,
           implicit,
@@ -251,7 +283,7 @@ class Parser {
       this.consume('minus') ??
       this.consume('tilde') ??
       this.consume('bang')
-    if (!operator) return this.parsePostfix()
+    if (!operator) return this.parsePower()
 
     const operand = this.parseUnary()
     if (!operand.ok) return operand
@@ -269,6 +301,21 @@ class Parser {
                 : '!',
         operand: operand.node,
         span: { start: operator.span.start, end: operand.node.span.end },
+      },
+    }
+  }
+
+  private parsePower(): NodeResult {
+    const base = this.parsePostfix()
+    if (!base.ok || !this.consume('power')) return base
+    const exponent = this.parseUnary()
+    if (!exponent.ok) return exponent
+    return {
+      ok: true,
+      node: {
+        kind: 'binary-expression', operator: '**', left: base.node,
+        right: exponent.node, implicit: false,
+        span: { start: base.node.span.start, end: exponent.node.span.end },
       },
     }
   }
@@ -350,6 +397,17 @@ class Parser {
       }
     }
 
+    if (this.consume('constant')) {
+      return {
+        ok: true,
+        node: {
+          kind: 'scalar-literal',
+          value: token.text === 'pi' ? Math.PI : 2 * Math.PI,
+          span: token.span,
+        },
+      }
+    }
+
     if (this.consume('blade')) {
       return {
         ok: true,
@@ -370,6 +428,9 @@ class Parser {
     }
 
     if (this.consume('identifier')) {
+      if (this.current().kind === 'left-parenthesis') {
+        return this.parseCall(token)
+      }
       return {
         ok: true,
         node: {
@@ -457,6 +518,31 @@ class Parser {
     return {
       ok: false,
       diagnostic: syntaxDiagnostic('Expected an expression.', token.span),
+    }
+  }
+
+
+  private parseCall(callee: Token): NodeResult {
+    this.consume('left-parenthesis')
+    const argument = this.parseAdditive()
+    if (!argument.ok) return argument
+    const rightParenthesis = this.consume('right-parenthesis')
+    if (!rightParenthesis) {
+      return {
+        ok: false,
+        diagnostic: syntaxDiagnostic(
+          `Expected “)” after the argument to “${callee.text}”.`,
+          insertionAt(this.current()),
+        ),
+      }
+    }
+    return {
+      ok: true,
+      node: {
+        kind: 'call-expression', callee: callee.text,
+        arguments: [argument.node],
+        span: { start: callee.span.start, end: rightParenthesis.span.end },
+      },
     }
   }
 
