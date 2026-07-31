@@ -37,18 +37,21 @@ describe('source evaluation pipeline', () => {
     })
   })
 
-  it('interprets a bivector without creating a render primitive', () => {
+  it('interprets a bivector and creates an accessible oriented-area primitive', () => {
     const result = evaluateSource('e1 * e2', engine)
 
     expect(result).toMatchObject({
       status: 'valid',
       inspection: 'e12',
       entity: { kind: 'bivector-2d', value: 1 },
-      primitive: null,
-      visualization: {
-        status: 'unsupported',
-        message: 'This VGA 2D object has no supported visualization.',
+      primitive: {
+        kind: 'oriented-area',
+        area: 1,
+        orientation: 'counterclockwise',
+        accessibleName: 'Bivector 1',
+        shape: { kind: 'loop', center: { x: 0, y: 0 } },
       },
+      visualization: { status: 'available' },
     })
   })
 

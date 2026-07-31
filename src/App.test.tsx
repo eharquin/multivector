@@ -17,7 +17,7 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('2e1 + e2')).toBeInTheDocument()
     expect(
       screen.getByRole('img', {
-        name: /Two-dimensional vector viewport/,
+        name: /Two-dimensional VGA viewport/,
       }),
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
   })
@@ -36,7 +36,7 @@ describe('VGA 2D vertical slice', () => {
     )
     expect(screen.getByRole('alert')).toHaveTextContent('Source characters')
     expect(screen.queryByText('2e1 + e2')).not.toBeInTheDocument()
-    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+    expect(screen.getByRole('img')).toHaveTextContent('No spatial objects are visible')
   })
 
   it('recovers immediately when invalid source is corrected', () => {
@@ -67,7 +67,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.change(input, { target: { value: '0' } })
 
     expect(screen.getByText('0', { selector: 'output' })).toBeInTheDocument()
-    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+    expect(screen.getByRole('img')).toHaveTextContent('No spatial objects are visible')
   })
 
   it('evaluates a nonzero scalar without treating it as invalid', () => {
@@ -78,7 +78,7 @@ describe('VGA 2D vertical slice', () => {
 
     expect(input).toHaveAttribute('aria-invalid', 'false')
     expect(screen.getByText('12', { selector: 'output' })).toBeInTheDocument()
-    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+    expect(screen.getByRole('img')).toHaveTextContent('No spatial objects are visible')
   })
 
   it('accepts basis-blade notation through the same visual workflow', () => {
@@ -119,7 +119,7 @@ describe('VGA 2D vertical slice', () => {
 
     expect(screen.getAllByLabelText(/^Vector [12]$/)).toHaveLength(2)
     expect(screen.getByRole('img')).toHaveTextContent(
-      '2 vectors are visible.',
+      '2 vectors and 0 bivectors are visible.',
     )
     expect(screen.getByRole('img')).toHaveTextContent(
       'Vector 2 runs from the origin to -1, 2.',
@@ -218,7 +218,9 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.getByRole('textbox', { name: 'Position 1' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+    expect(screen.getByRole('img')).toHaveTextContent(
+      'Bivector 1 is an oriented loop with signed value 3, area 3, counterclockwise orientation, positioned at the origin.',
+    )
   })
 
   it.each([
@@ -239,7 +241,7 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.queryByText(/‖/)).not.toBeInTheDocument()
   })
 
-  it('evaluates an outer product as a textual bivector object', () => {
+  it('evaluates an outer product as a textual and visual bivector object', () => {
     render(<App />)
 
     fireEvent.change(
@@ -249,7 +251,9 @@ describe('VGA 2D vertical slice', () => {
 
     expect(screen.getByText('Bivector')).toBeInTheDocument()
     expect(screen.getByText('e12', { selector: 'output' })).toBeInTheDocument()
-    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+    expect(screen.getByRole('img')).toHaveTextContent(
+      'Bivector 1 is an oriented loop with signed value 1, area 1, counterclockwise orientation, positioned at the origin.',
+    )
   })
 
   it('inserts after the active row with Enter and deletes an empty row', () => {

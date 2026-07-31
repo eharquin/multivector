@@ -79,7 +79,7 @@ flowchart TD
     ENTITY["Optional renderer-independent<br/>VGA 2D entity"]
     UNSUPPORTED["Unsupported-interpretation<br/>textual state"]
     RECORD["Evaluated value with separate<br/>position metadata"]
-    PRIMITIVE["Optional positioned<br/>oriented-segment primitive"]
+    PRIMITIVE["Optional positioned segment<br/>or oriented-area primitive"]
     TEXT["Textual state"]
     OUTPUT["React and SVG output"]
 
@@ -110,9 +110,10 @@ its transitive dependants from current source; stale values are not retained. A
 successful evaluation never exposes the ganja.js object used inside the algebra
 adapter. The standard VGA(2) interpretation classifies every exact owned value
 as a scalar, vector, bivector, rotor, or mixed multivector. A valid scalar has a
-textual state but no spatial render primitive. Bivectors, rotors, and mixed
-multivectors likewise remain valid and inspectable while their visualization
-state is unsupported.
+textual state but no spatial render primitive. Vectors produce oriented
+segments. Bivectors produce signed-area loops, or construction-aware
+parallelograms for safe direct outer products. Rotors and mixed multivectors
+remain valid and inspectable while their visualization state is unsupported.
 
 Standard geometric interpretation depends only on the owned multivector value.
 Equivalent expressions therefore receive the same semantic entity:
@@ -131,9 +132,10 @@ scalars, rotors, and mixed multivectors preserve any stored position source
 without evaluating it. Bare references target value nodes, `V.position` and
 `B.position` target position nodes, and vector-only `V.head` derives the sum of
 the vector value and position. Missing or invalid position results use the
-origin without changing or invalidating a valid positioned value. Only vectors
-currently produce spatial primitives; bivector positions are retained for a
-later visualizer extension.
+origin without changing or invalidating a valid positioned value. Vectors and
+bivectors produce spatial primitives from their separately owned positions.
+Direct named-vector outer products may retain enough surface construction
+provenance to select a parallelogram without changing value-based interpretation.
 
 The surface AST preserves constructor and operator syntax for diagnostics and
 future language-aware editing. Lowering removes syntax sugar before evaluation;

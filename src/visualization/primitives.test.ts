@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { vectorToPrimitive } from './primitives'
+import { bivectorToPrimitive, vectorToPrimitive } from './primitives'
 
 describe('vector primitive adapter', () => {
   it('creates an oriented segment without algebra identifiers or coefficients', () => {
@@ -27,5 +27,78 @@ describe('vector primitive adapter', () => {
       end: { x: 1, y: 3 },
       accessibleName: 'V',
     })
+  })
+})
+
+describe('bivector primitive adapter', () => {
+  it('uses area magnitude and non-color orientation for generic loops', () => {
+    const positive = bivectorToPrimitive(
+      { kind: 'bivector-2d', value: 4 },
+      'B',
+      { x: 2, y: -1 },
+    )
+    const negative = bivectorToPrimitive(
+      { kind: 'bivector-2d', value: -4 },
+      'C',
+      { x: 2, y: -1 },
+    )
+
+    expect(positive).toMatchObject({
+      kind: 'oriented-area',
+      area: 4,
+      orientation: 'counterclockwise',
+      shape: { kind: 'loop', center: { x: 2, y: -1 } },
+    })
+    expect(negative).toMatchObject({
+      area: 4,
+      orientation: 'clockwise',
+      shape: { kind: 'loop', center: { x: 2, y: -1 } },
+    })
+    expect(positive.accessibleDescription).toContain('signed value 4')
+    expect(negative.accessibleDescription).toContain('clockwise orientation')
+    expect(positive).not.toHaveProperty('algebraId')
+    expect(positive).not.toHaveProperty('coefficients')
+  })
+
+  it('uses a direct outer-product construction when its area is consistent', () => {
+    const primitive = bivectorToPrimitive(
+      { kind: 'bivector-2d', value: 5 },
+      'area',
+      { x: -1, y: 2 },
+      [
+        { kind: 'vector-2d', x: 2, y: 1 },
+        { kind: 'vector-2d', x: 1, y: 3 },
+      ],
+    )
+
+    expect(primitive).toMatchObject({
+      area: 5,
+      orientation: 'counterclockwise',
+      shape: {
+        kind: 'parallelogram',
+        vertices: [
+          { x: -1, y: 2 },
+          { x: 1, y: 3 },
+          { x: 2, y: 6 },
+          { x: 0, y: 5 },
+        ],
+      },
+    })
+  })
+
+  it('falls back to the same-area loop for inconsistent provenance', () => {
+    const primitive = bivectorToPrimitive(
+      { kind: 'bivector-2d', value: 5 },
+      'area',
+      { x: 0, y: 0 },
+      [
+        { kind: 'vector-2d', x: 1, y: 0 },
+        { kind: 'vector-2d', x: 0, y: 1 },
+      ],
+    )
+
+    expect(primitive.shape).toMatchObject({ kind: 'loop' })
+    if (primitive.shape.kind !== 'loop') throw new Error('Expected loop')
+    expect(Math.PI * primitive.shape.radius ** 2).toBeCloseTo(5)
   })
 })

@@ -44,6 +44,6 @@ export const VGA_2_INFO = Object.freeze({
   notes: [
     'The even sub-algebra {1, e12} is isomorphic to the complex numbers ℂ, with e12 playing the role of the imaginary unit.',
     'VGA has no projective representation: it encodes directions and oriented areas, not points or lines.',
-    'Bivectors are interpreted and positionable but remain text-only until bivector visualization is implemented.',
+    'Bivectors render as positioned oriented-area loops; direct named-vector outer products may render as parallelograms with the same area.',
   ] as const,
 })

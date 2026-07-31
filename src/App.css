@@ -371,6 +371,14 @@ code {
   vector-effect: non-scaling-stroke;
 }
 
+.bivector {
+  fill: color-mix(in srgb, var(--vector) 18%, transparent);
+  stroke: var(--vector);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
 marker path {
   fill: var(--vector);
 }

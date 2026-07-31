@@ -16,8 +16,9 @@ import { lowerExpression } from '../language/lowerExpression'
 import { parseExpression } from '../language/parseExpression'
 import type { SurfaceExpressionNode } from '../language/ast'
 import {
+  bivectorToPrimitive,
   vectorToPrimitive,
-  type OrientedSegmentPrimitive,
+  type VisualizationPrimitive,
 } from '../visualization/primitives'
 
 /**
@@ -30,7 +31,7 @@ export type EvaluationState =
       value: OwnedMultivector
       inspection: string
       entity: StandardVga2Entity
-      primitive: OrientedSegmentPrimitive | null
+      primitive: VisualizationPrimitive | null
       visualization:
         | Readonly<{ status: 'available' }>
         | Readonly<{ status: 'non-spatial' }>
@@ -72,20 +73,23 @@ function firstReference(
 /** Builds presentation state from an already evaluated owned value. */
 export function presentEvaluation(
   value: OwnedMultivector,
-  accessibleName = 'Vector 1',
+  accessibleName?: string,
 ): EvaluationState {
   const entity = interpretVga2(value)
+  const name = accessibleName ??
+    (entity.kind === 'bivector-2d' ? 'Bivector 1' : 'Vector 1')
   return {
     status: 'valid',
     value,
     inspection: inspectMultivector(value),
     entity,
-    primitive:
-      entity.kind === 'vector-2d'
-        ? vectorToPrimitive(entity, accessibleName)
+    primitive: entity.kind === 'vector-2d'
+      ? vectorToPrimitive(entity, name)
+      : entity.kind === 'bivector-2d'
+        ? bivectorToPrimitive(entity, name)
         : null,
     visualization:
-      entity.kind === 'vector-2d'
+      entity.kind === 'vector-2d' || entity.kind === 'bivector-2d'
         ? { status: 'available' }
         : entity.kind === 'scalar'
           ? { status: 'non-spatial' }
@@ -103,7 +107,7 @@ export function presentEvaluation(
 export function evaluateSource(
   source: string,
   engine: VgaEngine,
-  accessibleName = 'Vector 1',
+  accessibleName?: string,
 ): EvaluationState {
   const parsed = parseExpression(source)
   if (!parsed.ok) {
