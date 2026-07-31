@@ -38,4 +38,23 @@ describe('expression tokenizer', () => {
       ],
     })
   })
+
+  it('recognizes fundamental VGA operators and the pseudoscalar', () => {
+    expect(tokenize('~A ^ !B | 2ps & C')).toMatchObject({
+      ok: true,
+      tokens: [
+        { kind: 'tilde' },
+        { kind: 'identifier', text: 'A' },
+        { kind: 'caret' },
+        { kind: 'bang' },
+        { kind: 'identifier', text: 'B' },
+        { kind: 'pipe' },
+        { kind: 'number', text: '2' },
+        { kind: 'pseudoscalar', text: 'ps' },
+        { kind: 'ampersand' },
+        { kind: 'identifier', text: 'C' },
+        { kind: 'end' },
+      ],
+    })
+  })
 })

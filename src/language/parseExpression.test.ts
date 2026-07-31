@@ -193,4 +193,72 @@ describe('minimal expression parser', () => {
       },
     })
   })
+
+  it('applies geometric-product precedence below outer, inner, and regressive products', () => {
+    expect(parseExpression('A * B ^ C | D & F + E')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'binary-expression',
+        operator: '+',
+        left: {
+          kind: 'binary-expression',
+          operator: '*',
+          left: { kind: 'reference', name: 'A' },
+          right: {
+            kind: 'binary-expression',
+            operator: '&',
+            left: {
+              kind: 'binary-expression',
+              operator: '|',
+              left: {
+                kind: 'binary-expression',
+                operator: '^',
+                left: { kind: 'reference', name: 'B' },
+                right: { kind: 'reference', name: 'C' },
+              },
+              right: { kind: 'reference', name: 'D' },
+            },
+            right: { kind: 'reference', name: 'F' },
+          },
+        },
+        right: { kind: 'reference', name: 'E' },
+      },
+    })
+  })
+
+  it('parses reverse, dual, pseudoscalar, and postfix algebra properties', () => {
+    expect(parseExpression('(~(A + ps)).g1.e2')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'property-expression',
+        property: 'e2',
+        object: {
+          kind: 'property-expression',
+          property: 'g1',
+          object: {
+            kind: 'unary-expression',
+            operator: '~',
+          },
+        },
+      },
+    })
+  })
+
+  it('parses canonical postfix involution properties', () => {
+    expect(parseExpression('A.dual.reverse.involution')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'property-expression',
+        property: 'involution',
+        object: {
+          kind: 'property-expression',
+          property: 'reverse',
+          object: {
+            kind: 'property-expression',
+            property: 'dual',
+          },
+        },
+      },
+    })
+  })
 })

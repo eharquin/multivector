@@ -3,6 +3,7 @@ import type { Diagnostic, SourceSpan } from '../domain/diagnostic'
 export type TokenKind =
   | 'number'
   | 'vector'
+  | 'pseudoscalar'
   | 'blade'
   | 'identifier'
   | 'equals'
@@ -10,6 +11,11 @@ export type TokenKind =
   | 'plus'
   | 'minus'
   | 'star'
+  | 'caret'
+  | 'pipe'
+  | 'ampersand'
+  | 'tilde'
+  | 'bang'
   | 'left-parenthesis'
   | 'right-parenthesis'
   | 'comma'
@@ -44,7 +50,7 @@ function diagnostic(message: string, span: SourceSpan): TokenizeResult {
 }
 
 /**
- * Tokenizes the current scalar, vector-constructor, and VGA(2) blade syntax.
+ * Tokenizes the current scalar, vector, blade, property, and operator syntax.
  *
  * Token spans are half-open UTF-16 ranges in the preserved source.
  */
@@ -82,6 +88,12 @@ export function tokenize(source: string): TokenizeResult {
           text,
           span: { start: offset, end },
         })
+      } else if (text === 'ps') {
+        tokens.push({
+          kind: 'pseudoscalar',
+          text,
+          span: { start: offset, end },
+        })
       } else if (
         text === 'e1' ||
         text === 'e2' ||
@@ -108,6 +120,11 @@ export function tokenize(source: string): TokenizeResult {
       '+': 'plus',
       '-': 'minus',
       '*': 'star',
+      '^': 'caret',
+      '|': 'pipe',
+      '&': 'ampersand',
+      '~': 'tilde',
+      '!': 'bang',
       '(': 'left-parenthesis',
       ')': 'right-parenthesis',
       ',': 'comma',

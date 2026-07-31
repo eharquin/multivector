@@ -75,8 +75,9 @@ gradeInvolution(eJ) = (-1)^k eJ
 cliffordConjugate(eJ) = (-1)^(k(k+1)/2) eJ
 ```
 
-They are owned algebra operations even when the initial source language does not
-expose them directly.
+They are owned algebra operations. The initial source language exposes reverse
+through `~A` and `A.reverse`, and grade involution through `A.involution`;
+Clifford conjugation remains internal to algebra capabilities that require it.
 
 ## 4. Outer, inner, and contraction products
 

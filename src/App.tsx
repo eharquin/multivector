@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,6 +9,8 @@ import {
 } from 'react'
 import { createVga2Engine } from './algebra/vgaEngine'
 import { evaluateDocument } from './application/evaluateDocument'
+import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
+import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import {
   describeVga2Entity,
   supportsVga2Position,
@@ -44,10 +47,16 @@ function App() {
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
   const pendingFocus = useRef<string | null>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
+  const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
+  const expressionReferenceButtonRef = useRef<HTMLButtonElement>(null)
   const resizeDrag = useRef<Readonly<{ startX: number; startWidth: number }> | null>(
     null,
   )
   const [panelWidth, setPanelWidth] = useState(340)
+  const [infoDialog, setInfoDialog] = useState<
+    'algebra' | 'expressions' | null
+  >(null)
+  const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
 
   const evaluatedItems = useMemo(
     () => evaluateDocument(expressionDoc, engine),
@@ -206,7 +215,15 @@ function App() {
         >
           MultiVector
         </a>
-        <span className="algebra-badge">VGA · 2D</span>
+        <button
+          ref={algebraInfoButtonRef}
+          type="button"
+          className="algebra-badge"
+          aria-haspopup="dialog"
+          onClick={() => setInfoDialog('algebra')}
+        >
+          VGA · 2D
+        </button>
         <span className="app-status">Research preview</span>
       </header>
 
@@ -372,6 +389,16 @@ function App() {
               )
             })}
           </div>
+          <button
+            ref={expressionReferenceButtonRef}
+            type="button"
+            className="expression-reference-button"
+            aria-haspopup="dialog"
+            onClick={() => setInfoDialog('expressions')}
+          >
+            <span aria-hidden="true">?</span>
+            <span>Expression reference</span>
+          </button>
         </aside>
 
         <div
@@ -448,6 +475,18 @@ function App() {
           </div>
         </section>
       </main>
+      {infoDialog === 'algebra' && (
+        <AlgebraInfoDialog
+          returnFocusRef={algebraInfoButtonRef}
+          onClose={closeInfoDialog}
+        />
+      )}
+      {infoDialog === 'expressions' && (
+        <ExpressionReferenceDialog
+          returnFocusRef={expressionReferenceButtonRef}
+          onClose={closeInfoDialog}
+        />
+      )}
     </div>
   )
 }

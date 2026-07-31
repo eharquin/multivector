@@ -141,7 +141,11 @@ in VGA(2), `vector(x, y)` and `(x, y)` become `x * e1 + y * e2`. Constructor not
 blade notation consequently share the same core evaluator and algebra-engine
 operations. Compact blades also lower through generator products: `e12` becomes
 `e1 * e2`, while `e21` becomes `e2 * e1`, allowing the algebra product to derive
-`e21 = -e12`.
+`e21 = -e12`. Outer, convention-defined inner, and regressive products,
+reverse, dual, grade involution, grade projection, coefficient extraction, and
+the pseudoscalar lower to dedicated core operations. Their implementation remains behind the owned-value
+engine boundary; convention fixtures use project-owned analytical results
+rather than treating ganja.js as the expected-result authority.
 
 ## Directory responsibilities
 
@@ -155,7 +159,7 @@ operations. Compact blades also lower through generator products: `e12` becomes
 | `src/geometry` | Conversion from owned algebra values to renderer-independent semantic entities | Parsing, backend operations, screen coordinates, or SVG |
 | `src/visualization` | Renderer-neutral positioned primitives and explicit mathematical-to-screen transforms | Algebra identifiers, backend values, source parsing, or application state |
 | `src/application` | Document-wide declaration resolution, dependency ordering, use-case orchestration, and conversion of failures into application states | React rendering, DOM events, backend-specific operations, or CSS |
-| `src/App.tsx` and styles | User input, accessible presentation, and SVG composition from application state | Language rules, algebra semantics, or backend value inspection |
+| `src/App.tsx`, `src/components`, and styles | User input, accessible presentation, reference dialogs, and SVG composition from application state | Language rules, algebra semantics, or backend value inspection |
 | `src/types` | Narrow declarations for untyped external packages | Domain models or feature behavior |
 
 Tests are colocated with the layer whose behavior they establish. Integration

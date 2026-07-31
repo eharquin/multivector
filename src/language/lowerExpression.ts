@@ -53,6 +53,8 @@ export function lowerExpression(
       return scalar(expression.value, expression.span)
     case 'basis-blade':
       return lowerBlade(expression.name, expression.span)
+    case 'pseudoscalar':
+      return { kind: 'pseudoscalar', origin: expression.span }
     case 'reference':
       return {
         kind: 'reference',
@@ -62,15 +64,38 @@ export function lowerExpression(
       }
     case 'unary-expression': {
       const operand = lowerExpression(expression.operand)
-      return expression.operator === '+'
-        ? operand
-        : { kind: 'negate', operand, origin: expression.span }
+      if (expression.operator === '+') return operand
+      if (expression.operator === '-') {
+        return { kind: 'negate', operand, origin: expression.span }
+      }
+      return {
+        kind: expression.operator === '~' ? 'reverse' : 'dual',
+        operand,
+        origin: expression.span,
+      }
     }
     case 'binary-expression': {
       const left = lowerExpression(expression.left)
       const right = lowerExpression(expression.right)
       if (expression.operator === '*') {
         return multiply(left, right, expression.span)
+      }
+      if (
+        expression.operator === '^' ||
+        expression.operator === '|' ||
+        expression.operator === '&'
+      ) {
+        return {
+          kind:
+            expression.operator === '^'
+              ? 'outer'
+              : expression.operator === '|'
+                ? 'inner'
+                : 'regressive',
+          left,
+          right,
+          origin: expression.span,
+        }
       }
       return expression.operator === '+'
         ? add(left, right, expression.span)
@@ -95,6 +120,54 @@ export function lowerExpression(
         ),
         expression.span,
       )
+    }
+    case 'property-expression': {
+      const operand = lowerExpression(expression.object)
+      if (
+        expression.property === 'dual' ||
+        expression.property === 'reverse' ||
+        expression.property === 'involution'
+      ) {
+        return {
+          kind:
+            expression.property === 'dual'
+              ? 'dual'
+              : expression.property === 'reverse'
+                ? 'reverse'
+                : 'grade-involution',
+          operand,
+          origin: expression.span,
+        }
+      }
+      const grades = { g0: 0, g1: 1, g2: 2 } as const
+      if (expression.property in grades) {
+        return {
+          kind: 'grade',
+          operand,
+          grade: grades[expression.property as keyof typeof grades],
+          origin: expression.span,
+        }
+      }
+      if (
+        expression.property === 'e' ||
+        expression.property === 'e1' ||
+        expression.property === 'e2' ||
+        expression.property === 'e12'
+      ) {
+        return {
+          kind: 'coefficient',
+          operand,
+          blade: expression.property,
+          origin: expression.span,
+        }
+      }
+      return {
+        kind: 'unsupported-property',
+        operand,
+        property: expression.property,
+        propertyOrigin: expression.propertySpan,
+        origin: expression.span,
+      }
     }
   }
 }

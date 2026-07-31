@@ -239,6 +239,19 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.queryByText(/‖/)).not.toBeInTheDocument()
   })
 
+  it('evaluates an outer product as a textual bivector object', () => {
+    render(<App />)
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Expression 1' }),
+      { target: { value: '(1, 0) ^ (0, 1)' } },
+    )
+
+    expect(screen.getByText('Bivector')).toBeInTheDocument()
+    expect(screen.getByText('e12', { selector: 'output' })).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+  })
+
   it('inserts after the active row with Enter and deletes an empty row', () => {
     render(<App />)
 
@@ -292,5 +305,47 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.getByRole('complementary', { name: 'Expressions' }),
     ).toHaveStyle({ width: '356px' })
+  })
+
+  it('opens the VGA algebra information and restores focus on Escape', () => {
+    render(<App />)
+
+    const trigger = screen.getByRole('button', { name: 'VGA · 2D' })
+    fireEvent.click(trigger)
+
+    const dialog = screen.getByRole('dialog', {
+      name: 'Vectorial Geometric Algebra ℝ(2,0,0)',
+    })
+    expect(dialog).toHaveTextContent('Basis & metric')
+    expect(dialog).toHaveTextContent('Cayley table')
+    expect(dialog).toHaveTextContent('A.involution')
+    expect(dialog).not.toHaveTextContent('Object kinds (color palette)')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
+  it('opens the expression reference from the bottom of the panel', () => {
+    render(<App />)
+
+    const trigger = screen.getByRole('button', {
+      name: 'Expression reference',
+    })
+    fireEvent.click(trigger)
+
+    const dialog = screen.getByRole('dialog', {
+      name: 'Expression Reference',
+    })
+    expect(dialog).toHaveTextContent('Operators')
+    expect(dialog).toHaveTextContent('A & B')
+    expect(dialog).toHaveTextContent('A.dual')
+    expect(dialog).toHaveTextContent('V = (2, 1)')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 })

@@ -263,4 +263,37 @@ describe('document dependency evaluation', () => {
       entity: { kind: 'scalar', value: 0 },
     })
   })
+
+  it('resolves algebra properties and products through named dependencies', () => {
+    const results = evaluate(
+      'area = V ^ W',
+      'dot = V | W',
+      'V = (2, 1)',
+      'W = (1, 3)',
+      'axis = (!V).e2',
+    )
+
+    expect(results.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: '5e12' },
+      { status: 'valid', inspection: '5' },
+      { status: 'valid', inspection: '2e1 + e2' },
+      { status: 'valid', inspection: 'e1 + 3e2' },
+      { status: 'valid', inspection: '2' },
+    ])
+  })
+
+  it('keeps independent branches valid after an unsupported property', () => {
+    const results = evaluate('A = e1.unknown', 'B = ps')
+
+    expect(results.map((result) => result.evaluation)).toMatchObject([
+      {
+        status: 'invalid',
+        diagnostic: {
+          code: 'LANG_UNSUPPORTED_PROPERTY',
+          span: { start: 7, end: 14 },
+        },
+      },
+      { status: 'valid', inspection: 'e12' },
+    ])
+  })
 })

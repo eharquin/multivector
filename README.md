@@ -26,6 +26,19 @@ V2 = (2, 1)
 B = V1 * V2
 ```
 
+The current geometric-operation subset includes outer product `^`, inner
+product `|`, regressive product `&`, reverse `~`, dual `!`, grade involution,
+the pseudoscalar `ps`, grade projections, and blade-coefficient extraction.
+Reverse, dual, and grade involution also have the canonical postfix forms
+`.reverse`, `.dual`, and `.involution`. For example:
+
+```text
+area = V1 ^ V2
+dot = V1 | V2
+vectorPart = (1 + V1 + 3e12).g1
+involuted = (1 + V1 + 3e12).involution
+```
+
 The document evaluator resolves forward references, evaluates acyclic
 dependencies in dependency order, and reports source-localized missing-name,
 duplicate-name, cycle, and invalid-dependency diagnostics while independent
@@ -39,7 +52,9 @@ position for later visualization support. `V.position` and `V.head`, and
 `B.position`, may be referenced by other expressions. Position metadata remains
 separate from multivector coefficients. Scalars, bivectors, rotors, and
 mixed-grade values retain textual states when the viewport has no spatial
-visualization for them.
+visualization for them. The header's VGA badge opens an algebra-information
+sheet, and the bottom of the expression panel provides a reference limited to
+the expression syntax currently implemented.
 
 Persistence, lists, appearance controls, direct manipulation, animation, and
 additional algebras remain planned work.
