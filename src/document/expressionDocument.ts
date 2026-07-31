@@ -3,6 +3,7 @@ export const MAX_EXPRESSION_ITEMS = 1_000
 export type ExpressionItem = Readonly<{
   id: string
   source: string
+  positionSource?: string
 }>
 
 export type ExpressionDocument = Readonly<{
@@ -53,6 +54,19 @@ export function updateExpression(
   return {
     items: document.items.map((item) =>
       item.id === id ? { ...item, source } : item,
+    ),
+  }
+}
+
+/** Updates one item's optional position source without changing its value source. */
+export function updateExpressionPosition(
+  document: ExpressionDocument,
+  id: string,
+  positionSource: string,
+): ExpressionDocument {
+  return {
+    items: document.items.map((item) =>
+      item.id === id ? { ...item, positionSource } : item,
     ),
   }
 }

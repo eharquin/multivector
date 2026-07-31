@@ -29,6 +29,7 @@
 
 .app-title:focus-visible,
 .expression-source:focus-visible,
+.position-source:focus-visible,
 .add-expression:focus-visible,
 .delete-expression:focus-visible {
   outline: 2px solid var(--accent);
@@ -113,7 +114,8 @@ h2 {
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
-  transition: border-color 120ms ease;
+  background: var(--surface);
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
 .expression-list {
@@ -129,13 +131,27 @@ h2 {
   background: color-mix(in srgb, var(--accent-soft) 35%, transparent);
 }
 
+.expression-item:hover {
+  background: color-mix(in srgb, var(--background) 55%, var(--surface));
+}
+
 .expression-item.has-error {
   box-shadow: inset 3px 0 0 var(--error-border);
 }
 
 .expression-input-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  min-height: 74px;
+  padding: 8px 0 8px 12px;
+}
+
+.expression-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .delete-expression {
@@ -150,6 +166,13 @@ h2 {
   border: 0;
   font-size: 1.1rem;
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.expression-item:hover .delete-expression,
+.expression-item:focus-within .delete-expression {
+  opacity: 1;
 }
 
 .delete-expression:hover {
@@ -161,7 +184,7 @@ h2 {
   min-width: 0;
   flex: 1;
   display: block;
-  padding: 10px 12px;
+  padding: 2px 0;
   color: var(--text);
   background: transparent;
   border: 0;
@@ -172,24 +195,46 @@ h2 {
   outline-offset: -2px;
 }
 
+.position-input-row {
+  display: flex;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.position-prefix {
+  color: var(--muted);
+  font: 0.78rem var(--font-mono);
+}
+
+.position-source {
+  min-width: 0;
+  flex: 1;
+  padding: 2px 7px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font: 0.78rem/1.4 var(--font-mono);
+}
+
+.position-source:focus-visible {
+  color: var(--text);
+  outline-offset: -2px;
+}
+
 .expression-feedback {
-  min-height: 44px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 10px 12px;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
   color: var(--muted);
-  background: var(--background);
-  border-top: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .has-error .expression-feedback {
   color: var(--error);
-  background: var(--error-soft);
-  border-color: var(--error-border);
 }
 
 .feedback-label {
@@ -201,7 +246,10 @@ h2 {
 }
 
 .expression-feedback output {
-  color: var(--text);
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .item-visualization-note {
@@ -210,13 +258,10 @@ h2 {
 }
 
 .expression-empty-state {
-  min-height: 42px;
-  padding: 10px 12px;
+  padding: 0;
   color: var(--muted);
-  background: var(--background);
-  border-top: 1px solid var(--border);
   font-size: 0.72rem;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .add-expression {

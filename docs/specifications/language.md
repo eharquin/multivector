@@ -23,7 +23,9 @@ per row, case-sensitive identifier references, forward-reference resolution,
 and document-level diagnostics for missing names, duplicate declarations,
 cycles, and invalid dependencies. It supports these features for the current
 VGA(2) scalar, vector-constructor, compact-blade, unary-sign, addition,
-subtraction, and geometric-product subset.
+subtraction, and geometric-product subset. The read-only `V.position` and
+`V.head` properties resolve the separately evaluated position and the derived
+sum `V.position + V` for named positioned vectors.
 
 Lists, annotations, properties, the remaining operators and functions,
 serialization, and the generalized algebra-symbol registry in this

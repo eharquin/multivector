@@ -9,7 +9,10 @@ import type { CoreExpressionNode } from '../language/ast'
 export function evaluateExpression(
   expression: CoreExpressionNode,
   engine: VgaEngine,
-  resolveReference?: (name: string) => OwnedMultivector,
+  resolveReference?: (
+    name: string,
+    property: 'position' | 'head' | null,
+  ) => OwnedMultivector,
 ): OwnedMultivector {
   switch (expression.kind) {
     case 'scalar':
@@ -20,7 +23,7 @@ export function evaluateExpression(
       if (!resolveReference) {
         throw new Error(`No value is available for “${expression.name}”.`)
       }
-      return resolveReference(expression.name)
+      return resolveReference(expression.name, expression.property)
     case 'add':
       return engine.add(
         evaluateExpression(expression.left, engine, resolveReference),

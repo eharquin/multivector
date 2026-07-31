@@ -4,14 +4,19 @@ import type {
   ExpressionItem,
 } from '../document/expressionDocument'
 import type { SourceSpan } from '../domain/diagnostic'
-import type { OwnedMultivector } from '../domain/multivector'
+import {
+  inspectMultivector,
+  type OwnedMultivector,
+} from '../domain/multivector'
 import { evaluateExpression } from '../evaluation/evaluateExpression'
 import type { SurfaceExpressionNode } from '../language/ast'
 import { lowerExpression } from '../language/lowerExpression'
 import {
   parseDocumentExpression,
+  parseExpression,
   type ParsedDocumentExpression,
 } from '../language/parseExpression'
+import { vectorToPrimitive } from '../visualization/primitives'
 import {
   presentEvaluation,
   type EvaluationState,
@@ -21,16 +26,30 @@ export type EvaluatedDocumentItem = Readonly<{
   item: ExpressionItem
   position: number
   evaluation: EvaluationState | null
+  positionEvaluation: EvaluationState | null
+  headInspection: string | null
 }>
 
-type Reference = Readonly<{ name: string; span: SourceSpan }>
-
-type ParsedItem = Readonly<{
+type NodeProperty = 'value' | 'position'
+type ReferenceProperty = 'position' | 'head' | null
+type Reference = Readonly<{
+  name: string
+  property: ReferenceProperty
+  span: SourceSpan
+}>
+type ParsedNode = Readonly<{
+  key: string
   item: ExpressionItem
   position: number
-  source: ParsedDocumentExpression
+  property: NodeProperty
+  expression: SurfaceExpressionNode
+  declaration: ParsedDocumentExpression['declaration']
   references: readonly Reference[]
 }>
+
+function nodeKey(itemId: string, property: NodeProperty): string {
+  return `${itemId}:${property}`
+}
 
 function diagnostic(
   code: string,
@@ -46,7 +65,11 @@ function diagnostic(
 function collectReferences(expression: SurfaceExpressionNode): Reference[] {
   switch (expression.kind) {
     case 'reference':
-      return [{ name: expression.name, span: expression.span }]
+      return [{
+        name: expression.name,
+        property: expression.property,
+        span: expression.span,
+      }]
     case 'unary-expression':
       return collectReferences(expression.operand)
     case 'binary-expression':
@@ -62,105 +85,147 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
   }
 }
 
+function isPositionValue(value: OwnedMultivector): boolean {
+  const [scalar, , , bivector] = value.coefficients
+  return scalar === 0 && bivector === 0
+}
+
 /**
- * Parses and evaluates a complete expression document.
+ * Evaluates value and position sources as separate document graph nodes.
  *
- * Declarations are resolved by name rather than row order. Invalid dependency
- * components do not prevent independent rows from producing values.
+ * Position metadata never enters the owned value. Missing and invalid
+ * positions render at the origin while preserving a valid item value.
  */
 export function evaluateDocument(
   document: ExpressionDocument,
   engine: VgaEngine,
 ): readonly EvaluatedDocumentItem[] {
-  const parsedById = new Map<string, ParsedItem>()
+  const nodes = new Map<string, ParsedNode>()
   const results = new Map<string, EvaluationState | null>()
 
   document.items.forEach((item, index) => {
+    const valueKey = nodeKey(item.id, 'value')
     if (item.source.trim() === '') {
-      results.set(item.id, null)
-      return
+      results.set(valueKey, null)
+    } else {
+      const parsed = parseDocumentExpression(item.source)
+      if (!parsed.ok) {
+        results.set(valueKey, {
+          status: 'invalid',
+          diagnostic: parsed.diagnostic,
+        })
+      } else {
+        nodes.set(valueKey, {
+          key: valueKey,
+          item,
+          position: index + 1,
+          property: 'value',
+          expression: parsed.source.expression,
+          declaration: parsed.source.declaration,
+          references: collectReferences(parsed.source.expression),
+        })
+      }
     }
 
-    const parsed = parseDocumentExpression(item.source)
-    if (!parsed.ok) {
-      results.set(item.id, {
+    const positionSource = item.positionSource?.trim() ?? ''
+    if (!positionSource) return
+    const positionKey = nodeKey(item.id, 'position')
+    const parsedPosition = parseExpression(item.positionSource!)
+    if (!parsedPosition.ok) {
+      results.set(positionKey, {
         status: 'invalid',
-        diagnostic: parsed.diagnostic,
+        diagnostic: parsedPosition.diagnostic,
       })
-      return
+    } else {
+      nodes.set(positionKey, {
+        key: positionKey,
+        item,
+        position: index + 1,
+        property: 'position',
+        expression: parsedPosition.expression,
+        declaration: null,
+        references: collectReferences(parsedPosition.expression),
+      })
     }
-
-    parsedById.set(item.id, {
-      item,
-      position: index + 1,
-      source: parsed.source,
-      references: collectReferences(parsed.source.expression),
-    })
   })
 
-  const declarations = new Map<string, ParsedItem[]>()
-  for (const parsed of parsedById.values()) {
-    const declaration = parsed.source.declaration
-    if (!declaration) continue
-    const entries = declarations.get(declaration.name) ?? []
-    entries.push(parsed)
-    declarations.set(declaration.name, entries)
+  const declarations = new Map<string, ParsedNode[]>()
+  for (const node of nodes.values()) {
+    if (node.property !== 'value' || !node.declaration) continue
+    const entries = declarations.get(node.declaration.name) ?? []
+    entries.push(node)
+    declarations.set(node.declaration.name, entries)
   }
 
   for (const [name, entries] of declarations) {
     if (entries.length < 2) continue
     for (const entry of entries) {
       results.set(
-        entry.item.id,
+        entry.key,
         diagnostic(
           'LANG_DUPLICATE_NAME',
           `The name “${name}” is declared more than once.`,
-          entry.source.declaration!.span,
+          entry.declaration!.span,
         ),
       )
     }
   }
 
-  const cycleIds = new Set<string>()
-  const visited = new Set<string>()
-  const visiting: string[] = []
-
-  const findCycles = (entry: ParsedItem) => {
-    if (visited.has(entry.item.id)) return
-    const cycleStart = visiting.indexOf(entry.item.id)
-    if (cycleStart >= 0) {
-      visiting.slice(cycleStart).forEach((id) => cycleIds.add(id))
-      return
+  const dependencyKeys = (reference: Reference): string[] => {
+    const targets = declarations.get(reference.name)
+    if (targets?.length !== 1) return []
+    const target = targets[0]
+    if (reference.property === null) return [target.key]
+    const positionKey = nodeKey(target.item.id, 'position')
+    if (reference.property === 'position') {
+      return nodes.has(positionKey) ? [positionKey] : []
     }
-
-    visiting.push(entry.item.id)
-    for (const reference of entry.references) {
-      const targets = declarations.get(reference.name)
-      if (targets?.length === 1) findCycles(targets[0])
-    }
-    visiting.pop()
-    visited.add(entry.item.id)
+    return [
+      target.key,
+      ...(nodes.has(positionKey) ? [positionKey] : []),
+    ]
   }
 
-  parsedById.forEach(findCycles)
-  for (const id of cycleIds) {
-    const entry = parsedById.get(id)!
+  const cycleKeys = new Set<string>()
+  const visited = new Set<string>()
+  const visiting: string[] = []
+  const findCycles = (node: ParsedNode) => {
+    if (visited.has(node.key)) return
+    const cycleStart = visiting.indexOf(node.key)
+    if (cycleStart >= 0) {
+      visiting.slice(cycleStart).forEach((key) => cycleKeys.add(key))
+      return
+    }
+    visiting.push(node.key)
+    for (const reference of node.references) {
+      dependencyKeys(reference).forEach((key) => {
+        const dependency = nodes.get(key)
+        if (dependency) findCycles(dependency)
+      })
+    }
+    visiting.pop()
+    visited.add(node.key)
+  }
+  nodes.forEach(findCycles)
+
+  for (const key of cycleKeys) {
+    const node = nodes.get(key)!
     results.set(
-      id,
+      key,
       diagnostic(
         'LANG_DEPENDENCY_CYCLE',
-        'This declaration is part of a dependency cycle.',
-        entry.source.declaration?.span ?? entry.source.expression.span,
+        `This ${node.property} source is part of a dependency cycle.`,
+        node.declaration?.span ?? node.expression.span,
       ),
     )
   }
 
-  const evaluate = (entry: ParsedItem): EvaluationState => {
-    const existing = results.get(entry.item.id)
+  const evaluateNode = (node: ParsedNode): EvaluationState => {
+    const existing = results.get(node.key)
     if (existing !== undefined && existing !== null) return existing
 
-    const values = new Map<string, OwnedMultivector>()
-    for (const reference of entry.references) {
+    const resolved = new Map<string, OwnedMultivector>()
+    for (const reference of node.references) {
       const targets = declarations.get(reference.name)
       if (!targets) {
         const invalid = diagnostic(
@@ -168,7 +233,7 @@ export function evaluateDocument(
           `The name “${reference.name}” is not defined.`,
           reference.span,
         )
-        results.set(entry.item.id, invalid)
+        results.set(node.key, invalid)
         return invalid
       }
       if (targets.length > 1) {
@@ -177,41 +242,147 @@ export function evaluateDocument(
           `The name “${reference.name}” is declared more than once.`,
           reference.span,
         )
-        results.set(entry.item.id, invalid)
+        results.set(node.key, invalid)
         return invalid
       }
 
-      const dependency = evaluate(targets[0])
-      if (dependency.status === 'invalid') {
+      const target = targets[0]
+      const valueResult = evaluateNode(target)
+      if (valueResult.status === 'invalid') {
         const invalid = diagnostic(
           'LANG_INVALID_DEPENDENCY',
           `The dependency “${reference.name}” is invalid.`,
           reference.span,
         )
-        results.set(entry.item.id, invalid)
+        results.set(node.key, invalid)
         return invalid
       }
-      values.set(reference.name, dependency.value)
+
+      if (
+        reference.property !== null &&
+        valueResult.entity?.kind !== 'vector-2d'
+      ) {
+        const invalid = diagnostic(
+          'LANG_UNSUPPORTED_PROPERTY',
+          `The value “${reference.name}” does not support position.`,
+          reference.span,
+        )
+        results.set(node.key, invalid)
+        return invalid
+      }
+
+      const positionNode = nodes.get(nodeKey(target.item.id, 'position'))
+      let positionValue = engine.scalar(0)
+      if (reference.property !== null && positionNode) {
+        const positionResult = evaluateNode(positionNode)
+        if (positionResult.status === 'invalid') {
+          const invalid = diagnostic(
+            'LANG_INVALID_DEPENDENCY',
+            `The dependency “${reference.name}.position” is invalid.`,
+            reference.span,
+          )
+          results.set(node.key, invalid)
+          return invalid
+        }
+        positionValue = positionResult.value
+      }
+
+      let value = positionValue
+      if (reference.property !== 'position') {
+        value =
+          reference.property === 'head'
+            ? engine.add(positionValue, valueResult.value)
+            : valueResult.value
+      }
+      resolved.set(
+        `${reference.name}:${reference.property ?? 'value'}`,
+        value,
+      )
     }
 
     const value = evaluateExpression(
-      lowerExpression(entry.source.expression),
+      lowerExpression(node.expression),
       engine,
-      (name) => values.get(name)!,
+      (name, property) =>
+        resolved.get(`${name}:${property ?? 'value'}`)!,
     )
+    if (node.property === 'position' && !isPositionValue(value)) {
+      const invalid = diagnostic(
+        'GEOM_INVALID_POSITION',
+        'A position must evaluate to a VGA 2D vector or zero.',
+        node.expression.span,
+      )
+      results.set(node.key, invalid)
+      return invalid
+    }
+
     const presented = presentEvaluation(
       value,
-      entry.source.declaration?.name ?? `Vector ${entry.position}`,
+      node.declaration?.name ?? `Vector ${node.position}`,
     )
-    results.set(entry.item.id, presented)
+    results.set(node.key, presented)
     return presented
   }
 
-  parsedById.forEach(evaluate)
+  for (const node of nodes.values()) {
+    if (node.property === 'value') evaluateNode(node)
+  }
+  for (const node of nodes.values()) {
+    if (node.property !== 'position') continue
+    const valueResult = results.get(nodeKey(node.item.id, 'value'))
+    if (
+      valueResult?.status === 'valid' &&
+      valueResult.entity?.kind === 'vector-2d'
+    ) {
+      evaluateNode(node)
+    }
+  }
 
-  return document.items.map((item, index) => ({
-    item,
-    position: index + 1,
-    evaluation: results.get(item.id) ?? null,
-  }))
+  return document.items.map((item, index) => {
+    const valueEvaluation =
+      results.get(nodeKey(item.id, 'value')) ?? null
+
+    if (
+      valueEvaluation?.status === 'valid' &&
+      valueEvaluation.entity?.kind === 'vector-2d'
+    ) {
+      const positionEvaluation =
+        results.get(nodeKey(item.id, 'position')) ?? null
+      const positionEntity =
+        positionEvaluation?.status === 'valid' &&
+        positionEvaluation.entity?.kind === 'vector-2d'
+          ? positionEvaluation.entity
+          : { x: 0, y: 0 }
+      return {
+        item,
+        position: index + 1,
+        positionEvaluation,
+        headInspection: inspectMultivector(
+          engine.add(
+            valueEvaluation.value,
+            positionEvaluation?.status === 'valid'
+              ? positionEvaluation.value
+              : engine.scalar(0),
+          ),
+        ),
+        evaluation: {
+          ...valueEvaluation,
+          primitive: vectorToPrimitive(
+            valueEvaluation.entity,
+            valueEvaluation.primitive?.accessibleName ??
+              `Vector ${index + 1}`,
+            positionEntity,
+          ),
+        },
+      }
+    }
+
+    return {
+      item,
+      position: index + 1,
+      evaluation: valueEvaluation,
+      positionEvaluation: null,
+      headInspection: null,
+    }
+  })
 }

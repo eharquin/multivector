@@ -254,12 +254,32 @@ class Parser {
     }
 
     if (this.consume('identifier')) {
+      let property: 'position' | 'head' | null = null
+      let end = token.span.end
+      if (this.consume('dot')) {
+        const propertyToken = this.consume('identifier')
+        if (
+          !propertyToken ||
+          (propertyToken.text !== 'position' && propertyToken.text !== 'head')
+        ) {
+          return {
+            ok: false,
+            diagnostic: syntaxDiagnostic(
+              'Expected the property “position” or “head”.',
+              propertyToken?.span ?? insertionAt(this.current()),
+            ),
+          }
+        }
+        property = propertyToken.text
+        end = propertyToken.span.end
+      }
       return {
         ok: true,
         node: {
           kind: 'reference',
           name: token.text,
-          span: token.span,
+          property,
+          span: { start: token.span.start, end },
         },
       }
     }
@@ -268,8 +288,53 @@ class Parser {
 
     const leftParenthesis = this.consume('left-parenthesis')
     if (leftParenthesis) {
-      const expression = this.parseAdditive()
-      if (!expression.ok) return expression
+      const first = this.parseAdditive()
+      if (!first.ok) return first
+
+      if (this.consume('comma')) {
+        if (!isScalarExpression(first.node)) {
+          return {
+            ok: false,
+            diagnostic: syntaxDiagnostic(
+              'Vector components must be scalar expressions.',
+              first.node.span,
+            ),
+          }
+        }
+        const second = this.parseAdditive()
+        if (!second.ok) return second
+        if (!isScalarExpression(second.node)) {
+          return {
+            ok: false,
+            diagnostic: syntaxDiagnostic(
+              'Vector components must be scalar expressions.',
+              second.node.span,
+            ),
+          }
+        }
+        const rightParenthesis = this.consume('right-parenthesis')
+        if (!rightParenthesis) {
+          return {
+            ok: false,
+            diagnostic: syntaxDiagnostic(
+              'Expected “)” after vector components.',
+              insertionAt(this.current()),
+            ),
+          }
+        }
+        return {
+          ok: true,
+          node: {
+            kind: 'vector-constructor',
+            components: [first.node, second.node],
+            span: {
+              start: leftParenthesis.span.start,
+              end: rightParenthesis.span.end,
+            },
+          },
+        }
+      }
+
       const rightParenthesis = this.consume('right-parenthesis')
       if (!rightParenthesis) {
         return {
@@ -283,7 +348,7 @@ class Parser {
       return {
         ok: true,
         node: {
-          ...expression.node,
+          ...first.node,
           span: {
             start: leftParenthesis.span.start,
             end: rightParenthesis.span.end,

@@ -25,6 +25,22 @@ describe('surface-to-core lowering', () => {
     })
   })
 
+  it('lowers tuple vector syntax through the same core operations', () => {
+    expect(lowerExpression(parse('(1, 2)'))).toMatchObject({
+      kind: 'add',
+      left: {
+        kind: 'multiply',
+        left: { kind: 'scalar', value: 1 },
+        right: { kind: 'basis-blade', name: 'e1' },
+      },
+      right: {
+        kind: 'multiply',
+        left: { kind: 'scalar', value: 2 },
+        right: { kind: 'basis-blade', name: 'e2' },
+      },
+    })
+  })
+
   it('retains surface origins on generated constructor operations', () => {
     const lowered = lowerExpression(parse(' vector(1, 2) '))
 

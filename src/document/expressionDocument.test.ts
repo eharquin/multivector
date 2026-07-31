@@ -5,6 +5,7 @@ import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
   updateExpression,
+  updateExpressionPosition,
 } from './expressionDocument'
 
 describe('expression document', () => {
@@ -33,6 +34,18 @@ describe('expression document', () => {
     expect(deleteExpression(updated, 'item-1').items).toEqual([
       { id: 'item-2', source: 'e2' },
     ])
+  })
+
+  it('updates position source separately from value source', () => {
+    const document = expressionDocument([{ id: 'item-1', source: 'e1' }])
+
+    expect(
+      updateExpressionPosition(document, 'item-1', 'vector(2, 3)').items[0],
+    ).toEqual({
+      id: 'item-1',
+      source: 'e1',
+      positionSource: 'vector(2, 3)',
+    })
   })
 
   it('does not exceed the normative document item limit', () => {

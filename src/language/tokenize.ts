@@ -6,6 +6,7 @@ export type TokenKind =
   | 'blade'
   | 'identifier'
   | 'equals'
+  | 'dot'
   | 'plus'
   | 'minus'
   | 'star'
@@ -111,6 +112,7 @@ export function tokenize(source: string): TokenizeResult {
       ')': 'right-parenthesis',
       ',': 'comma',
       '=': 'equals',
+      '.': 'dot',
     }
     const kind = punctuation[source[offset]]
     if (!kind) {

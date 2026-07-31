@@ -162,6 +162,56 @@ describe('VGA 2D vertical slice', () => {
     )
   })
 
+  it('edits a separate position source and renders translated endpoints', () => {
+    render(<App />)
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Expression 1' }),
+      { target: { value: 'V = vector(2, 1)' } },
+    )
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    expect(position).toHaveAttribute('placeholder', '(0, 0)')
+    fireEvent.change(position, { target: { value: '(-1, 2)' } })
+
+    expect(position).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.queryByText('Position: -e1 + 2e2')).not.toBeInTheDocument()
+    expect(screen.queryByText('Head: e1 + 3e2')).not.toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent(
+      'V runs from -1, 2 to 1, 3.',
+    )
+    expect(screen.getByLabelText('V')).toHaveAttribute('x1', '248')
+    expect(screen.getByLabelText('V')).toHaveAttribute('y1', '96')
+  })
+
+  it('shows a position diagnostic while retaining the vector output', () => {
+    render(<App />)
+
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    fireEvent.change(position, { target: { value: '12' } })
+
+    expect(position).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('alert')).toHaveTextContent('GEOM_INVALID_POSITION')
+    expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent(
+      'Vector 1 runs from the origin to 2, 1.',
+    )
+  })
+
+  it('only offers an editable position for vector values', () => {
+    render(<App />)
+
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+    expect(
+      screen.getByRole('textbox', { name: 'Position 1' }),
+    ).toBeInTheDocument()
+
+    fireEvent.change(expression, { target: { value: '12' } })
+
+    expect(
+      screen.queryByRole('textbox', { name: 'Position 1' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('inserts after the active row with Enter and deletes an empty row', () => {
     render(<App />)
 

@@ -57,6 +57,7 @@ export function lowerExpression(
       return {
         kind: 'reference',
         name: expression.name,
+        property: expression.property,
         origin: expression.span,
       }
     case 'unary-expression': {
