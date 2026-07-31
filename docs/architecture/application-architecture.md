@@ -69,16 +69,17 @@ and dependency information, then evaluates valid branches in dependency order:
 
 ```mermaid
 flowchart TD
-    DOCUMENT["Ordered expression items<br/>with stable identities"]
-    SOURCE["Item source text"]
+    DOCUMENT["Ordered expression items<br/>with value and position sources"]
+    SOURCE["Enabled source-property nodes"]
     TOKENS["Owned tokens<br/>with source spans"]
     AST["Owned syntax tree<br/>with source spans"]
-    GRAPH["Declaration table and<br/>dependency graph"]
+    GRAPH["Declaration table and property-aware<br/>dependency graph"]
     CORE["Core algebra AST<br/>with surface origins"]
     VALUE["Owned multivector"]
     ENTITY["Optional renderer-independent<br/>VGA 2D entity"]
     UNSUPPORTED["Unsupported-interpretation<br/>textual state"]
-    PRIMITIVE["Optional oriented-segment<br/>render primitive"]
+    RECORD["Evaluated value with separate<br/>position metadata"]
+    PRIMITIVE["Optional positioned<br/>oriented-segment primitive"]
     TEXT["Textual state"]
     OUTPUT["React and SVG output"]
 
@@ -89,10 +90,13 @@ flowchart TD
     GRAPH -->|"valid dependency order"| CORE
     AST -->|"lowerExpression"| CORE
     CORE -->|"evaluateExpression<br/>through VgaEngine"| VALUE
+    VALUE --> RECORD
+    GRAPH -->|"position node or origin fallback"| RECORD
     VALUE -->|"interpretVga2"| ENTITY
     VALUE -->|"no supported entity"| UNSUPPORTED
     ENTITY --> TEXT
     ENTITY -->|"spatial entities only"| PRIMITIVE
+    RECORD --> PRIMITIVE
     PRIMITIVE --> OUTPUT
     TEXT --> OUTPUT
     UNSUPPORTED --> OUTPUT
@@ -111,7 +115,7 @@ spatial render primitive.
 
 Standard geometric interpretation depends only on the owned multivector value.
 Equivalent expressions therefore receive the same semantic entity:
-`vector(0, 0)` and scalar `0` both evaluate to the all-zero multivector and are
+`vector(0, 0)`, `(0, 0)`, and scalar `0` all evaluate to the all-zero multivector and are
 classified canonically as scalar zero.
 
 Expression item identities are independent of their source and list position.
@@ -120,11 +124,15 @@ parsed independently, then named declarations and anonymous expressions are
 evaluated against one document-level declaration table. References may point
 forward or backward in row order. Declaration names are unique and
 case-sensitive; built-in VGA names remain reserved. Supported primitives are
-composed in document order, regardless of evaluation order.
+composed in document order, regardless of evaluation order. Each item may own a
+separate position source. Bare references target value nodes,
+`V.position` targets a position node, and `V.head` derives the sum of both
+nodes. Missing or invalid position results use the origin for rendering without
+changing or invalidating a valid vector value.
 
 The surface AST preserves constructor and operator syntax for diagnostics and
 future language-aware editing. Lowering removes syntax sugar before evaluation;
-in VGA(2), `vector(x, y)` becomes `x * e1 + y * e2`. Constructor notation and
+in VGA(2), `vector(x, y)` and `(x, y)` become `x * e1 + y * e2`. Constructor notation and
 blade notation consequently share the same core evaluator and algebra-engine
 operations. Compact blades also lower through generator products: `e12` becomes
 `e1 * e2`, while `e21` becomes `e2 * e1`, allowing the algebra product to derive
@@ -134,13 +142,13 @@ operations. Compact blades also lower through generator products: `e12` becomes
 
 | Location | Owns | Does not own |
 | --- | --- | --- |
-| `src/document` | Stable expression item identities, ordered item updates, and the document item-count boundary | Parsing, evaluation, dependencies, persistence, or React focus |
+| `src/document` | Stable expression item identities, separately owned value and position sources, ordered item updates, and the document item-count boundary | Parsing, evaluation, dependencies, persistence, or React focus |
 | `src/language` | Tokenization, declaration and expression syntax, reference nodes, lowering to the core algebra AST, source spans, and syntax diagnostics | Document-wide name resolution, algebra computation, geometric meaning, rendering, or React state |
 | `src/evaluation` | Evaluation of owned core syntax against explicit algebra capabilities and resolved reference values | Parsing, dependency planning, backend construction, display formatting, or viewport behavior |
 | `src/algebra` | The algebra-engine interface and ganja.js adaptation | Public source semantics, UI state, geometric interpretation, or rendering |
 | `src/domain` | Backend-independent mathematical values and shared diagnostics | Backend objects, SVG primitives, browser APIs, or React types |
 | `src/geometry` | Conversion from owned algebra values to renderer-independent semantic entities | Parsing, backend operations, screen coordinates, or SVG |
-| `src/visualization` | Renderer-neutral primitives and explicit mathematical-to-screen transforms | Algebra identifiers, backend values, source parsing, or application state |
+| `src/visualization` | Renderer-neutral positioned primitives and explicit mathematical-to-screen transforms | Algebra identifiers, backend values, source parsing, or application state |
 | `src/application` | Document-wide declaration resolution, dependency ordering, use-case orchestration, and conversion of failures into application states | React rendering, DOM events, backend-specific operations, or CSS |
 | `src/App.tsx` and styles | User input, accessible presentation, and SVG composition from application state | Language rules, algebra semantics, or backend value inspection |
 | `src/types` | Narrow declarations for untyped external packages | Domain models or feature behavior |
@@ -197,6 +205,8 @@ coverage a current delivery requirement.
    UI.
 9. Dependency order is derived from references, not row position. Invalid graph
    branches have no value, while independent branches continue evaluating.
+10. Position is evaluated and propagated as record metadata. It never enters
+    owned multivector coefficients or changes standard geometric interpretation.
 
 These rules implement the replacement boundaries described in
 [Technology Decisions](technology-decisions.md) and the ownership constraints
@@ -208,8 +218,9 @@ The current vertical slice intentionally omits several capabilities needed by
 the VGA 2D Foundation milestone. When those capabilities enter implementation,
 their responsibilities should fit the existing dependency direction:
 
-- document state expands its current stable identities and source ownership to
-  include algebra configuration, appearance, and persisted revisions;
+- document state expands its current stable identities and value/position
+  source ownership to include algebra configuration, appearance, and persisted
+  revisions;
 - dependency analysis expands from the current declaration table and acyclic
   traversal into bounded reusable planning nodes for every persisted source
   property;

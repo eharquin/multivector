@@ -14,6 +14,7 @@ import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
   updateExpression,
+  updateExpressionPosition,
   type ExpressionItem,
 } from './document/expressionDocument'
 import { toScreen, type Viewport2d } from './visualization/viewport'
@@ -60,6 +61,7 @@ function App() {
       {
         id: evaluated.item.id,
         primitive,
+        start: toScreen(viewport, primitive.start),
         end: toScreen(viewport, primitive.end),
       },
     ]
@@ -182,7 +184,11 @@ function App() {
         } visible. ${renderedVectors
           .map(
             ({ primitive }) =>
-              `${primitive.accessibleName} runs from the origin to ${primitive.end.x}, ${primitive.end.y}.`,
+              `${primitive.accessibleName} runs from ${
+                primitive.start.x === 0 && primitive.start.y === 0
+                  ? 'the origin'
+                  : `${primitive.start.x}, ${primitive.start.y}`
+              } to ${primitive.end.x}, ${primitive.end.y}.`,
           )
           .join(' ')}`
 
@@ -223,39 +229,134 @@ function App() {
           </div>
 
           <div className="expression-list">
-            {evaluatedItems.map(({ item, position, evaluation }, index) => {
+            {evaluatedItems.map(({
+              item,
+              position,
+              evaluation,
+              positionEvaluation,
+            }, index) => {
               const feedbackId = `expression-feedback-${item.id}`
               const inputId = `expression-source-${item.id}`
               const invalid = evaluation?.status === 'invalid'
+              const invalidPosition =
+                positionEvaluation?.status === 'invalid'
+              const supportsPosition =
+                evaluation?.status === 'valid' &&
+                evaluation.entity?.kind === 'vector-2d'
 
               return (
                 <article
-                  className={`expression-item ${invalid ? 'has-error' : ''}`}
+                  className={`expression-item ${
+                    invalid || invalidPosition ? 'has-error' : ''
+                  }`}
                   key={item.id}
                 >
                   <div className="expression-input-row">
-                    <input
-                      ref={(element) => {
-                        if (element) inputRefs.current.set(item.id, element)
-                        else inputRefs.current.delete(item.id)
-                      }}
-                      id={inputId}
-                      className="expression-source"
-                      aria-label={`Expression ${position}`}
-                      value={item.source}
-                      onChange={(event) =>
-                        setExpressionDoc((current) =>
-                          updateExpression(current, item.id, event.target.value),
-                        )
-                      }
-                      onKeyDown={(event) =>
-                        handleItemKeyDown(event, item, index)
-                      }
-                      aria-describedby={evaluation ? feedbackId : undefined}
-                      aria-invalid={invalid}
-                      spellCheck={false}
-                      autoComplete="off"
-                    />
+                    <div className="expression-body">
+                      <input
+                        ref={(element) => {
+                          if (element) inputRefs.current.set(item.id, element)
+                          else inputRefs.current.delete(item.id)
+                        }}
+                        id={inputId}
+                        className="expression-source"
+                        aria-label={`Expression ${position}`}
+                        value={item.source}
+                        onChange={(event) =>
+                          setExpressionDoc((current) =>
+                            updateExpression(current, item.id, event.target.value),
+                          )
+                        }
+                        onKeyDown={(event) =>
+                          handleItemKeyDown(event, item, index)
+                        }
+                        aria-describedby={evaluation ? feedbackId : undefined}
+                        aria-invalid={invalid}
+                        spellCheck={false}
+                        autoComplete="off"
+                      />
+
+                      {evaluation || positionEvaluation ? (
+                        <div
+                          id={feedbackId}
+                          className="expression-feedback"
+                          role={invalid || invalidPosition ? 'alert' : 'status'}
+                        >
+                          {evaluation?.status === 'valid' ? (
+                            <>
+                              <output>{evaluation.inspection}</output>
+                              {evaluation.visualization.status === 'unsupported' && (
+                                <span className="item-visualization-note">
+                                  No supported 2D interpretation
+                                </span>
+                              )}
+                            </>
+                          ) : evaluation?.status === 'invalid' ? (
+                            <>
+                              <span className="feedback-label">
+                                {evaluation.diagnostic.code}
+                              </span>
+                              <span>{evaluation.diagnostic.message}</span>
+                              <span className="source-location">
+                                Source characters{' '}
+                                {evaluation.diagnostic.span.start + 1}–
+                                {Math.max(
+                                  evaluation.diagnostic.span.start + 1,
+                                  evaluation.diagnostic.span.end,
+                                )}
+                              </span>
+                            </>
+                          ) : null}
+                          {positionEvaluation?.status === 'invalid' && (
+                            <>
+                              <span className="feedback-label">
+                                {positionEvaluation.diagnostic.code}
+                              </span>
+                              <span>{positionEvaluation.diagnostic.message}</span>
+                              <span className="source-location">
+                                Position characters{' '}
+                                {positionEvaluation.diagnostic.span.start + 1}–
+                                {Math.max(
+                                  positionEvaluation.diagnostic.span.start + 1,
+                                  positionEvaluation.diagnostic.span.end,
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="expression-empty-state">
+                          Enter an expression, or press Backspace to remove this row.
+                        </div>
+                      )}
+
+                      {supportsPosition && (
+                        <div className="position-input-row">
+                          <span className="position-prefix" aria-hidden="true">@</span>
+                          <input
+                            className="position-source"
+                            aria-label={`Position ${position}`}
+                            placeholder="(0, 0)"
+                            value={item.positionSource ?? ''}
+                            onChange={(event) =>
+                              setExpressionDoc((current) =>
+                                updateExpressionPosition(
+                                  current,
+                                  item.id,
+                                  event.target.value,
+                                ),
+                              )
+                            }
+                            aria-invalid={invalidPosition}
+                            aria-describedby={
+                              positionEvaluation ? feedbackId : undefined
+                            }
+                            spellCheck={false}
+                            autoComplete="off"
+                          />
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       className="delete-expression"
@@ -265,44 +366,6 @@ function App() {
                       ×
                     </button>
                   </div>
-
-                  {evaluation ? (
-                    <div
-                      id={feedbackId}
-                      className="expression-feedback"
-                      role={invalid ? 'alert' : 'status'}
-                    >
-                      {evaluation.status === 'valid' ? (
-                        <>
-                          <output>{evaluation.inspection}</output>
-                          {evaluation.visualization.status === 'unsupported' && (
-                            <span className="item-visualization-note">
-                              No supported 2D interpretation
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <span className="feedback-label">
-                            {evaluation.diagnostic.code}
-                          </span>
-                          <span>{evaluation.diagnostic.message}</span>
-                          <span className="source-location">
-                            Source characters{' '}
-                            {evaluation.diagnostic.span.start + 1}–
-                            {Math.max(
-                              evaluation.diagnostic.span.start + 1,
-                              evaluation.diagnostic.span.end,
-                            )}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="expression-empty-state">
-                      Enter an expression, or press Backspace to remove this row.
-                    </div>
-                  )}
                 </article>
               )
             })}
@@ -367,12 +430,12 @@ function App() {
                 r="3"
               />
 
-              {renderedVectors.map(({ id, primitive, end }) => (
+              {renderedVectors.map(({ id, primitive, start, end }) => (
                 <line
                   key={id}
                   className="vector"
-                  x1={origin.x}
-                  y1={origin.y}
+                  x1={start.x}
+                  y1={start.y}
                   x2={end.x}
                   y2={end.y}
                   markerEnd="url(#arrowhead)"

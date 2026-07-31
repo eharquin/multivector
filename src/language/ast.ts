@@ -15,6 +15,7 @@ export type BasisBladeNode = Readonly<{
 export type ReferenceNode = Readonly<{
   kind: 'reference'
   name: string
+  property: 'position' | 'head' | null
   span: SourceSpan
 }>
 
@@ -68,6 +69,7 @@ export type CoreExpressionNode =
       Readonly<{
         kind: 'reference'
         name: string
+        property: 'position' | 'head' | null
       }>)
   | (CoreNodeBase &
       Readonly<{

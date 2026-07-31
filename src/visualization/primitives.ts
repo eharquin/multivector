@@ -13,15 +13,19 @@ export type OrientedSegmentPrimitive = Readonly<{
   accessibleName: string
 }>
 
-/** Converts an origin-based semantic vector into a directed render primitive. */
+/** Converts a semantic vector and separate position into a render primitive. */
 export function vectorToPrimitive(
   entity: Vector2dEntity,
   accessibleName = 'Vector 1',
+  position: Readonly<{ x: number; y: number }> = { x: 0, y: 0 },
 ): OrientedSegmentPrimitive {
   return Object.freeze({
     kind: 'oriented-segment' as const,
-    start: Object.freeze({ x: 0, y: 0 }),
-    end: Object.freeze({ x: entity.x, y: entity.y }),
+    start: Object.freeze({ x: position.x, y: position.y }),
+    end: Object.freeze({
+      x: position.x + entity.x,
+      y: position.y + entity.y,
+    }),
     accessibleName,
   })
 }

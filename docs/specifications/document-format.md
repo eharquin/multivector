@@ -1,7 +1,7 @@
 # MultiVector Document Format
 
 **Status:** Draft for review
-**Date:** 2026-07-28
+**Date:** 2026-07-30
 **Format version:** 1
 **Refines:** DOC-001 through DOC-012
 **License:** MIT
@@ -15,6 +15,15 @@ imported, exported, shared, and example documents use this structure.
 Stored source is authoritative. Tokens, abstract syntax trees, evaluated values,
 render primitives, active playback, transient selection, focus, dialog state,
 and undo or redo stacks are derived or session state and are never serialized.
+
+### Current implementation subset
+
+The in-memory expression document currently owns stable item identities, value
+source, and an optional separate position source. Value and position sources
+are evaluated as distinct dependency nodes. Serialization, canonical JSON,
+migration, appearance, controls, and the remaining format-version-one fields
+are not implemented yet. This note records implementation evidence and does not
+change the normative serialized structure below.
 
 ## 2. Structure
 

@@ -44,6 +44,39 @@ describe('minimal expression parser', () => {
     })
   })
 
+  it('parses a two-component tuple as concise vector syntax', () => {
+    expect(parseExpression(' (2, -1.5e+1) ')).toEqual({
+      ok: true,
+      expression: {
+        kind: 'vector-constructor',
+        components: [
+          { kind: 'scalar-literal', value: 2, span: { start: 2, end: 3 } },
+          {
+            kind: 'unary-expression',
+            operator: '-',
+            operand: {
+              kind: 'scalar-literal',
+              value: 15,
+              span: { start: 6, end: 12 },
+            },
+            span: { start: 5, end: 12 },
+          },
+        ],
+        span: { start: 1, end: 13 },
+      },
+    })
+  })
+
+  it('keeps a single parenthesized expression scalar', () => {
+    expect(parseExpression('(1 + 2)')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'binary-expression',
+        operator: '+',
+      },
+    })
+  })
+
   it('rejects invalid syntax without returning a recovered expression', () => {
     expect(parseExpression('vector(2)')).toEqual({
       ok: false,
@@ -139,6 +172,25 @@ describe('minimal expression parser', () => {
     expect(parseDocumentExpression('vector = 2')).toMatchObject({
       ok: false,
       diagnostic: { code: 'LANG_SYNTAX' },
+    })
+  })
+
+  it('parses read-only position and head properties', () => {
+    expect(parseExpression('V.position + V.head')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'binary-expression',
+        left: {
+          kind: 'reference',
+          name: 'V',
+          property: 'position',
+        },
+        right: {
+          kind: 'reference',
+          name: 'V',
+          property: 'head',
+        },
+      },
     })
   })
 })

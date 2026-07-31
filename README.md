@@ -16,12 +16,13 @@ MultiVector is under active research development.
 
 MultiVector is under active research development. The current implementation is
 an initial VGA(2) vertical slice: users can create, edit, and delete an ordered
-list of scalar, compact-blade (`e1`, `e2`, `e12`, `e21`), or `vector(x, y)`
+list of scalar, compact-blade (`e1`, `e2`, `e12`, `e21`), `vector(x, y)`, or
+concise tuple-vector `(x, y)`
 expressions. Rows may declare names and refer to declarations in other rows:
 
 ```text
-V1 = vector(1, 1)
-V2 = vector(2, 1)
+V1 = (1, 1)
+V2 = (2, 1)
 B = V1 * V2
 ```
 
@@ -30,11 +31,15 @@ dependencies in dependency order, and reports source-localized missing-name,
 duplicate-name, cycle, and invalid-dependency diagnostics while independent
 branches continue evaluating. Values pass through the isolated algebra-engine
 adapter and value-based standard interpretation. Supported vectors render
-together in list order; scalars, bivectors, and mixed-grade values retain
-textual states when the viewport has no spatial interpretation for them.
+together in list order. Each row also owns an optional position expression;
+positioned vectors render from that position to their derived head, while
+`V.position` and `V.head` may be referenced by other expressions. Position
+metadata remains separate from the vector's multivector coefficients. Scalars,
+bivectors, and mixed-grade values retain textual states when the viewport has
+no spatial interpretation for them.
 
-Persistence, positioning, direct manipulation, animation, and additional
-algebras remain planned work.
+Persistence, lists, appearance controls, direct manipulation, animation, and
+additional algebras remain planned work.
 The current slice is implementation evidence toward the VGA 2D Foundation, not
 a completed public release.
 
