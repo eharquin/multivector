@@ -57,7 +57,10 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
     case 'scalar-literal':
       return true
     case 'unary-expression':
-      return isScalarExpression(expression.operand)
+      return (
+        (expression.operator === '+' || expression.operator === '-') &&
+        isScalarExpression(expression.operand)
+      )
     case 'binary-expression':
       return (
         isScalarExpression(expression.left) &&
@@ -65,7 +68,16 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
       )
     case 'basis-blade':
     case 'vector-constructor':
+    case 'pseudoscalar':
       return false
+    case 'property-expression':
+      return (
+        expression.property === 'e' ||
+        expression.property === 'e1' ||
+        expression.property === 'e2' ||
+        expression.property === 'e12' ||
+        expression.property === 'g0'
+      )
     case 'reference':
       return true
   }
@@ -167,7 +179,7 @@ class Parser {
   }
 
   private parseMultiplicative(): NodeResult {
-    let left = this.parseUnary()
+    let left = this.parseGeometric()
     if (!left.ok) return left
 
     while (true) {
@@ -175,11 +187,12 @@ class Parser {
       const implicit: boolean =
         !explicit &&
         isImplicitCoefficient(left.node) &&
-        this.current().kind === 'blade'
+        (this.current().kind === 'blade' ||
+          this.current().kind === 'pseudoscalar')
 
       if (!explicit && !implicit) break
 
-      const right = this.parseUnary()
+      const right = this.parseGeometric()
       if (!right.ok) return right
       left = {
         ok: true,
@@ -199,11 +212,46 @@ class Parser {
     return left
   }
 
+  private parseGeometric(): NodeResult {
+    let left = this.parseUnary()
+    if (!left.ok) return left
+
+    while (
+      this.current().kind === 'caret' ||
+      this.current().kind === 'pipe' ||
+      this.current().kind === 'ampersand'
+    ) {
+      const operator = this.current()
+      this.offset += 1
+      const right = this.parseUnary()
+      if (!right.ok) return right
+      left = {
+        ok: true,
+        node: {
+          kind: 'binary-expression',
+          operator:
+            operator.kind === 'caret'
+              ? '^'
+              : operator.kind === 'pipe'
+                ? '|'
+                : '&',
+          left: left.node,
+          right: right.node,
+          implicit: false,
+          span: { start: left.node.span.start, end: right.node.span.end },
+        },
+      }
+    }
+    return left
+  }
+
   private parseUnary(): NodeResult {
     const operator =
       this.consume('plus') ??
-      this.consume('minus')
-    if (!operator) return this.parsePrimary()
+      this.consume('minus') ??
+      this.consume('tilde') ??
+      this.consume('bang')
+    if (!operator) return this.parsePostfix()
 
     const operand = this.parseUnary()
     if (!operand.ok) return operand
@@ -211,11 +259,71 @@ class Parser {
       ok: true,
       node: {
         kind: 'unary-expression',
-        operator: operator.kind === 'plus' ? '+' : '-',
+        operator:
+          operator.kind === 'plus'
+            ? '+'
+            : operator.kind === 'minus'
+              ? '-'
+              : operator.kind === 'tilde'
+                ? '~'
+                : '!',
         operand: operand.node,
         span: { start: operator.span.start, end: operand.node.span.end },
       },
     }
+  }
+
+  private parsePostfix(): NodeResult {
+    let expression = this.parsePrimary()
+    if (!expression.ok) return expression
+
+    while (this.consume('dot')) {
+      const propertyToken =
+        this.consume('identifier') ?? this.consume('blade')
+      if (!propertyToken) {
+        return {
+          ok: false,
+          diagnostic: syntaxDiagnostic(
+            'Expected a property name after “.”.',
+            insertionAt(this.current()),
+          ),
+        }
+      }
+
+      if (
+        expression.node.kind === 'reference' &&
+        expression.node.property === null &&
+        (propertyToken.text === 'position' || propertyToken.text === 'head')
+      ) {
+        expression = {
+          ok: true,
+          node: {
+            ...expression.node,
+            property: propertyToken.text,
+            span: {
+              start: expression.node.span.start,
+              end: propertyToken.span.end,
+            },
+          },
+        }
+        continue
+      }
+
+      expression = {
+        ok: true,
+        node: {
+          kind: 'property-expression',
+          object: expression.node,
+          property: propertyToken.text,
+          propertySpan: propertyToken.span,
+          span: {
+            start: expression.node.span.start,
+            end: propertyToken.span.end,
+          },
+        },
+      }
+    }
+    return expression
   }
 
   private parsePrimary(): NodeResult {
@@ -253,33 +361,22 @@ class Parser {
       }
     }
 
-    if (this.consume('identifier')) {
-      let property: 'position' | 'head' | null = null
-      let end = token.span.end
-      if (this.consume('dot')) {
-        const propertyToken = this.consume('identifier')
-        if (
-          !propertyToken ||
-          (propertyToken.text !== 'position' && propertyToken.text !== 'head')
-        ) {
-          return {
-            ok: false,
-            diagnostic: syntaxDiagnostic(
-              'Expected the property “position” or “head”.',
-              propertyToken?.span ?? insertionAt(this.current()),
-            ),
-          }
-        }
-        property = propertyToken.text
-        end = propertyToken.span.end
+
+    if (this.consume('pseudoscalar')) {
+      return {
+        ok: true,
+        node: { kind: 'pseudoscalar', span: token.span },
       }
+    }
+
+    if (this.consume('identifier')) {
       return {
         ok: true,
         node: {
           kind: 'reference',
           name: token.text,
-          property,
-          span: { start: token.span.start, end },
+          property: null,
+          span: token.span,
         },
       }
     }
@@ -432,7 +529,7 @@ class Parser {
 }
 
 /**
- * Parses the current scalar, vector-constructor, and VGA(2) blade expressions.
+ * Parses the current VGA(2) expression-language subset with owned spans.
  *
  * Nodes and diagnostics retain half-open UTF-16 source ranges.
  */

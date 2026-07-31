@@ -23,7 +23,9 @@ per row, case-sensitive identifier references, forward-reference resolution,
 and document-level diagnostics for missing names, duplicate declarations,
 cycles, and invalid dependencies. It supports these features for the current
 VGA(2) scalar, vector-constructor, compact-blade, unary-sign, addition,
-subtraction, and geometric-product subset. The read-only `V.position` and
+subtraction, geometric product, outer product, inner product, regressive
+product, reverse, dual, grade involution, pseudoscalar, grade-projection, and
+coefficient-extraction subset. The read-only `V.position` and
 `V.head` properties resolve the separately evaluated position and the derived
 sum `V.position + V` for named positioned vectors. Pure bivectors receive the
 same separate position capability through `B.position` but have no `head`
@@ -31,8 +33,8 @@ property. The expression panel classifies exact VGA(2) values as scalars,
 vectors, bivectors, rotors, or mixed multivectors without adding those labels
 to the mathematical value.
 
-Lists, annotations, properties, the remaining operators and functions,
-serialization, and the generalized algebra-symbol registry in this
+Lists, annotations, the remaining properties, operators and functions,
+serialization, and the generalized algebra-symbol and capability registries in this
 specification remain planned. This section records implementation evidence; it
 does not narrow the normative language.
 
@@ -231,6 +233,8 @@ The initial language provides:
 | `-A`, `+A` | unary sign |
 | `~A` | reverse |
 | `!A` | dual when defined |
+| `A.reverse`, `A.dual` | postfix reverse and dual |
+| `A.involution` | grade involution |
 | `A**n` | geometric integer power |
 | `A.inverse` | inverse when it exists |
 | `A.e1` | blade coefficient |
@@ -243,6 +247,9 @@ operator are not part of the initial language.
 
 Unsupported or undefined operations produce structured diagnostics and never a
 silent `null` or approximate substitute.
+
+The explicit postfix names are canonical. Abbreviations such as `.rev` and
+`.invo` are not language-version-one aliases.
 
 ## 9. Precedence and associativity
 

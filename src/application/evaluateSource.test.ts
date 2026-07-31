@@ -93,4 +93,51 @@ describe('source evaluation pipeline', () => {
       primitive: null,
     })
   })
+
+  it.each([
+    ['(1, 0) ^ (0, 1)', 'e12', 'bivector-2d'],
+    ['(2, 1) | (1, 3)', '5', 'scalar'],
+    ['e1 & e2', '-1', 'scalar'],
+    ['~(1 + 2e1 + 3e2 + 4e12)', '1 + 2e1 + 3e2 - 4e12', 'mixed-multivector'],
+    ['!e1', 'e2', 'vector-2d'],
+    ['ps', 'e12', 'bivector-2d'],
+    ['2ps', '2e12', 'bivector-2d'],
+    ['(1 + 2e1 + 3e2 + 4e12).g1', '2e1 + 3e2', 'vector-2d'],
+    ['(1 + 2e1 + 3e2 + 4e12).e12', '4', 'scalar'],
+    ['(1 + 2e1 + 3e2 + 4e12).involution', '1 - 2e1 - 3e2 + 4e12', 'mixed-multivector'],
+  ])('evaluates fundamental operation %s', (source, inspection, kind) => {
+    expect(evaluateSource(source, engine)).toMatchObject({
+      status: 'valid',
+      inspection,
+      entity: { kind },
+    })
+  })
+
+  it('keeps prefix and canonical postfix dual and reverse forms equivalent', () => {
+    expect(validValue('!e1')).toEqual(validValue('e1.dual'))
+    expect(validValue('~e12')).toEqual(validValue('e12.reverse'))
+  })
+
+  it('does not reserve abbreviated involution aliases', () => {
+    expect(evaluateSource('e1.rev', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
+    })
+    expect(evaluateSource('e1.invo', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
+    })
+  })
+
+  it('reports an unknown property at its source span', () => {
+    expect(evaluateSource('(1 + e1).unknown', engine)).toEqual({
+      status: 'invalid',
+      diagnostic: {
+        code: 'LANG_UNSUPPORTED_PROPERTY',
+        severity: 'error',
+        message: 'The property “unknown” is not supported.',
+        span: { start: 9, end: 16 },
+      },
+    })
+  })
 })

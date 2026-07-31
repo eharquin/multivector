@@ -19,16 +19,29 @@ export type ReferenceNode = Readonly<{
   span: SourceSpan
 }>
 
+export type PseudoscalarNode = Readonly<{
+  kind: 'pseudoscalar'
+  span: SourceSpan
+}>
+
+export type PropertyExpressionNode = Readonly<{
+  kind: 'property-expression'
+  object: SurfaceExpressionNode
+  property: string
+  propertySpan: SourceSpan
+  span: SourceSpan
+}>
+
 export type UnaryExpressionNode = Readonly<{
   kind: 'unary-expression'
-  operator: '+' | '-'
+  operator: '+' | '-' | '~' | '!'
   operand: SurfaceExpressionNode
   span: SourceSpan
 }>
 
 export type BinaryExpressionNode = Readonly<{
   kind: 'binary-expression'
-  operator: '+' | '-' | '*'
+  operator: '+' | '-' | '*' | '^' | '|' | '&'
   left: SurfaceExpressionNode
   right: SurfaceExpressionNode
   implicit: boolean
@@ -45,6 +58,8 @@ export type SurfaceExpressionNode =
   | ScalarLiteralNode
   | BasisBladeNode
   | ReferenceNode
+  | PseudoscalarNode
+  | PropertyExpressionNode
   | UnaryExpressionNode
   | BinaryExpressionNode
   | VectorConstructorNode
@@ -60,6 +75,7 @@ export type CoreExpressionNode =
         kind: 'scalar'
         value: number
       }>)
+  | (CoreNodeBase & Readonly<{ kind: 'pseudoscalar' }>)
   | (CoreNodeBase &
       Readonly<{
         kind: 'basis-blade'
@@ -73,12 +89,31 @@ export type CoreExpressionNode =
       }>)
   | (CoreNodeBase &
       Readonly<{
-        kind: 'add' | 'multiply'
+        kind: 'add' | 'multiply' | 'outer' | 'inner' | 'regressive'
         left: CoreExpressionNode
         right: CoreExpressionNode
       }>)
   | (CoreNodeBase &
       Readonly<{
-        kind: 'negate'
+        kind: 'negate' | 'reverse' | 'dual' | 'grade-involution'
         operand: CoreExpressionNode
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'grade'
+        operand: CoreExpressionNode
+        grade: 0 | 1 | 2
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'coefficient'
+        operand: CoreExpressionNode
+        blade: 'e' | 'e1' | 'e2' | 'e12'
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'unsupported-property'
+        operand: CoreExpressionNode
+        property: string
+        propertyOrigin: SourceSpan
       }>)

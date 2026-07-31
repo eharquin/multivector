@@ -8,7 +8,10 @@ import {
   inspectMultivector,
   type OwnedMultivector,
 } from '../domain/multivector'
-import { evaluateExpression } from '../evaluation/evaluateExpression'
+import {
+  evaluateExpression,
+  ExpressionEvaluationError,
+} from '../evaluation/evaluateExpression'
 import { supportsVga2Position } from '../geometry/vga2Interpretation'
 import type { SurfaceExpressionNode } from '../language/ast'
 import { lowerExpression } from '../language/lowerExpression'
@@ -78,10 +81,13 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
         ...collectReferences(expression.left),
         ...collectReferences(expression.right),
       ]
+    case 'property-expression':
+      return collectReferences(expression.object)
     case 'vector-constructor':
       return expression.components.flatMap(collectReferences)
     case 'scalar-literal':
     case 'basis-blade':
+    case 'pseudoscalar':
       return []
   }
 }
@@ -314,12 +320,20 @@ export function evaluateDocument(
       )
     }
 
-    const value = evaluateExpression(
-      lowerExpression(node.expression),
-      engine,
-      (name, property) =>
-        resolved.get(`${name}:${property ?? 'value'}`)!,
-    )
+    let value: OwnedMultivector
+    try {
+      value = evaluateExpression(
+        lowerExpression(node.expression),
+        engine,
+        (name, property) =>
+          resolved.get(`${name}:${property ?? 'value'}`)!,
+      )
+    } catch (error) {
+      if (!(error instanceof ExpressionEvaluationError)) throw error
+      const invalid = diagnostic(error.code, error.message, error.origin)
+      results.set(node.key, invalid)
+      return invalid
+    }
     if (node.property === 'position' && !isPositionValue(value)) {
       const invalid = diagnostic(
         'GEOM_INVALID_POSITION',

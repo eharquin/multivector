@@ -31,7 +31,10 @@
 .expression-source:focus-visible,
 .position-source:focus-visible,
 .add-expression:focus-visible,
-.delete-expression:focus-visible {
+.delete-expression:focus-visible,
+.algebra-badge:focus-visible,
+.expression-reference-button:focus-visible,
+.info-dialog-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -51,6 +54,11 @@
   color: var(--accent);
   background: var(--accent-soft);
   border-color: var(--accent-border);
+  cursor: pointer;
+}
+
+.algebra-badge:hover {
+  background: color-mix(in srgb, var(--accent-soft) 65%, var(--surface));
 }
 
 .app-status {
@@ -125,6 +133,24 @@ h2 {
   gap: 0;
   overflow-y: auto;
   padding: 0;
+}
+
+.expression-reference-button {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 0;
+  border-top: 1px solid var(--border);
+  font: 700 0.72rem var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.expression-reference-button:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .expression-item:focus-within {
@@ -385,6 +411,141 @@ body.resizing-panel {
   user-select: none;
 }
 
+.info-overlay {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(13 20 30 / 58%);
+}
+
+.info-dialog {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100svh - 48px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 28%);
+}
+
+.info-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-dialog-header h2 {
+  flex: 1;
+  font-size: 1.05rem;
+}
+
+.info-dialog-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.info-dialog-close:hover {
+  color: var(--text);
+  background: var(--background);
+}
+
+.info-dialog-body {
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.info-description {
+  margin: 0 0 20px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.info-section + .info-section {
+  margin-top: 22px;
+}
+
+.info-section h3 {
+  margin: 0 0 8px;
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.info-table-scroll {
+  overflow-x: auto;
+}
+
+.info-table,
+.algebra-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.info-table th,
+.info-table td,
+.algebra-grid th,
+.algebra-grid td {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.info-table th,
+.algebra-grid th {
+  color: var(--text);
+  background: var(--background);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.info-table th {
+  width: 28%;
+}
+
+.algebra-grid th,
+.algebra-grid td {
+  min-width: 68px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+.info-table td,
+.algebra-grid td {
+  color: var(--muted);
+}
+
+.expression-reference-table th {
+  width: 35%;
+  white-space: nowrap;
+}
+
 @media (max-width: 760px) {
   .app-header {
     padding: 0 16px;
@@ -415,5 +576,18 @@ body.resizing-panel {
 
   .canvas-frame {
     min-height: 360px;
+  }
+
+  .info-overlay {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .info-dialog {
+    max-height: calc(100svh - 20px);
+  }
+
+  .info-dialog-body {
+    padding: 14px;
   }
 }

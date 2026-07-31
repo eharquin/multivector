@@ -4,7 +4,10 @@ import {
   inspectMultivector,
   type OwnedMultivector,
 } from '../domain/multivector'
-import { evaluateExpression } from '../evaluation/evaluateExpression'
+import {
+  evaluateExpression,
+  ExpressionEvaluationError,
+} from '../evaluation/evaluateExpression'
 import {
   interpretVga2,
   type StandardVga2Entity,
@@ -48,6 +51,8 @@ function firstReference(
       return firstReference(expression.operand)
     case 'binary-expression':
       return firstReference(expression.left) ?? firstReference(expression.right)
+    case 'property-expression':
+      return firstReference(expression.object)
     case 'vector-constructor':
       return (
         firstReference(expression.components[0]) ??
@@ -55,6 +60,7 @@ function firstReference(
       )
     case 'scalar-literal':
     case 'basis-blade':
+    case 'pseudoscalar':
       return null
   }
 }
@@ -114,6 +120,21 @@ export function evaluateSource(
   }
 
   const coreExpression = lowerExpression(parsed.expression)
-  const value = evaluateExpression(coreExpression, engine)
-  return presentEvaluation(value, accessibleName)
+  try {
+    const value = evaluateExpression(coreExpression, engine)
+    return presentEvaluation(value, accessibleName)
+  } catch (error) {
+    if (error instanceof ExpressionEvaluationError) {
+      return {
+        status: 'invalid',
+        diagnostic: {
+          code: error.code,
+          severity: 'error',
+          message: error.message,
+          span: error.origin,
+        },
+      }
+    }
+    throw error
+  }
 }

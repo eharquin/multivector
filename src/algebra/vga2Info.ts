@@ -1,0 +1,42 @@
+export const VGA_2_INFO = Object.freeze({
+  name: 'Vectorial Geometric Algebra',
+  signature: 'ℝ(2,0,0)',
+  description:
+    'Vector-based 2D geometry: scalars, vectors, bivectors (oriented areas), and rotors. No points or lines—only directions, areas, and rotations.',
+  blades: ['1', 'e1', 'e2', 'e12'] as const,
+  bladeSquares: ['+1', '+1', '+1', '−1'] as const,
+  cayley: [
+    ['1', 'e1', 'e2', 'e12'],
+    ['e1', '1', 'e12', 'e2'],
+    ['e2', '−e12', '1', '−e1'],
+    ['e12', '−e2', 'e1', '−1'],
+  ] as const,
+  objects: [
+    ['Scalar', 'a'],
+    ['Vector', 'a·e1 + b·e2 — positionable direction'],
+    ['Bivector', 's·e12 — signed oriented area with a separate position'],
+    ['Rotor', 'a + b·e12 — even multivector'],
+    ['Mixed multivector', 'multiple grades without one standard geometric reading'],
+  ] as const,
+  operations: [
+    ['A * B', 'geometric product'],
+    ['A ^ B', 'outer product'],
+    ['A | B', 'inner product'],
+    ['A & B', 'regressive product'],
+    ['~A, A.reverse', 'reverse'],
+    ['!A, A.dual', 'dual'],
+    ['A.involution', 'grade involution'],
+    ['A.g0, A.g1, A.g2', 'grade projection'],
+    ['A.e, A.e1, A.e2, A.e12', 'coefficient extraction'],
+    ['ps', 'canonical pseudoscalar e12'],
+  ] as const,
+  subalgebras: [
+    ['Scalars', '1'],
+    ['Even sub-algebra ℝ(2,0,0)⁺', '1, e12 (≅ complex numbers ℂ)'],
+  ] as const,
+  notes: [
+    'The even sub-algebra {1, e12} is isomorphic to the complex numbers ℂ, with e12 playing the role of the imaginary unit.',
+    'VGA has no projective representation: it encodes directions and oriented areas, not points or lines.',
+    'Bivectors are interpreted and positionable but remain text-only until bivector visualization is implemented.',
+  ] as const,
+})
