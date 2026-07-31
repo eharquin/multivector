@@ -25,7 +25,11 @@ cycles, and invalid dependencies. It supports these features for the current
 VGA(2) scalar, vector-constructor, compact-blade, unary-sign, addition,
 subtraction, and geometric-product subset. The read-only `V.position` and
 `V.head` properties resolve the separately evaluated position and the derived
-sum `V.position + V` for named positioned vectors.
+sum `V.position + V` for named positioned vectors. Pure bivectors receive the
+same separate position capability through `B.position` but have no `head`
+property. The expression panel classifies exact VGA(2) values as scalars,
+vectors, bivectors, rotors, or mixed multivectors without adding those labels
+to the mathematical value.
 
 Lists, annotations, properties, the remaining operators and functions,
 serialization, and the generalized algebra-symbol registry in this

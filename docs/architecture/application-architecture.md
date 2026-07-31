@@ -108,10 +108,11 @@ cycles, and invalid upstream dependencies are distinct states. Independent
 branches continue evaluating, and editing or deleting a declaration recomputes
 its transitive dependants from current source; stale values are not retained. A
 successful evaluation never exposes the ganja.js object used inside the algebra
-adapter. An unsupported interpretation remains a valid evaluation with its
-owned value and inspection text; only its visualization state is unsupported.
-A valid scalar has a standard semantic interpretation and textual state but no
-spatial render primitive.
+adapter. The standard VGA(2) interpretation classifies every exact owned value
+as a scalar, vector, bivector, rotor, or mixed multivector. A valid scalar has a
+textual state but no spatial render primitive. Bivectors, rotors, and mixed
+multivectors likewise remain valid and inspectable while their visualization
+state is unsupported.
 
 Standard geometric interpretation depends only on the owned multivector value.
 Equivalent expressions therefore receive the same semantic entity:
@@ -125,10 +126,14 @@ evaluated against one document-level declaration table. References may point
 forward or backward in row order. Declaration names are unique and
 case-sensitive; built-in VGA names remain reserved. Supported primitives are
 composed in document order, regardless of evaluation order. Each item may own a
-separate position source. Bare references target value nodes,
-`V.position` targets a position node, and `V.head` derives the sum of both
-nodes. Missing or invalid position results use the origin for rendering without
-changing or invalidating a valid vector value.
+separate position source. Position nodes are active for vectors and bivectors;
+scalars, rotors, and mixed multivectors preserve any stored position source
+without evaluating it. Bare references target value nodes, `V.position` and
+`B.position` target position nodes, and vector-only `V.head` derives the sum of
+the vector value and position. Missing or invalid position results use the
+origin without changing or invalidating a valid positioned value. Only vectors
+currently produce spatial primitives; bivector positions are retained for a
+later visualizer extension.
 
 The surface AST preserves constructor and operator syntax for diagnostics and
 future language-aware editing. Lowering removes syntax sugar before evaluation;

@@ -26,7 +26,7 @@ export type EvaluationState =
       status: 'valid'
       value: OwnedMultivector
       inspection: string
-      entity: StandardVga2Entity | null
+      entity: StandardVga2Entity
       primitive: OrientedSegmentPrimitive | null
       visualization:
         | Readonly<{ status: 'available' }>
@@ -65,21 +65,6 @@ export function presentEvaluation(
   accessibleName = 'Vector 1',
 ): EvaluationState {
   const entity = interpretVga2(value)
-  if (!entity) {
-    return {
-      status: 'valid',
-      value,
-      inspection: inspectMultivector(value),
-      entity: null,
-      primitive: null,
-      visualization: {
-        status: 'unsupported',
-        message:
-          'This multivector has no supported VGA 2D geometric interpretation.',
-      },
-    }
-  }
-
   return {
     status: 'valid',
     value,
@@ -92,7 +77,12 @@ export function presentEvaluation(
     visualization:
       entity.kind === 'vector-2d'
         ? { status: 'available' }
-        : { status: 'non-spatial' },
+        : entity.kind === 'scalar'
+          ? { status: 'non-spatial' }
+          : {
+              status: 'unsupported',
+              message: 'This VGA 2D object has no supported visualization.',
+            },
   }
 }
 

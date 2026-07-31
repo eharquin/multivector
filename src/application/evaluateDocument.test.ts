@@ -200,4 +200,67 @@ describe('document dependency evaluation', () => {
       diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
     })
   })
+
+  it('evaluates a separate position for a bivector without rendering it', () => {
+    const results = evaluateItems([
+      {
+        id: 'bivector',
+        source: 'B = 3e12',
+        positionSource: '(2, 1)',
+      },
+      { id: 'position', source: 'P = B.position' },
+      { id: 'head', source: 'B.head' },
+    ])
+
+    expect(results[0]).toMatchObject({
+      evaluation: {
+        status: 'valid',
+        entity: { kind: 'bivector-2d', value: 3 },
+        primitive: null,
+      },
+      positionEvaluation: {
+        status: 'valid',
+        inspection: '2e1 + e2',
+      },
+      headInspection: null,
+    })
+    expect(results[1].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '2e1 + e2',
+    })
+    expect(results[2].evaluation).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
+    })
+  })
+
+  it('keeps an invalid bivector position separate from its valid value', () => {
+    const [result] = evaluateItems([
+      { id: 'bivector', source: 'B = -2e12', positionSource: '12' },
+    ])
+
+    expect(result).toMatchObject({
+      evaluation: {
+        status: 'valid',
+        inspection: '-2e12',
+        entity: { kind: 'bivector-2d', value: -2 },
+        primitive: null,
+      },
+      positionEvaluation: {
+        status: 'invalid',
+        diagnostic: { code: 'GEOM_INVALID_POSITION' },
+      },
+      headInspection: null,
+    })
+  })
+
+  it('returns the origin for an unpositioned bivector reference', () => {
+    const results = evaluate('B = e12', 'B.position')
+
+    expect(results[1].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '0',
+      entity: { kind: 'scalar', value: 0 },
+    })
+  })
 })

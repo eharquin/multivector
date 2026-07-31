@@ -97,7 +97,7 @@ describe('VGA 2D vertical slice', () => {
     )
   })
 
-  it('keeps unsupported mixed-grade results valid and inspectable', () => {
+  it('shows a minimal object kind above the canonical value', () => {
     render(<App />)
 
     const input = screen.getByRole('textbox', { name: 'Expression 1' })
@@ -107,9 +107,7 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.getByText('12 + 2e1 + 80e12', { selector: 'output' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('No supported 2D interpretation'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Mixed multivector')).toBeInTheDocument()
   })
 
   it('adds independent expressions and renders their vectors in list order', () => {
@@ -197,7 +195,7 @@ describe('VGA 2D vertical slice', () => {
     )
   })
 
-  it('only offers an editable position for vector values', () => {
+  it('offers editable positions for vectors and bivectors but not scalars', () => {
     render(<App />)
 
     const expression = screen.getByRole('textbox', { name: 'Expression 1' })
@@ -210,6 +208,35 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.queryByRole('textbox', { name: 'Position 1' }),
     ).not.toBeInTheDocument()
+
+    fireEvent.change(expression, { target: { value: '3e12' } })
+
+    expect(screen.getByText('Bivector')).toBeInTheDocument()
+    expect(
+      screen.getByText('3e12', { selector: 'output' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('textbox', { name: 'Position 1' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent('No vectors are visible')
+  })
+
+  it.each([
+    ['12', 'Scalar'],
+    ['(2, 1)', 'Vector'],
+    ['3e12', 'Bivector'],
+    ['1 + e12', 'Rotor'],
+    ['1 + e1 + e12', 'Mixed multivector'],
+  ])('labels %s as %s without derived details', (source, kind) => {
+    render(<App />)
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Expression 1' }),
+      { target: { value: source } },
+    )
+
+    expect(screen.getByText(kind)).toBeInTheDocument()
+    expect(screen.queryByText(/‖/)).not.toBeInTheDocument()
   })
 
   it('inserts after the active row with Enter and deletes an empty row', () => {

@@ -9,6 +9,7 @@ import {
   type OwnedMultivector,
 } from '../domain/multivector'
 import { evaluateExpression } from '../evaluation/evaluateExpression'
+import { supportsVga2Position } from '../geometry/vga2Interpretation'
 import type { SurfaceExpressionNode } from '../language/ast'
 import { lowerExpression } from '../language/lowerExpression'
 import {
@@ -259,12 +260,25 @@ export function evaluateDocument(
       }
 
       if (
-        reference.property !== null &&
-        valueResult.entity?.kind !== 'vector-2d'
+        reference.property === 'position' &&
+        !supportsVga2Position(valueResult.entity)
       ) {
         const invalid = diagnostic(
           'LANG_UNSUPPORTED_PROPERTY',
           `The value “${reference.name}” does not support position.`,
+          reference.span,
+        )
+        results.set(node.key, invalid)
+        return invalid
+      }
+
+      if (
+        reference.property === 'head' &&
+        valueResult.entity.kind !== 'vector-2d'
+      ) {
+        const invalid = diagnostic(
+          'LANG_UNSUPPORTED_PROPERTY',
+          `The value “${reference.name}” does not support head.`,
           reference.span,
         )
         results.set(node.key, invalid)
@@ -332,7 +346,7 @@ export function evaluateDocument(
     const valueResult = results.get(nodeKey(node.item.id, 'value'))
     if (
       valueResult?.status === 'valid' &&
-      valueResult.entity?.kind === 'vector-2d'
+      supportsVga2Position(valueResult.entity)
     ) {
       evaluateNode(node)
     }
@@ -344,10 +358,19 @@ export function evaluateDocument(
 
     if (
       valueEvaluation?.status === 'valid' &&
-      valueEvaluation.entity?.kind === 'vector-2d'
+      supportsVga2Position(valueEvaluation.entity)
     ) {
       const positionEvaluation =
         results.get(nodeKey(item.id, 'position')) ?? null
+      if (valueEvaluation.entity.kind !== 'vector-2d') {
+        return {
+          item,
+          position: index + 1,
+          evaluation: valueEvaluation,
+          positionEvaluation,
+          headInspection: null,
+        }
+      }
       const positionEntity =
         positionEvaluation?.status === 'valid' &&
         positionEvaluation.entity?.kind === 'vector-2d'

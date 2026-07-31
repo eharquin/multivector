@@ -37,18 +37,17 @@ describe('source evaluation pipeline', () => {
     })
   })
 
-  it('retains a valid bivector value without requiring a geometric entity', () => {
+  it('interprets a bivector without creating a render primitive', () => {
     const result = evaluateSource('e1 * e2', engine)
 
     expect(result).toMatchObject({
       status: 'valid',
       inspection: 'e12',
-      entity: null,
+      entity: { kind: 'bivector-2d', value: 1 },
       primitive: null,
       visualization: {
         status: 'unsupported',
-        message:
-          'This multivector has no supported VGA 2D geometric interpretation.',
+        message: 'This VGA 2D object has no supported visualization.',
       },
     })
   })
@@ -76,14 +75,22 @@ describe('source evaluation pipeline', () => {
     ['12 + e1', '12 + e1'],
     ['vector(1, 1) + 12', '12 + e1 + e2'],
     ['12 + 2e1 + 80e12', '12 + 2e1 + 80e12'],
-  ])('evaluates and inspects mixed expression %s', (source, inspection) => {
+  ])('evaluates and interprets mixed expression %s', (source, inspection) => {
     const result = evaluateSource(source, engine)
 
     expect(result).toMatchObject({
       status: 'valid',
       inspection,
-      entity: null,
+      entity: { kind: 'mixed-multivector' },
       visualization: { status: 'unsupported' },
+    })
+  })
+
+  it('distinguishes a rotor from a pure bivector', () => {
+    expect(evaluateSource('1 + e12', engine)).toMatchObject({
+      status: 'valid',
+      entity: { kind: 'rotor-2d', scalar: 1, bivector: 1 },
+      primitive: null,
     })
   })
 })
