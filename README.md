@@ -62,9 +62,9 @@ render together in list order. Expression rows provide separate visibility and
 appearance controls, Studio-compatible semantic color styles, configurable
 labels, and natural VGA normalization for individual vectors and bivectors.
 Appearance applies to a whole list and never changes its element values. Hidden
-objects retain their evaluated text. The application supports session-level
-system, light, and dark themes; restoring the selection across reloads remains
-part of planned view-state persistence. Each single-vector or single-bivector
+objects retain their evaluated text. The application supports persistent
+system, light, and dark theme selection. Additional viewport display settings
+remain part of future view-state controls. Each single-vector or single-bivector
 row also owns an optional position expression; lists instead preserve the
 inherited positions of their elements. Positioned vectors render from that
 position to their derived head. Positioned bivectors render as signed
@@ -87,15 +87,15 @@ open document, and failed writes retain the last saved revision.
 `Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
 element's index, semantic type, canonical value, and inherited position.
 
-Direct manipulation, animation, and additional
-algebras remain planned work.
+Semantic history, scalar controls, direct manipulation, animation, and
+additional algebras remain planned work.
 
 The current public application delivers the accepted VGA 2D Foundation
 workflow. Broader geometry and interaction capabilities remain incremental.
 
 The keyboard-only [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md)
 and its [acceptance record](docs/acceptance/vga-2d-foundation.md) track the
-release workflow and remaining manual evidence.
+accepted release workflow and its evidence.
 The example is loaded as the default graph only when no local document exists.
 
 ## Documentation
