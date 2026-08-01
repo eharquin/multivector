@@ -17,7 +17,7 @@ passed until it has actually been performed against the release candidate.
 | F2D-002 — Authoring and recovery | Keyboard example fixture in `src/App.test.tsx`; language, dependency, limit, and diagnostic recovery fixtures | Automated |
 | F2D-003 — Geometry | Interpretation and primitive fixtures plus application coverage for individual, listed, positioned, scalar-zero, non-spatial, invalid, and rendering-limit states | Automated |
 | F2D-004 — Persistence | Canonical byte-stability, strict import, local restoration, and failed-write retention fixtures in `src/document` | Automated |
-| F2D-005 — Accessibility | Semantic component assertions plus the manual checklist below | Manual pass pending |
+| F2D-005 — Accessibility | Semantic component assertions plus the completed manual checklist below | Checks passed; environment metadata pending |
 | F2D-006 — Release | `npm run verify`, GitHub Pages workflow with a post-deployment HTTP check, and deployed smoke checklist below | Deployment pending |
 | F2D-007 — Design feedback | Requirement disposition table below | In progress |
 
@@ -26,22 +26,26 @@ passed until it has actually been performed against the release candidate.
 Record browser, operating system, viewport, assistive technology, release
 revision, tester, and date with the results.
 
-- [ ] Complete the documented example without a pointer.
-- [ ] Confirm a logical focus order and visible focus for every interactive
+The project maintainer completed every check against release candidate
+`5511c44`. Browser, operating system, viewport, assistive technology, tester
+identity, and date still need to be recorded before closing #16.
+
+- [x] Complete the documented example without a pointer.
+- [x] Confirm a logical focus order and visible focus for every interactive
   element.
-- [ ] Open and close each dialog and popover with the keyboard; confirm focus
+- [x] Open and close each dialog and popover with the keyboard; confirm focus
   restoration and absence of traps.
-- [ ] Confirm controls and SVG entities have useful accessible names.
-- [ ] Confirm invalid source and persistence failures are announced once and
+- [x] Confirm controls and SVG entities have useful accessible names.
+- [x] Confirm invalid source and persistence failures are announced once and
   remain available as text.
-- [ ] Confirm visibility, invalidity, selection, and evaluation state remain
+- [x] Confirm visibility, invalidity, selection, and evaluation state remain
   understandable without color.
-- [ ] At 200% browser zoom, confirm essential text remains readable, panel
+- [x] At 200% browser zoom, confirm essential text remains readable, panel
   content is reachable, and the page does not require two-dimensional scrolling.
-- [ ] Confirm interactive hit areas meet the 24 by 24 CSS-pixel minimum.
-- [ ] Check light, dark, and system themes for text, focus, control, diagnostic,
+- [x] Confirm interactive hit areas meet the 24 by 24 CSS-pixel minimum.
+- [x] Check light, dark, and system themes for text, focus, control, diagnostic,
   and non-text contrast.
-- [ ] With reduced motion enabled, confirm no required interaction depends on
+- [x] With reduced motion enabled, confirm no required interaction depends on
   motion.
 
 ## Deployment smoke checklist
@@ -69,5 +73,5 @@ revision, tester, and date with the results.
 | Direct manipulation | Deferred | #24 and #25 own viewport creation and positioned-vector manipulation. |
 | Scalar controls and animation | Deferred | #23 and #26 own these increments. |
 | URL sharing and figure export | Deferred | They are not part of the foundation workflow. |
-| Accessibility | Pending recorded manual evidence | Automated semantic fixtures do not replace keyboard, screen-reader, contrast, zoom, and target-size checks. |
+| Accessibility | Confirmed by the manual checklist; environment metadata pending | Automated semantic fixtures are supplemented by keyboard, contrast, zoom, target-size, theme, and reduced-motion checks. |
 | Deployment | Pending release-candidate evidence | The workflow exists; acceptance requires a successful deployment and smoke record. |

@@ -1,4 +1,11 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import {
@@ -100,6 +107,23 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.queryByRole('textbox', { name: 'Position 3' }),
     ).not.toBeInTheDocument()
+
+    const inspectionToggle = screen.getByRole('button', {
+      name: 'List (2)',
+    })
+    expect(inspectionToggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(inspectionToggle)
+
+    const details = screen.getByRole('list', { name: 'Elements of V' })
+    const elements = within(details).getAllByRole('listitem')
+    expect(elements).toHaveLength(2)
+    expect(within(elements[0]).getByLabelText('Element 0')).toHaveTextContent('0')
+    expect(elements[0]).toHaveTextContent('Vector')
+    expect(elements[0]).toHaveTextContent('e1')
+    expect(elements[0]).toHaveTextContent('position (1, 2)')
+    expect(elements[1]).toHaveTextContent('Vector')
+    expect(elements[1]).toHaveTextContent('e2')
+    expect(elements[1]).toHaveTextContent('position (-1, 3)')
   })
   it('edits an expression and exposes its value and SVG vector in text', () => {
     render(<App />)
@@ -526,6 +550,36 @@ describe('VGA 2D vertical slice', () => {
       screen.queryByRole('textbox', { name: 'Expression 2' }),
     ).not.toBeInTheDocument()
     expect(first).toHaveFocus()
+  })
+
+  it('inserts below from a position field with Enter', () => {
+    render(<App />)
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    fireEvent.change(position, { target: { value: '(1, 1)' } })
+
+    fireEvent.keyDown(position, { key: 'Enter' })
+
+    expect(screen.getByRole('textbox', { name: 'Position 1' }))
+      .toHaveValue('(1, 1)')
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+  })
+
+  it('inserts above from expression and position fields with Shift+Enter', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+
+    fireEvent.keyDown(expression, { key: 'Enter', shiftKey: true })
+
+    expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Expression 2' }))
+      .toHaveValue('vector(2, 1)')
+
+    const position = screen.getByRole('textbox', { name: 'Position 2' })
+    fireEvent.keyDown(position, { key: 'Enter', shiftKey: true })
+
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Expression 3' }))
+      .toHaveValue('vector(2, 1)')
   })
 
   it('keeps sibling results when one expression is invalid or deleted', () => {

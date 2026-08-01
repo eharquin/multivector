@@ -60,6 +60,8 @@ export type EvaluationState =
         inspection: string
         entity: StandardVga2Entity
         primitive: VisualizationPrimitive | null
+        position: Readonly<{ x: number; y: number }> | null
+        positionConflict: boolean
       }>[]
       visualization: Readonly<{ status: 'available' }>
     }>
@@ -127,6 +129,8 @@ export function presentEvaluation(
           value: element.value,
           inspection: inspectMultivector(element.value),
           entity,
+          position: null,
+          positionConflict: false,
           primitive: entity.kind === 'vector-2d'
             ? vectorToPrimitive(entity, name)
             : entity.kind === 'bivector-2d'

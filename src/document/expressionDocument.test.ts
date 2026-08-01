@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addExpression,
+  addExpressionBefore,
   clearExpressions,
   deleteExpression,
   expressionDocument,
@@ -9,9 +10,44 @@ import {
   updateExpressionAppearance,
   updateExpressionPosition,
   updateExpressionNormalization,
+  vga2FoundationExampleDocument,
 } from './expressionDocument'
 
 describe('expression document', () => {
+  it('provides the documented VGA 2D graph for a new session', () => {
+    const document = vga2FoundationExampleDocument()
+
+    expect(document.id).toBe('vga2-foundation-example')
+    expect(document.items).toEqual([
+      { id: 'item-1', source: 's = 2' },
+      {
+        id: 'item-2',
+        source: 'V1 = vector(s, 1)',
+        positionSource: '(1, 1)',
+      },
+      {
+        id: 'item-3',
+        source: 'V2 = vector(1, -1)',
+        positionSource: '(0.1, 0.1)',
+      },
+      { id: 'item-4', source: 'L = [V1, V2]' },
+      { id: 'item-5', source: 'H = V1.head' },
+    ])
+  })
+
+  it('inserts an expression before a stable sibling identity', () => {
+    const document = expressionDocument([
+      { id: 'item-1', source: '1' },
+      { id: 'item-2', source: '2' },
+    ])
+
+    expect(addExpressionBefore(
+      document,
+      { id: 'item-new', source: '' },
+      'item-1',
+    ).items.map(({ id }) => id)).toEqual(['item-new', 'item-1', 'item-2'])
+  })
+
   it('inserts after a stable item identity', () => {
     const document = expressionDocument([
       { id: 'item-1', source: 'e1' },

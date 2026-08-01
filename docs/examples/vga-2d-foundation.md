@@ -4,6 +4,9 @@ This example exercises the complete foundation workflow using only the
 keyboard. It uses two independently positioned vectors, a list that preserves
 those positions, and a derived vector head.
 
+It is also the default graph for a new browser session. An existing locally
+saved document remains authoritative and is never replaced by the example.
+
 ## Build the document
 
 1. Focus the first expression, replace its source with `s = 2`, and press
@@ -16,6 +19,9 @@ those positions, and a derived vector head.
 4. Enter `L = [V1, V2]` and press `Enter`.
 5. Enter `H = V1.head`.
 
+`Enter` creates the next expression below from either an expression or a
+position field. `Shift+Enter` creates it above.
+
 The panel should report:
 
 - `s` as scalar `2`;
@@ -27,6 +33,10 @@ The panel should report:
 
 The viewport should expose five visible vectors: the two declarations, the two
 list elements, and the derived head when it has the standard origin position.
+
+Expand `List (2)` in the expression panel. Its read-only element rows should
+classify both values as vectors and show `2e1 + e2` at `(1, 1)` and `e1 - e2`
+at `(0.1, 0.1)`, in source order.
 
 ## Exercise diagnostics and recovery
 

@@ -83,6 +83,10 @@ Documents are saved locally after valid edits. The header provides explicit
 canonical JSON import and export; imports are validated before replacing the
 open document, and failed writes retain the last saved revision.
 
+`Enter` adds an expression below the active expression or position field;
+`Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
+element's index, semantic type, canonical value, and inherited position.
+
 Direct manipulation, animation, and additional
 algebras remain planned work.
 
@@ -92,6 +96,7 @@ a completed public release.
 The keyboard-only [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md)
 and its [acceptance record](docs/acceptance/vga-2d-foundation.md) track the
 release workflow and remaining manual evidence.
+The example is loaded as the default graph only when no local document exists.
 
 ## Documentation
 
