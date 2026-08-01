@@ -69,7 +69,7 @@ function App() {
       evaluated.evaluation?.status === 'valid'
         ? evaluated.evaluation.primitive
         : null
-    if (!primitive) return []
+    if (!primitive || primitive.kind !== 'oriented-segment') return []
     return [
       {
         id: evaluated.item.id,
@@ -78,6 +78,31 @@ function App() {
         end: toScreen(viewport, primitive.end),
       },
     ]
+  })
+  const renderedAreas = evaluatedItems.flatMap((evaluated) => {
+    const primitive = evaluated.evaluation?.status === 'valid'
+      ? evaluated.evaluation.primitive
+      : null
+    if (!primitive || primitive.kind !== 'oriented-area') return []
+    if (primitive.shape.kind === 'parallelogram') {
+      const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
+      return [{
+        id: evaluated.item.id,
+        primitive,
+        path: `${points.map((point, index) =>
+          `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
+      }]
+    }
+    const center = toScreen(viewport, primitive.shape.center)
+    const radius = primitive.shape.radius * viewport.pixelsPerUnit
+    const sweep = primitive.orientation === 'counterclockwise' ? 1 : 0
+    return [{
+      id: evaluated.item.id,
+      primitive,
+      path: `M ${center.x + radius} ${center.y} ` +
+        `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
+        `A ${radius} ${radius} 0 1 ${sweep} ${center.x + radius} ${center.y} Z`,
+    }]
   })
 
   useEffect(() => {
@@ -189,12 +214,12 @@ function App() {
     }
   }
 
-  const canvasDescription =
-    renderedVectors.length === 0
-      ? `No vectors are visible from ${expressionDoc.items.length} expressions.`
-      : `${renderedVectors.length} ${
-          renderedVectors.length === 1 ? 'vector is' : 'vectors are'
-        } visible. ${renderedVectors
+  const visibleCount = renderedVectors.length + renderedAreas.length
+  const canvasDescription = visibleCount === 0
+      ? `No spatial objects are visible from ${expressionDoc.items.length} expressions.`
+      : `${renderedVectors.length} ${renderedVectors.length === 1 ? 'vector' : 'vectors'} ` +
+        `and ${renderedAreas.length} ${renderedAreas.length === 1 ? 'bivector' : 'bivectors'} ` +
+        `are visible. ${renderedVectors
           .map(
             ({ primitive }) =>
               `${primitive.accessibleName} runs from ${
@@ -203,6 +228,8 @@ function App() {
                   : `${primitive.start.x}, ${primitive.start.y}`
               } to ${primitive.end.x}, ${primitive.end.y}.`,
           )
+          .join(' ')} ${renderedAreas
+          .map(({ primitive }) => primitive.accessibleDescription)
           .join(' ')}`
 
   return (
@@ -422,7 +449,7 @@ function App() {
               role="img"
               aria-labelledby="canvas-title canvas-description"
             >
-              <title id="canvas-title">Two-dimensional vector viewport</title>
+              <title id="canvas-title">Two-dimensional VGA viewport</title>
               <desc id="canvas-description">{canvasDescription}</desc>
               <defs>
                 <marker
@@ -435,6 +462,17 @@ function App() {
                   markerUnits="strokeWidth"
                 >
                   <path d="M 0 0 L 8 4 L 0 8 z" />
+                </marker>
+                <marker
+                  id="area-arrowhead"
+                  markerWidth="7"
+                  markerHeight="7"
+                  refX="6"
+                  refY="3.5"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M 0 0 L 7 3.5 L 0 7 z" />
                 </marker>
               </defs>
 
@@ -469,6 +507,15 @@ function App() {
                   y2={end.y}
                   markerEnd="url(#arrowhead)"
                   aria-label={primitive.accessibleName}
+                />
+              ))}
+              {renderedAreas.map(({ id, primitive, path }) => (
+                <path
+                  key={id}
+                  className="bivector"
+                  d={path}
+                  markerEnd="url(#area-arrowhead)"
+                  aria-label={primitive.accessibleDescription}
                 />
               ))}
             </svg>

@@ -12,7 +12,10 @@ import {
   evaluateExpression,
   ExpressionEvaluationError,
 } from '../evaluation/evaluateExpression'
-import { supportsVga2Position } from '../geometry/vga2Interpretation'
+import {
+  supportsVga2Position,
+  type Vector2dEntity,
+} from '../geometry/vga2Interpretation'
 import type { SurfaceExpressionNode } from '../language/ast'
 import { lowerExpression } from '../language/lowerExpression'
 import {
@@ -20,7 +23,10 @@ import {
   parseExpression,
   type ParsedDocumentExpression,
 } from '../language/parseExpression'
-import { vectorToPrimitive } from '../visualization/primitives'
+import {
+  bivectorToPrimitive,
+  vectorToPrimitive,
+} from '../visualization/primitives'
 import {
   presentEvaluation,
   type EvaluationState,
@@ -368,30 +374,67 @@ export function evaluateDocument(
     }
   }
 
+  const directOuterProductSides = (
+    item: ExpressionItem,
+  ): readonly [Vector2dEntity, Vector2dEntity] | undefined => {
+    const node = nodes.get(nodeKey(item.id, 'value'))
+    if (
+      node?.expression.kind !== 'binary-expression' ||
+      node.expression.operator !== '^' ||
+      node.expression.left.kind !== 'reference' ||
+      node.expression.left.property !== null ||
+      node.expression.right.kind !== 'reference' ||
+      node.expression.right.property !== null
+    ) return undefined
+
+    const left = declarations.get(node.expression.left.name)
+    const right = declarations.get(node.expression.right.name)
+    if (left?.length !== 1 || right?.length !== 1) return undefined
+    const leftResult = results.get(left[0].key)
+    const rightResult = results.get(right[0].key)
+    if (
+      leftResult?.status !== 'valid' ||
+      leftResult.entity.kind !== 'vector-2d' ||
+      rightResult?.status !== 'valid' ||
+      rightResult.entity.kind !== 'vector-2d'
+    ) return undefined
+    return [leftResult.entity, rightResult.entity]
+  }
+
   return document.items.map((item, index) => {
     const valueEvaluation =
       results.get(nodeKey(item.id, 'value')) ?? null
 
     if (
       valueEvaluation?.status === 'valid' &&
-      supportsVga2Position(valueEvaluation.entity)
+      (valueEvaluation.entity.kind === 'vector-2d' ||
+        valueEvaluation.entity.kind === 'bivector-2d')
     ) {
       const positionEvaluation =
         results.get(nodeKey(item.id, 'position')) ?? null
-      if (valueEvaluation.entity.kind !== 'vector-2d') {
-        return {
-          item,
-          position: index + 1,
-          evaluation: valueEvaluation,
-          positionEvaluation,
-          headInspection: null,
-        }
-      }
       const positionEntity =
         positionEvaluation?.status === 'valid' &&
         positionEvaluation.entity?.kind === 'vector-2d'
           ? positionEvaluation.entity
           : { x: 0, y: 0 }
+      if (valueEvaluation.entity.kind === 'bivector-2d') {
+        return {
+          item,
+          position: index + 1,
+          evaluation: {
+            ...valueEvaluation,
+            primitive: bivectorToPrimitive(
+              valueEvaluation.entity,
+              nodes.get(nodeKey(item.id, 'value'))?.declaration?.name ??
+                `Bivector ${index + 1}`,
+              positionEntity,
+              directOuterProductSides(item),
+            ),
+          },
+          positionEvaluation,
+          headInspection: null,
+        }
+      }
       return {
         item,
         position: index + 1,

@@ -201,7 +201,7 @@ describe('document dependency evaluation', () => {
     })
   })
 
-  it('evaluates a separate position for a bivector without rendering it', () => {
+  it('renders a bivector at its separately evaluated position', () => {
     const results = evaluateItems([
       {
         id: 'bivector',
@@ -216,7 +216,12 @@ describe('document dependency evaluation', () => {
       evaluation: {
         status: 'valid',
         entity: { kind: 'bivector-2d', value: 3 },
-        primitive: null,
+        primitive: {
+          kind: 'oriented-area',
+          area: 3,
+          orientation: 'counterclockwise',
+          shape: { kind: 'loop', center: { x: 2, y: 1 } },
+        },
       },
       positionEvaluation: {
         status: 'valid',
@@ -244,7 +249,12 @@ describe('document dependency evaluation', () => {
         status: 'valid',
         inspection: '-2e12',
         entity: { kind: 'bivector-2d', value: -2 },
-        primitive: null,
+        primitive: {
+          kind: 'oriented-area',
+          area: 2,
+          orientation: 'clockwise',
+          shape: { kind: 'loop', center: { x: 0, y: 0 } },
+        },
       },
       positionEvaluation: {
         status: 'invalid',
@@ -280,6 +290,32 @@ describe('document dependency evaluation', () => {
       { status: 'valid', inspection: 'e1 + 3e2' },
       { status: 'valid', inspection: '2' },
     ])
+  })
+
+  it('renders a direct named-vector outer product as a parallelogram', () => {
+    const results = evaluate(
+      'area = V ^ W',
+      'V = (2, 1)',
+      'W = (1, 3)',
+    )
+
+    expect(results[0].evaluation).toMatchObject({
+      status: 'valid',
+      entity: { kind: 'bivector-2d', value: 5 },
+      primitive: {
+        kind: 'oriented-area',
+        area: 5,
+        shape: {
+          kind: 'parallelogram',
+          vertices: [
+            { x: 0, y: 0 },
+            { x: 2, y: 1 },
+            { x: 3, y: 4 },
+            { x: 1, y: 3 },
+          ],
+        },
+      },
+    })
   })
 
   it('keeps independent branches valid after an unsupported property', () => {
