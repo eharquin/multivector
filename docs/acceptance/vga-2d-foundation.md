@@ -3,7 +3,7 @@
 **Issue:** #16  
 **Milestone:** [VGA 2D Foundation](../requirements/milestones/vga-2d-foundation.md)  
 **Example:** [VGA 2D Foundation Example](../examples/vga-2d-foundation.md)  
-**Status:** In progress
+**Status:** Accepted
 
 This record separates automated evidence from manual and deployed observations.
 A pending observation is not acceptance evidence and shall not be marked as
@@ -13,13 +13,13 @@ passed until it has actually been performed against the release candidate.
 
 | Criterion | Evidence | Status |
 | --- | --- | --- |
-| F2D-001 — Vertical slice | Parser, lowering, document evaluation, VGA engine, interpretation, primitive, viewport, and application tests under `src` | Automated |
-| F2D-002 — Authoring and recovery | Keyboard example fixture in `src/App.test.tsx`; language, dependency, limit, and diagnostic recovery fixtures | Automated |
-| F2D-003 — Geometry | Interpretation and primitive fixtures plus application coverage for individual, listed, positioned, scalar-zero, non-spatial, invalid, and rendering-limit states | Automated |
-| F2D-004 — Persistence | Canonical byte-stability, strict import, local restoration, and failed-write retention fixtures in `src/document` | Automated |
-| F2D-005 — Accessibility | Semantic component assertions plus the completed manual checklist below | Checks passed; environment metadata pending |
-| F2D-006 — Release | `npm run verify`, GitHub Pages workflow with a post-deployment HTTP check, and deployed smoke checklist below | Deployment pending |
-| F2D-007 — Design feedback | Requirement disposition table below | In progress |
+| F2D-001 — Vertical slice | Parser, lowering, document evaluation, VGA engine, interpretation, primitive, viewport, and application tests under `src` | Accepted |
+| F2D-002 — Authoring and recovery | Keyboard example fixture in `src/App.test.tsx`; language, dependency, limit, and diagnostic recovery fixtures | Accepted |
+| F2D-003 — Geometry | Interpretation and primitive fixtures plus application coverage for individual, listed, positioned, scalar-zero, non-spatial, invalid, and rendering-limit states | Accepted |
+| F2D-004 — Persistence | Canonical byte-stability, strict import, local restoration, and failed-write retention fixtures in `src/document` | Accepted |
+| F2D-005 — Accessibility | Semantic component assertions plus the completed manual checklist below | Accepted |
+| F2D-006 — Release | `npm run verify`, GitHub Pages deployment, automatic HTTP check, and completed deployed smoke checklist | Accepted |
+| F2D-007 — Design feedback | Requirement disposition table below | Accepted |
 
 ## Manual accessibility checklist
 
@@ -27,8 +27,10 @@ Record browser, operating system, viewport, assistive technology, release
 revision, tester, and date with the results.
 
 The project maintainer completed every check against release candidate
-`5511c44`. Browser, operating system, viewport, assistive technology, tester
-identity, and date still need to be recorded before closing #16.
+`5511c44`, with the final interaction refinements validated on deployed
+revision `c180b49` on 2026-08-02. The exact browser, operating-system, and
+viewport versions were not recorded; no dedicated assistive technology beyond
+keyboard and browser accessibility semantics was reported.
 
 - [x] Complete the documented example without a pointer.
 - [x] Confirm a logical focus order and visible focus for every interactive
@@ -51,14 +53,23 @@ identity, and date still need to be recorded before closing #16.
 ## Deployment smoke checklist
 
 - [x] `npm run verify` passes locally on the release candidate (197 tests).
-- [ ] The push workflow deploys the verified artifact to GitHub Pages.
-- [ ] The application loads directly at its configured base path without a
+- [x] The push workflow deploys the verified artifact to GitHub Pages.
+- [x] The application loads directly at its configured base path without a
   backend.
-- [ ] The documented example evaluates and renders in the deployed application.
-- [ ] Reload restores the local document.
-- [ ] Canonical export followed by import restores the same document.
-- [ ] A fresh session has no dependency on data from another device or server.
-- [ ] Record the workflow run, deployed URL, revision, tester, and date.
+- [x] The documented example evaluates and renders in the deployed application.
+- [x] Reload restores the local document.
+- [x] Canonical export followed by import restores the same document.
+- [x] A fresh session has no dependency on data from another device or server.
+- [x] Record the workflow run, deployed URL, revision, tester, and date.
+
+Deployment evidence:
+
+- workflow: [Verify and deploy run 30720794187](https://github.com/eharquin/multivector/actions/runs/30720794187);
+- deployed URL: <https://eharquin.github.io/multivector/>;
+- revision: `c180b494052bc4cdc5eec02793ad8ab923a984a5b4`;
+- automatic deployment and HTTP smoke result: passed;
+- deployed workflow, reload, import, export, and fresh-session validation:
+  project maintainer, 2026-08-02.
 
 ## Draft requirement disposition
 
@@ -73,5 +84,5 @@ identity, and date still need to be recorded before closing #16.
 | Direct manipulation | Deferred | #24 and #25 own viewport creation and positioned-vector manipulation. |
 | Scalar controls and animation | Deferred | #23 and #26 own these increments. |
 | URL sharing and figure export | Deferred | They are not part of the foundation workflow. |
-| Accessibility | Confirmed by the manual checklist; environment metadata pending | Automated semantic fixtures are supplemented by keyboard, contrast, zoom, target-size, theme, and reduced-motion checks. |
-| Deployment | Pending release-candidate evidence | The workflow exists; acceptance requires a successful deployment and smoke record. |
+| Accessibility | Confirmed | Automated semantic fixtures are supplemented by keyboard, contrast, zoom, target-size, theme, and reduced-motion checks. |
+| Deployment | Confirmed | The verified revision deployed without a backend and passed automatic and maintainer smoke checks. |

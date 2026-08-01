@@ -90,8 +90,8 @@ element's index, semantic type, canonical value, and inherited position.
 Direct manipulation, animation, and additional
 algebras remain planned work.
 
-The current slice is implementation evidence toward the VGA 2D Foundation, not
-a completed public release.
+The current public application delivers the accepted VGA 2D Foundation
+workflow. Broader geometry and interaction capabilities remain incremental.
 
 The keyboard-only [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md)
 and its [acceptance record](docs/acceptance/vga-2d-foundation.md) track the
