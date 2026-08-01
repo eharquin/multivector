@@ -5,6 +5,42 @@ import {
 } from './parseExpression'
 
 describe('minimal expression parser', () => {
+  it('parses list literals, ranges, and zero-based indexing', () => {
+    expect(parseExpression('[]')).toMatchObject({
+      ok: true, expression: { kind: 'list-expression', elements: [] },
+    })
+    expect(parseExpression('[e1, 2e2,]')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'list-expression',
+        elements: [{ kind: 'basis-blade' }, { kind: 'binary-expression' }],
+      },
+    })
+    expect(parseExpression('[1...3]')).toMatchObject({
+      ok: true, expression: { kind: 'range-expression', next: null },
+    })
+    expect(parseExpression('[5,3...0]')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'range-expression',
+        start: { value: 5 }, next: { value: 3 }, end: { value: 0 },
+      },
+    })
+    expect(parseExpression('[e1, e2][1].dual')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'property-expression',
+        object: { kind: 'index-expression', index: { value: 1 } },
+        property: 'dual',
+      },
+    })
+  })
+
+  it('rejects list elisions', () => {
+    expect(parseExpression('[e1,,e2]')).toMatchObject({
+      ok: false, diagnostic: { code: 'LANG_SYNTAX' },
+    })
+  })
   it('parses a scalar literal as a complete expression', () => {
     expect(parseExpression('  -12.5 ')).toEqual({
       ok: true,

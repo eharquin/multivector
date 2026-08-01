@@ -33,7 +33,15 @@ property. The expression panel classifies exact VGA(2) values as scalars,
 vectors, bivectors, rotors, or mixed multivectors without adding those labels
 to the mathematical value.
 
-Lists, annotations, the remaining properties, operators and functions,
+The implemented collection subset includes list literals, two- and three-term
+integer ranges, zero-based indexing, value/list and singleton/equal-length
+list broadcasting, distributive supported operations, stable derived element
+identities, and deterministic generated-value and work limits. Nested lists
+and partial list results are rejected. Positioned vector and bivector elements
+retain positions through supported list operations; `position` and vector
+`head` distribute over compatible lists.
+
+Annotations, the remaining properties, operators and functions,
 serialization, and the generalized algebra-symbol and capability registries in this
 specification remain planned. This section records implementation evidence; it
 does not narrow the normative language.

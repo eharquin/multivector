@@ -137,6 +137,17 @@ bivectors produce spatial primitives from their separately owned positions.
 Direct named-vector outer products may retain enough surface construction
 provenance to select a parallelogram without changing value-based interpretation.
 
+The common evaluator owns a multivector-or-flat-list value union above the
+algebra engine. List literals and ranges create stable element records;
+distributive unary and binary operations preserve order and derive deterministic
+result identities while sending only individual multivectors through the VGA
+engine. Indexing returns one multivector with its selected element identity kept
+on the evaluated record. Position metadata follows element identity and
+operation lineage outside mathematical values. Compatible positions propagate,
+one positioned operand supplies the result position, and conflicting positions
+produce a geometry diagnostic without invalidating the list value. Presentation
+renders the supported prefix and reports elements omitted by rendering limits.
+
 The surface AST preserves constructor and operator syntax for diagnostics and
 future language-aware editing. Lowering removes syntax sugar before evaluation;
 in VGA(2), `vector(x, y)` and `(x, y)` become `x * e1 + y * e2`. Constructor notation and

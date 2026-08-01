@@ -49,6 +49,28 @@ export function lowerExpression(
   expression: SurfaceExpressionNode,
 ): CoreExpressionNode {
   switch (expression.kind) {
+    case 'list-expression':
+      return {
+        kind: 'list',
+        elements: expression.elements.map(lowerExpression),
+        elementOrigins: expression.elements.map((element) => element.span),
+        origin: expression.span,
+      }
+    case 'range-expression':
+      return {
+        kind: 'range',
+        start: lowerExpression(expression.start),
+        next: expression.next ? lowerExpression(expression.next) : null,
+        end: lowerExpression(expression.end),
+        origin: expression.span,
+      }
+    case 'index-expression':
+      return {
+        kind: 'index',
+        object: lowerExpression(expression.object),
+        index: lowerExpression(expression.index),
+        origin: expression.span,
+      }
     case 'scalar-literal':
       return scalar(expression.value, expression.span)
     case 'basis-blade':

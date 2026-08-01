@@ -20,6 +20,75 @@ function evaluateItems(items: readonly ExpressionItem[]) {
 }
 
 describe('document dependency evaluation', () => {
+  it('broadcasts named lists and preserves stable derived identities', () => {
+    const items = [
+      { id: 'list', source: 'L = [e1, e2]' },
+      { id: 'sum', source: 'M = L + [e2]' },
+      { id: 'selected', source: 'S = M[1]' },
+    ]
+    const first = evaluateItems(items)
+    const second = evaluateItems(items)
+
+    expect(first.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: '[e1, e2]' },
+      { status: 'valid', inspection: '[e1 + e2, 2e2]' },
+      { status: 'valid', inspection: '2e2', elementId: expect.any(String) },
+    ])
+    const firstList = first[1].evaluation
+    const secondList = second[1].evaluation
+    if (firstList?.status !== 'valid' || firstList.valueType !== 'list' ||
+        secondList?.status !== 'valid' || secondList.valueType !== 'list') return
+    expect(firstList.value.elements.map((element) => element.id)).toEqual(
+      secondList.value.elements.map((element) => element.id),
+    )
+  })
+
+  it('distributes positions and heads over vector lists', () => {
+    const results = evaluateItems([
+      {
+        id: 'vectors',
+        source: 'V = [e1, 2e2]',
+        positionSource: '[(1, 2), (-1, 3)]',
+      },
+      { id: 'positions', source: 'P = V.position' },
+      { id: 'heads', source: 'H = V.head' },
+      { id: 'derived', source: 'W = V + e1' },
+      { id: 'derived-positions', source: 'WP = W.position' },
+      { id: 'derived-heads', source: 'WH = W.head' },
+    ])
+
+    expect(results.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: '[e1, 2e2]' },
+      { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
+      { status: 'valid', inspection: '[2e1 + 2e2, -e1 + 5e2]' },
+      {
+        status: 'valid',
+        inspection: '[2e1, e1 + 2e2]',
+        elements: [
+          { primitive: { start: { x: 1, y: 2 }, end: { x: 3, y: 2 } } },
+          { primitive: { start: { x: -1, y: 3 }, end: { x: 0, y: 5 } } },
+        ],
+      },
+      { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
+      { status: 'valid', inspection: '[3e1 + 2e2, 5e2]' },
+    ])
+    expect(results[0].headInspection).toBe('[2e1 + 2e2, -e1 + 5e2]')
+  })
+
+  it('reports conflicting inherited list positions without changing values', () => {
+    const [,, result] = evaluateItems([
+      { id: 'a', source: 'A = [e1]', positionSource: '(1, 0)' },
+      { id: 'b', source: 'B = [e2]', positionSource: '(2, 0)' },
+      { id: 'sum', source: 'C = A + B' },
+    ])
+
+    expect(result.evaluation).toMatchObject({
+      status: 'valid', inspection: '[e1 + e2]',
+    })
+    expect(result.positionEvaluation).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'GEOM_POSITION_CONFLICT' },
+    })
+  })
   it('evaluates named expressions and forward references by dependency order', () => {
     const results = evaluate(
       'B = V1 * V2',

@@ -11,6 +11,17 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     ],
   },
   {
+    title: 'Lists and ranges',
+    entries: [
+      ['[A, B, C]', 'ordered list literal; a trailing comma is allowed'],
+      ['[1...5]', 'inclusive unit-step integer range'],
+      ['[1, 3...7]', 'integer range with an explicit next term'],
+      ['L[0]', 'zero-based list indexing'],
+      ['L + A', 'broadcast one value over a list'],
+      ['L + M', 'elementwise or singleton-list broadcasting'],
+    ],
+  },
+  {
     title: 'Operators',
     entries: [
       ['A + B, A - B', 'addition and subtraction'],
@@ -51,7 +62,7 @@ export const EXPRESSION_REFERENCE = Object.freeze([
   {
     title: 'Precedence',
     entries: [
-      ['(...) calls and properties', 'strongest'],
+      ['(...) calls, L[i], and properties', 'strongest'],
       ['A**n', 'right-associative geometric power'],
       ['!A, ~A, +A, -A', 'unary operations'],
       ['A ^ B, A & B, A | B', 'geometric derived products'],
@@ -65,6 +76,7 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     entries: [
       ['@ (0, 0)', 'optional position field; an empty field also uses the origin'],
       ['@ P', 'position may reference another named vector expression'],
+      ['@ [P, Q]', 'list positions distribute element by element'],
       ['invalid position', 'keeps the object value valid and reports a position diagnostic'],
     ],
   },

@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { bivectorToPrimitive, vectorToPrimitive } from './primitives'
+import {
+  bivectorToPrimitive,
+  limitRenderedListElements,
+  vectorToPrimitive,
+} from './primitives'
 
 describe('vector primitive adapter', () => {
+  it('preserves the first 1,000 list elements and reports exact truncation', () => {
+    const result = limitRenderedListElements(
+      Array.from({ length: 1_003 }, (_, index) => index),
+    )
+
+    expect(result.visible).toHaveLength(1_000)
+    expect(result.visible[0]).toBe(0)
+    expect(result.visible[999]).toBe(999)
+    expect(result.omitted).toBe(3)
+  })
   it('creates an oriented segment without algebra identifiers or coefficients', () => {
     const primitive = vectorToPrimitive({ kind: 'vector-2d', x: 2, y: 1 })
 

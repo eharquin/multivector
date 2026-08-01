@@ -5,6 +5,12 @@ import {
   type OwnedMultivector,
 } from '../domain/multivector'
 import {
+  inspectLanguageValue,
+  elementIdentity,
+  type LanguageValue,
+  type OwnedList,
+} from '../domain/languageValue'
+import {
   evaluateExpression,
   ExpressionEvaluationError,
 } from '../evaluation/evaluateExpression'
@@ -28,14 +34,34 @@ import {
 export type EvaluationState =
   | Readonly<{
       status: 'valid'
+      valueType: 'single'
       value: OwnedMultivector
       inspection: string
       entity: StandardVga2Entity
       primitive: VisualizationPrimitive | null
+      elements: null
+      elementId: string | null
       visualization:
         | Readonly<{ status: 'available' }>
         | Readonly<{ status: 'non-spatial' }>
         | Readonly<{ status: 'unsupported'; message: string }>
+    }>
+  | Readonly<{
+      status: 'valid'
+      valueType: 'list'
+      value: OwnedList
+      inspection: string
+      entity: Readonly<{ kind: 'list'; length: number }>
+      primitive: null
+      elementId: null
+      elements: readonly Readonly<{
+        id: string
+        value: OwnedMultivector
+        inspection: string
+        entity: StandardVga2Entity
+        primitive: VisualizationPrimitive | null
+      }>[]
+      visualization: Readonly<{ status: 'available' }>
     }>
   | Readonly<{
       status: 'invalid'
@@ -63,6 +89,15 @@ function firstReference(
       return expression.arguments
         .map(firstReference)
         .find((reference) => reference !== null) ?? null
+    case 'list-expression':
+      return expression.elements.map(firstReference)
+        .find((reference) => reference !== null) ?? null
+    case 'range-expression':
+      return firstReference(expression.start) ??
+        (expression.next ? firstReference(expression.next) : null) ??
+        firstReference(expression.end)
+    case 'index-expression':
+      return firstReference(expression.object) ?? firstReference(expression.index)
     case 'scalar-literal':
     case 'basis-blade':
     case 'pseudoscalar':
@@ -72,14 +107,42 @@ function firstReference(
 
 /** Builds presentation state from an already evaluated owned value. */
 export function presentEvaluation(
-  value: OwnedMultivector,
+  value: LanguageValue,
   accessibleName?: string,
 ): EvaluationState {
+  if (value.kind === 'list') {
+    return {
+      status: 'valid',
+      valueType: 'list',
+      value,
+      inspection: inspectLanguageValue(value),
+      entity: Object.freeze({ kind: 'list' as const, length: value.elements.length }),
+      primitive: null,
+      elementId: null,
+      elements: Object.freeze(value.elements.map((element, index) => {
+        const entity = interpretVga2(element.value)
+        const name = `${accessibleName ?? 'List 1'}[${index}]`
+        return Object.freeze({
+          id: element.id,
+          value: element.value,
+          inspection: inspectMultivector(element.value),
+          entity,
+          primitive: entity.kind === 'vector-2d'
+            ? vectorToPrimitive(entity, name)
+            : entity.kind === 'bivector-2d'
+              ? bivectorToPrimitive(entity, name)
+              : null,
+        })
+      })),
+      visualization: { status: 'available' },
+    }
+  }
   const entity = interpretVga2(value)
   const name = accessibleName ??
     (entity.kind === 'bivector-2d' ? 'Bivector 1' : 'Vector 1')
   return {
     status: 'valid',
+    valueType: 'single',
     value,
     inspection: inspectMultivector(value),
     entity,
@@ -88,6 +151,8 @@ export function presentEvaluation(
       : entity.kind === 'bivector-2d'
         ? bivectorToPrimitive(entity, name)
         : null,
+    elements: null,
+    elementId: elementIdentity(value),
     visualization:
       entity.kind === 'vector-2d' || entity.kind === 'bivector-2d'
         ? { status: 'available' }

@@ -5,6 +5,35 @@ import App from './App'
 afterEach(cleanup)
 
 describe('VGA 2D vertical slice', () => {
+  it('inspects heterogeneous lists and renders supported elements in order', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'L = [1, e1, -2e12]' },
+    })
+
+    expect(screen.getByText('List (3)')).toBeInTheDocument()
+    expect(screen.getByText('[1, e1, -2e12]', { selector: 'output' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent(
+      '1 vector and 1 bivector are visible.',
+    )
+    expect(screen.getByRole('img')).toHaveTextContent(
+      'L[2] is an oriented loop with signed value -2',
+    )
+  })
+
+  it('renders a positioned vector list with distinct accessible element names', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = [e1, e2]' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 1' }), {
+      target: { value: '[(1, 2), (-1, 3)]' },
+    })
+
+    expect(screen.getByLabelText('V[0]')).toHaveAttribute('x1', '392')
+    expect(screen.getByLabelText('V[1]')).toHaveAttribute('x1', '248')
+  })
   it('edits an expression and exposes its value and SVG vector in text', () => {
     render(<App />)
 
