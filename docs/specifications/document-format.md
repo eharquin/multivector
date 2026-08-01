@@ -29,13 +29,12 @@ visibility, label visibility, label text, and style may each be absent, and one
 resolver supplies the deterministic defaults. These sparse records are
 application state, not canonical JSON; a canonical `Appearance` contains every
 required field described in section 2.2. A common list record applies to every
-rendered element. Theme selection is presentation-only. Natural normalization
+rendered element. Natural normalization
 is modeled by the canonical nullable `normalization` field on an expression
 item. It changes the value seen by dependent expressions without rewriting
 source and remains separate from appearance and numeric controls. The current
-theme selector is session state and updates display tokens immediately; it will
-populate and restore canonical `ViewState.display.theme` when view-state
-persistence is implemented.
+theme selector updates display tokens immediately and populates and restores
+canonical `ViewState.display.theme`.
 
 The current document operations include an atomic clear transition. It replaces
 `items` with an empty array and `appearance` with an empty object while retaining
@@ -43,10 +42,15 @@ all document-level identity and configuration fields. The sustained-hold
 confirmation and subsequent focus restoration are interface behavior and are
 not serialized.
 
-Canonical JSON serialization, migration, persistence of appearance and view
-state, numeric controls, and the remaining format-version-one fields are not
-implemented yet. This note records implementation evidence and does not change
-the normative serialized structure below.
+Canonical JSON serialization, strict version-one validation, local persistence,
+and explicit JSON import and export are implemented. Appearance, natural
+normalization, source, position source, document identity, metadata, and theme
+round-trip through that boundary. Numeric-control records are validated and
+preserved through the nullable `control` field, but their interactive runtime
+behavior is not implemented yet. Viewport display controls and annotations have
+canonical representations but do not yet have dedicated editing interfaces. This note
+records implementation evidence and does not change the normative serialized
+structure below.
 
 ## 2. Structure
 

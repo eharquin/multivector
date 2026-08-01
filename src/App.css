@@ -94,6 +94,42 @@
 
 .theme-control + .app-status { margin-left: 0; }
 
+.document-file-input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.document-command {
+  padding: 5px 9px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: 0.7rem var(--font-mono);
+  cursor: pointer;
+}
+
+.document-command:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.document-command:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.document-diagnostic {
+  padding: 8px 16px;
+  color: var(--error);
+  background: var(--error-soft);
+  border-bottom: 1px solid var(--error);
+  font: 0.75rem/1.4 var(--font-mono);
+}
+
 .workspace {
   flex: 1;
   min-height: 0;
