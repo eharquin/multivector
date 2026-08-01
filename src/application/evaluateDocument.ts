@@ -10,8 +10,10 @@ import {
   type OwnedMultivector,
 } from '../domain/multivector'
 import {
+  elementIdentity,
   inspectLanguageValue,
   ownedList,
+  retainElementIdentity,
   type LanguageValue,
 } from '../domain/languageValue'
 import {
@@ -384,11 +386,22 @@ export function evaluateDocument(
         for (const candidate of nodes.values()) {
           if (candidate.property !== 'value') continue
           const candidateValue = results.get(candidate.key)
-          if (candidateValue?.status !== 'valid' || candidateValue.valueType !== 'list') continue
-          candidateValue.value.elements.forEach((element) =>
-            localLineage.set(element.id, element.sources ?? []))
+          if (candidateValue?.status !== 'valid') continue
+          if (candidateValue.valueType === 'list') {
+            candidateValue.value.elements.forEach((element) =>
+              localLineage.set(element.id, element.sources ?? []))
+          }
           const candidatePosition = results.get(nodeKey(candidate.item.id, 'position'))
           if (candidatePosition?.status !== 'valid') continue
+          if (candidateValue.valueType === 'single') {
+            if (candidateValue.elementId && candidatePosition.value.kind === 'multivector') {
+              localPositions.set(candidateValue.elementId, {
+                x: candidatePosition.value.coefficients[1],
+                y: candidatePosition.value.coefficients[2],
+              })
+            }
+            continue
+          }
           candidateValue.value.elements.forEach((element, elementIndex) => {
             const position = candidatePosition.value.kind === 'list'
               ? candidatePosition.value.elements[
@@ -506,6 +519,9 @@ export function evaluateDocument(
       return invalid
     }
 
+    if (node.property === 'value' && value.kind === 'multivector' && !elementIdentity(value)) {
+      retainElementIdentity(value, node.key)
+    }
     const presented = presentEvaluation(
       value,
       node.declaration?.name ?? `Vector ${node.position}`,
@@ -534,12 +550,23 @@ export function evaluateDocument(
   for (const node of nodes.values()) {
     if (node.property !== 'value') continue
     const valueResult = results.get(node.key)
-    if (valueResult?.status !== 'valid' || valueResult.valueType !== 'list') continue
-    valueResult.value.elements.forEach((element) => {
-      lineage.set(element.id, element.sources ?? [])
-    })
+    if (valueResult?.status !== 'valid') continue
+    if (valueResult.valueType === 'list') {
+      valueResult.value.elements.forEach((element) => {
+        lineage.set(element.id, element.sources ?? [])
+      })
+    }
     const positionResult = results.get(nodeKey(node.item.id, 'position'))
     if (positionResult?.status !== 'valid') continue
+    if (valueResult.valueType === 'single') {
+      if (valueResult.elementId && positionResult.value.kind === 'multivector') {
+        explicitPositions.set(valueResult.elementId, {
+          x: positionResult.value.coefficients[1],
+          y: positionResult.value.coefficients[2],
+        })
+      }
+      continue
+    }
     valueResult.value.elements.forEach((element, elementIndex) => {
       const positionValue = positionResult.value
       const position = positionValue.kind === 'list'

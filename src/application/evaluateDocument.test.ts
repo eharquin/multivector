@@ -75,6 +75,28 @@ describe('document dependency evaluation', () => {
     expect(results[0].headInspection).toBe('[2e1 + 2e2, -e1 + 5e2]')
   })
 
+  it('preserves the individual positions of named vectors collected in a list', () => {
+    const results = evaluateItems([
+      { id: 'vector-1', source: 'V1 = vector(2, 1)', positionSource: '(1, 1)' },
+      { id: 'vector-2', source: 'V2 = vector(1, -1)', positionSource: '(0.1, 0.1)' },
+      { id: 'list', source: 'L = [V1, V2]' },
+      { id: 'positions', source: 'P = L.position' },
+    ])
+
+    expect(results[2].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '[2e1 + e2, e1 - e2]',
+      elements: [
+        { primitive: { start: { x: 1, y: 1 }, end: { x: 3, y: 2 } } },
+        { primitive: { start: { x: 0.1, y: 0.1 }, end: { x: 1.1, y: -0.9 } } },
+      ],
+    })
+    expect(results[3].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '[e1 + e2, 0.1e1 + 0.1e2]',
+    })
+  })
+
   it('reports conflicting inherited list positions without changing values', () => {
     const [,, result] = evaluateItems([
       { id: 'a', source: 'A = [e1]', positionSource: '(1, 0)' },

@@ -1,6 +1,7 @@
 import { AlgebraOperationError, type VgaEngine } from '../algebra/vgaEngine'
 import type { OwnedMultivector } from '../domain/multivector'
 import {
+  elementIdentity,
   MAX_GENERATED_VALUES,
   ownedList,
   retainElementIdentity,
@@ -92,10 +93,11 @@ function evaluateExpressionUnchecked(
           )
         }
         const id = `${scope}:literal:${expression.elementOrigins[index].start}:${expression.elementOrigins[index].end}`
+        const sourceIdentity = elementIdentity(value)
         elements.push({
           id,
           value,
-          sources: [id],
+          sources: sourceIdentity ? [sourceIdentity] : [id],
         })
       })
       chargeElements(budget, elements.length, expression)
