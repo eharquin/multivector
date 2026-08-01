@@ -517,6 +517,13 @@ export function evaluateDocument(
       results.set(node.key, invalid)
       return invalid
     }
+    if (
+      node.property === 'value' &&
+      node.item.normalization === 'natural' &&
+      value.kind === 'multivector'
+    ) {
+      value = engine.normalize(value).value
+    }
     if (node.property === 'position' && !isPositionValue(value)) {
       const invalid = diagnostic(
         'GEOM_INVALID_POSITION',

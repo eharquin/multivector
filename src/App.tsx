@@ -11,17 +11,23 @@ import { createVga2Engine } from './algebra/vgaEngine'
 import { evaluateDocument } from './application/evaluateDocument'
 import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
+import { AppearancePopover } from './components/AppearancePopover'
+import { ClearExpressionsButton } from './components/ClearExpressionsButton'
+import { resolveItemAppearance } from './components/appearancePalette'
 import {
   describeVga2Entity,
   supportsVga2Position,
 } from './geometry/vga2Interpretation'
 import {
   addExpression,
+  clearExpressions,
   deleteExpression,
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
   updateExpression,
+  updateExpressionAppearance,
   updateExpressionPosition,
+  updateExpressionNormalization,
   type ExpressionItem,
 } from './document/expressionDocument'
 import { toScreen, type Viewport2d } from './visualization/viewport'
@@ -31,6 +37,11 @@ import './App.css'
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 720
+type ThemeMode = 'system' | 'light' | 'dark'
+
+function declaredName(source: string): string | null {
+  return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
+}
 
 const viewport: Viewport2d = {
   width: 640,
@@ -53,29 +64,57 @@ function App() {
   const resizeDrag = useRef<Readonly<{ startX: number; startWidth: number }> | null>(
     null,
   )
+  const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
+  const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
+  const [theme, setTheme] = useState<ThemeMode>('system')
   const [infoDialog, setInfoDialog] = useState<
     'algebra' | 'expressions' | null
   >(null)
   const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
+  const closeAppearance = useCallback(() => setAppearanceItemId(null), [])
 
   const evaluatedItems = useMemo(
     () => evaluateDocument(expressionDoc, engine),
     [expressionDoc],
   )
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
   const origin = toScreen(viewport, { x: 0, y: 0 })
   const renderedPrimitives = evaluatedItems.flatMap((evaluated) => {
     if (evaluated.evaluation?.status !== 'valid') return []
+    const kind = evaluated.evaluation.valueType === 'list'
+      ? `List (${evaluated.evaluation.value.elements.length})`
+      : describeVga2Entity(evaluated.evaluation.entity)
+    const { visible, color, labelVisible, displayLabel } = resolveItemAppearance(
+      expressionDoc.appearance[evaluated.item.id],
+      kind,
+      declaredName(evaluated.item.source),
+    )
+    if (!visible) return []
+    const baseLabel = displayLabel
     return evaluated.evaluation.valueType === 'list'
       ? limitRenderedListElements(
           evaluated.evaluation.elements.filter((element) => element.primitive),
         ).visible
-        .flatMap((element) => element.primitive
-        ? [{ id: `${evaluated.item.id}:${element.id}`, primitive: element.primitive }]
+        .flatMap((element, elementIndex) => element.primitive
+        ? [{
+            id: `${evaluated.item.id}:${element.id}`,
+            primitive: element.primitive,
+            color,
+            label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
+          }]
         : [])
       : evaluated.evaluation.primitive
-        ? [{ id: evaluated.item.id, primitive: evaluated.evaluation.primitive }]
+        ? [{
+            id: evaluated.item.id,
+            primitive: evaluated.evaluation.primitive,
+            color,
+            label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
+          }]
         : []
   })
   const omittedRenderElements = evaluatedItems.reduce((total, evaluated) => {
@@ -85,24 +124,29 @@ function App() {
       evaluated.evaluation.elements.filter((element) => element.primitive),
     ).omitted
   }, 0)
-  const renderedVectors = renderedPrimitives.flatMap(({ id, primitive }) => {
+  const renderedVectors = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
     if (primitive.kind !== 'oriented-segment') return []
     return [{
         id,
         primitive,
+        color,
+        label,
         start: toScreen(viewport, primitive.start),
         end: toScreen(viewport, primitive.end),
       }]
   })
-  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive }) => {
+  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
     if (primitive.kind !== 'oriented-area') return []
     if (primitive.shape.kind === 'parallelogram') {
       const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
       return [{
         id,
         primitive,
+        color,
+        label,
         path: `${points.map((point, index) =>
           `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
+        labelPoint: points[2],
       }]
     }
     const center = toScreen(viewport, primitive.shape.center)
@@ -111,9 +155,12 @@ function App() {
     return [{
       id,
       primitive,
+      color,
+      label,
       path: `M ${center.x + radius} ${center.y} ` +
         `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
         `A ${radius} ${radius} 0 1 ${sweep} ${center.x + radius} ${center.y} Z`,
+      labelPoint: { x: center.x + radius, y: center.y - radius },
     }]
   })
 
@@ -203,6 +250,12 @@ function App() {
     }
   }
 
+  const clearAllExpressions = () => {
+    setAppearanceItemId(null)
+    setExpressionDoc(clearExpressions)
+    requestAnimationFrame(() => addButtonRef.current?.focus())
+  }
+
   const handleItemKeyDown = (
     event: KeyboardEvent<HTMLInputElement>,
     item: ExpressionItem,
@@ -265,6 +318,14 @@ function App() {
         >
           VGA · 2D
         </button>
+        <label className="theme-control">
+          <span>Theme</span>
+          <select value={theme} onChange={(event) => setTheme(event.target.value as ThemeMode)}>
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
         <span className="app-status">Research preview</span>
       </header>
 
@@ -306,38 +367,121 @@ function App() {
                 evaluation?.status === 'valid' &&
                 evaluation.valueType === 'single' &&
                 supportsVga2Position(evaluation.entity)
+              const kind = evaluation?.status === 'valid'
+                ? evaluation.valueType === 'list'
+                  ? `List (${evaluation.value.elements.length})`
+                  : describeVga2Entity(evaluation.entity)
+                : 'Object'
+              const drawable = evaluation?.status === 'valid' &&
+                (evaluation.valueType === 'list'
+                  ? evaluation.elements.some((element) => element.primitive)
+                  : evaluation.primitive !== null)
+              const {
+                visible,
+                styleId,
+                color,
+                labelVisible,
+                label,
+                displayLabel,
+              } = resolveItemAppearance(
+                expressionDoc.appearance[item.id],
+                kind,
+                declaredName(item.source),
+              )
+              const objectName = displayLabel ?? kind
+              const valid = evaluation?.status === 'valid'
+              const empty = item.source.trim() === ''
 
               return (
                 <article
-                  className={`expression-item ${
+                  className={`expression-item${visible ? '' : ' is-hidden'}${
+                    empty ? ' is-empty-expression' : ''
+                  } ${
                     invalid || invalidPosition ? 'has-error' : ''
                   }`}
                   key={item.id}
                 >
                   <div className="expression-input-row">
+                    <div className="expression-actions">
+                      {drawable && valid && (
+                          <button
+                            type="button"
+                            className="visibility-toggle"
+                            aria-label={`${visible ? 'Hide' : 'Show'} ${objectName}`}
+                            aria-pressed={visible}
+                            onClick={() => setExpressionDoc((current) =>
+                              updateExpressionAppearance(current, item.id, { visible: !visible }))}
+                          >
+                            <span aria-hidden="true">{visible ? '◉' : '⊘'}</span>
+                          </button>
+                      )}
+                      {valid && !drawable && (
+                        <span className="expression-action-spacer" aria-hidden="true" />
+                      )}
+                      {valid ? (
+                          <button
+                            type="button"
+                            className="appearance-swatch"
+                            aria-label={`Edit appearance for ${objectName}`}
+                            aria-haspopup="dialog"
+                            aria-expanded={appearanceItemId === item.id}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              appearanceAnchorRef.current = event.currentTarget
+                              setAppearanceItemId((current) => current === item.id ? null : item.id)
+                            }}
+                          >
+                            <span
+                              className="appearance-swatch-fill"
+                              style={{ backgroundColor: color }}
+                              aria-hidden="true"
+                            />
+                          </button>
+                      ) : (
+                        <span
+                          className={`expression-status-pastille${empty ? ' is-empty' : ' is-error'}`}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
                     <div className="expression-body">
-                      <input
-                        ref={(element) => {
-                          if (element) inputRefs.current.set(item.id, element)
-                          else inputRefs.current.delete(item.id)
-                        }}
-                        id={inputId}
-                        className="expression-source"
-                        aria-label={`Expression ${position}`}
-                        value={item.source}
-                        onChange={(event) =>
-                          setExpressionDoc((current) =>
-                            updateExpression(current, item.id, event.target.value),
-                          )
-                        }
-                        onKeyDown={(event) =>
-                          handleItemKeyDown(event, item, index)
-                        }
-                        aria-describedby={evaluation ? feedbackId : undefined}
-                        aria-invalid={invalid}
-                        spellCheck={false}
-                        autoComplete="off"
-                      />
+                      <div className="expression-editor-row">
+                        <input
+                          ref={(element) => {
+                            if (element) inputRefs.current.set(item.id, element)
+                            else inputRefs.current.delete(item.id)
+                          }}
+                          id={inputId}
+                          className="expression-source"
+                          aria-label={`Expression ${position}`}
+                          value={item.source}
+                          onChange={(event) =>
+                            setExpressionDoc((current) =>
+                              updateExpression(current, item.id, event.target.value),
+                            )
+                          }
+                          onKeyDown={(event) =>
+                            handleItemKeyDown(event, item, index)
+                          }
+                          aria-describedby={evaluation ? feedbackId : undefined}
+                          aria-invalid={invalid}
+                          spellCheck={false}
+                          autoComplete="off"
+                        />
+                        {supportsPosition && (
+                          <button
+                            type="button"
+                            className={`normalize-toggle${item.normalization ? ' active' : ''}`}
+                            aria-pressed={item.normalization === 'natural'}
+                            onClick={() => setExpressionDoc((current) =>
+                              updateExpressionNormalization(
+                                current,
+                                item.id,
+                                item.normalization === 'natural' ? undefined : 'natural',
+                              ))}
+                          >norm</button>
+                        )}
+                      </div>
 
                       {evaluation || positionEvaluation ? (
                         <div
@@ -347,10 +491,8 @@ function App() {
                         >
                           {evaluation?.status === 'valid' ? (
                             <>
-                              <span className="object-kind">
-                                {evaluation.valueType === 'list'
-                                  ? `List (${evaluation.value.elements.length})`
-                                  : describeVga2Entity(evaluation.entity)}
+                              <span className="object-kind" style={{ color }}>
+                                {kind}
                               </span>
                               <output>{evaluation.inspection}</output>
                             </>
@@ -387,20 +529,17 @@ function App() {
                             </>
                           )}
                         </div>
-                      ) : (
-                        <div className="expression-empty-state">
-                          Enter an expression, or press Backspace to remove this row.
-                        </div>
-                      )}
+                      ) : null}
 
                       {supportsPosition && (
                         <div className="position-input-row">
-                          <span className="position-prefix" aria-hidden="true">@</span>
+                          <span className="position-prefix" aria-hidden="true">position</span>
                           <input
                             className="position-source"
                             aria-label={`Position ${position}`}
                             placeholder="(0, 0)"
                             value={item.positionSource ?? ''}
+                            size={Math.max(1, (item.positionSource || '(0, 0)').length)}
                             onChange={(event) =>
                               setExpressionDoc((current) =>
                                 updateExpressionPosition(
@@ -429,20 +568,46 @@ function App() {
                       ×
                     </button>
                   </div>
+                  {appearanceItemId === item.id && valid && (
+                    <AppearancePopover
+                      kind={kind}
+                      styleId={styleId}
+                      visible={visible}
+                      labelVisible={labelVisible}
+                      label={label}
+                      colorOnly={!drawable}
+                      anchorRef={appearanceAnchorRef}
+                      onStyleChange={(style) => setExpressionDoc((current) =>
+                        updateExpressionAppearance(current, item.id, { style }))}
+                      onVisibleChange={(nextVisible) => setExpressionDoc((current) =>
+                        updateExpressionAppearance(current, item.id, { visible: nextVisible }))}
+                      onLabelVisibleChange={(nextVisible) => setExpressionDoc((current) =>
+                        updateExpressionAppearance(current, item.id, { labelVisible: nextVisible }))}
+                      onLabelChange={(nextLabel) => setExpressionDoc((current) =>
+                        updateExpressionAppearance(current, item.id, { label: nextLabel }))}
+                      onClose={closeAppearance}
+                    />
+                  )}
                 </article>
               )
             })}
           </div>
-          <button
-            ref={expressionReferenceButtonRef}
-            type="button"
-            className="expression-reference-button"
-            aria-haspopup="dialog"
-            onClick={() => setInfoDialog('expressions')}
-          >
-            <span aria-hidden="true">?</span>
-            <span>Expression reference</span>
-          </button>
+          <div className="expression-panel-footer">
+            <button
+              ref={expressionReferenceButtonRef}
+              type="button"
+              className="expression-reference-button"
+              aria-haspopup="dialog"
+              onClick={() => setInfoDialog('expressions')}
+            >
+              <span aria-hidden="true">?</span>
+              <span>Expression reference</span>
+            </button>
+            <ClearExpressionsButton
+              count={expressionDoc.items.length}
+              onClear={clearAllExpressions}
+            />
+          </div>
         </aside>
 
         <div
@@ -514,26 +679,30 @@ function App() {
                 r="3"
               />
 
-              {renderedVectors.map(({ id, primitive, start, end }) => (
-                <line
-                  key={id}
-                  className="vector"
-                  x1={start.x}
-                  y1={start.y}
-                  x2={end.x}
-                  y2={end.y}
-                  markerEnd="url(#arrowhead)"
-                  aria-label={primitive.accessibleName}
-                />
+              {renderedVectors.map(({ id, primitive, start, end, color, label }) => (
+                <g key={id} style={{ color }}>
+                  <line
+                    className="vector"
+                    x1={start.x}
+                    y1={start.y}
+                    x2={end.x}
+                    y2={end.y}
+                    markerEnd="url(#arrowhead)"
+                    aria-label={primitive.accessibleName}
+                  />
+                  {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
+                </g>
               ))}
-              {renderedAreas.map(({ id, primitive, path }) => (
-                <path
-                  key={id}
-                  className="bivector"
-                  d={path}
-                  markerEnd="url(#area-arrowhead)"
-                  aria-label={primitive.accessibleDescription}
-                />
+              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint }) => (
+                <g key={id} style={{ color }}>
+                  <path
+                    className="bivector"
+                    d={path}
+                    markerEnd="url(#area-arrowhead)"
+                    aria-label={primitive.accessibleDescription}
+                  />
+                  {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
+                </g>
               ))}
             </svg>
           </div>

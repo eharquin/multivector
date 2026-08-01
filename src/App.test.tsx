@@ -1,6 +1,11 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import {
+  DEFAULT_OBJECT_STYLES,
+  paletteEntry,
+} from './components/appearancePalette'
+import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 
 afterEach(cleanup)
 
@@ -126,6 +131,35 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByRole('img')).toHaveTextContent('No spatial objects are visible')
   })
 
+  it('shows gray and error pastilles for empty and invalid expressions', () => {
+    const { container } = render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+
+    fireEvent.change(expression, { target: { value: '' } })
+    expect(screen.queryByText(/Enter an expression/)).not.toBeInTheDocument()
+    expect(container.querySelector('.expression-status-pastille.is-empty'))
+      .toBeInTheDocument()
+
+    fireEvent.change(expression, { target: { value: 'Missing' } })
+    expect(expression).toHaveAttribute('aria-invalid', 'true')
+    expect(container.querySelector('.expression-status-pastille.is-error'))
+      .toBeInTheDocument()
+  })
+
+  it('offers color-only appearance for a scalar', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: '12' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for Scalar' }))
+
+    expect(screen.getByRole('dialog', { name: 'Appearance — Scalar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use color green 4' })).toBeInTheDocument()
+    expect(screen.queryByText('Visibility')).not.toBeInTheDocument()
+    expect(screen.queryByText('Show label')).not.toBeInTheDocument()
+  })
+
   it('accepts basis-blade notation through the same visual workflow', () => {
     render(<App />)
 
@@ -224,6 +258,113 @@ describe('VGA 2D vertical slice', () => {
     )
     expect(screen.getByLabelText('V')).toHaveAttribute('x1', '248')
     expect(screen.getByLabelText('V')).toHaveAttribute('y1', '96')
+  })
+
+  it('hides a rendered object without changing its evaluated text', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Vector' }))
+
+    expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show Vector' })).toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent('No spatial objects are visible')
+  })
+
+  it('applies deterministic default styles per semantic object kind', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+
+    expect(screen.getByText('Vector')).toHaveStyle({ color: '#E8A000' })
+
+    fireEvent.change(expression, { target: { value: 'e1 ^ e2' } })
+    expect(screen.getByText('Bivector')).toHaveStyle({ color: '#C30A3A' })
+
+    fireEvent.change(expression, { target: { value: '3' } })
+    expect(screen.getByText('Scalar')).toHaveStyle({ color: '#0F9D57' })
+  })
+
+  it('edits common color and label appearance independently of the value', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for Vector' }))
+    expect(screen.getByRole('dialog', { name: 'Appearance — Vector' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use color green 4' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Text' }), {
+      target: { value: 'Velocity' },
+    })
+
+    expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
+    expect(screen.getByText('Velocity', { selector: 'text' })).toBeInTheDocument()
+    expect(screen.getByText('Vector')).toHaveStyle({ color: '#0F9D57' })
+  })
+
+  it('restores the declared name when the label text is cleared', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = vector(2, 1)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for V' }))
+
+    const label = screen.getByRole('textbox', { name: 'Text' })
+    fireEvent.change(label, { target: { value: 'Velocity' } })
+    expect(screen.getByText('Velocity', { selector: 'text' })).toBeInTheDocument()
+
+    fireEvent.change(label, { target: { value: '' } })
+
+    expect(label).toHaveValue('')
+    expect(screen.getByText('V', { selector: 'text' })).toBeInTheDocument()
+  })
+
+  it('keeps focus in the label field while its text changes', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = vector(2, 1)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for V' }))
+    const label = screen.getByRole('textbox', { name: 'Text' })
+
+    label.focus()
+    fireEvent.change(label, { target: { value: 'V' } })
+    expect(label).toHaveFocus()
+    fireEvent.change(label, { target: { value: 'Ve' } })
+    expect(label).toHaveFocus()
+  })
+
+  it('returns focus to the swatch when the appearance popover closes', () => {
+    render(<App />)
+    const swatch = screen.getByRole('button', { name: 'Edit appearance for Vector' })
+
+    fireEvent.click(swatch)
+    fireEvent.click(screen.getByRole('button', { name: 'Close appearance' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(swatch).toHaveFocus()
+  })
+
+  it('offers system, light, and dark application themes', () => {
+    render(<App />)
+    const theme = screen.getByRole('combobox', { name: 'Theme' })
+
+    fireEvent.change(theme, { target: { value: 'dark' } })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+
+    fireEvent.change(theme, { target: { value: 'light' } })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+  })
+
+  it('toggles natural VGA normalization without rewriting the expression', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+    const normalize = screen.getByRole('button', { name: 'norm' })
+
+    fireEvent.click(normalize)
+    expect(normalize).toHaveAttribute('aria-pressed', 'true')
+    expect(expression).toHaveValue('vector(2, 1)')
+    expect(screen.queryByText('2e1 + e2', { selector: 'output' })).not.toBeInTheDocument()
+
+    fireEvent.click(normalize)
+    expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
   })
 
   it('shows a position diagnostic while retaining the vector output', () => {
@@ -375,12 +516,102 @@ describe('VGA 2D vertical slice', () => {
     expect(dialog).toHaveTextContent('Basis & metric')
     expect(dialog).toHaveTextContent('Cayley table')
     expect(dialog).toHaveTextContent('A.involution')
-    expect(dialog).not.toHaveTextContent('Object kinds (color palette)')
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
+  })
+
+  it('marks the operator as code and its description as prose', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
+
+    const row = screen.getByRole('rowheader', { name: 'A * B' }).closest('tr')
+
+    expect(row?.querySelector('th code')).toHaveTextContent('A * B')
+    expect(row?.querySelector('td')).toHaveTextContent('geometric product')
+    expect(row?.querySelector('td code')).toBeNull()
+  })
+
+  it('names every default object color in text, not only as a swatch', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
+    const dialog = screen.getByRole('dialog', {
+      name: 'Vectorial Geometric Algebra ℝ(2,0,0)',
+    })
+
+    expect(dialog).toHaveTextContent('Object colors')
+    for (const [, style] of DEFAULT_OBJECT_STYLES) {
+      const entry = paletteEntry(style)
+      expect(entry).toBeDefined()
+      expect(dialog).toHaveTextContent(entry?.name ?? style)
+    }
+
+    const listRow = screen.getByRole('rowheader', { name: 'List' }).closest('tr')
+    expect(listRow).toHaveTextContent('green 3')
+    expect(listRow?.querySelector('.object-color-swatch'))
+      .toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('clears every expression after the clear control is held', () => {
+    vi.useFakeTimers()
+    try {
+      render(<App />)
+      fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+      fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+        target: { value: 'e1 ^ e2' },
+      })
+      const clear = screen.getByRole('button', { name: 'Clear all expressions' })
+
+      fireEvent.pointerDown(clear)
+      act(() => void vi.advanceTimersByTime(CLEAR_HOLD_MS - 1))
+      expect(screen.getByRole('textbox', { name: 'Expression 1' })).toBeInTheDocument()
+
+      act(() => void vi.advanceTimersByTime(1))
+
+      expect(screen.queryByRole('textbox', { name: 'Expression 1' }))
+        .not.toBeInTheDocument()
+      expect(clear).toBeDisabled()
+      expect(screen.getByRole('img')).toHaveTextContent(
+        'No spatial objects are visible from 0 expressions',
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps every expression when the hold is released early', () => {
+    vi.useFakeTimers()
+    try {
+      render(<App />)
+      const clear = screen.getByRole('button', { name: 'Clear all expressions' })
+
+      fireEvent.pointerDown(clear)
+      act(() => void vi.advanceTimersByTime(CLEAR_HOLD_MS / 2))
+      fireEvent.pointerUp(clear)
+      act(() => void vi.advanceTimersByTime(CLEAR_HOLD_MS))
+
+      expect(screen.getByRole('textbox', { name: 'Expression 1' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('offers the same hold gesture to the keyboard', () => {
+    vi.useFakeTimers()
+    try {
+      render(<App />)
+      const clear = screen.getByRole('button', { name: 'Clear all expressions' })
+
+      fireEvent.keyDown(clear, { key: 'Enter' })
+      act(() => void vi.advanceTimersByTime(CLEAR_HOLD_MS))
+
+      expect(screen.queryByRole('textbox', { name: 'Expression 1' }))
+        .not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('opens the expression reference from the bottom of the panel', () => {

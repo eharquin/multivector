@@ -58,21 +58,30 @@ branches continue evaluating. Values pass through the isolated algebra-engine
 adapter and value-based standard interpretation. The expression panel identifies
 scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
 canonical values. Supported vectors and bivectors, including list elements,
-render together in list
-order. Each single-vector or single-bivector row also owns an optional position
-expression; lists instead preserve the inherited positions of their elements.
-positioned vectors render from that position to their derived head. Positioned bivectors render as
-signed oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when
-its construction is safely available. `V.position` and `V.head`, and
-`B.position`, may be referenced by other expressions. Position metadata remains
-separate from multivector coefficients. Scalars, rotors, and
-mixed-grade values retain textual states when the viewport has no spatial
-visualization for them. The header's VGA badge opens an algebra-information
-sheet, and the bottom of the expression panel provides a reference limited to
-the expression syntax currently implemented.
+render together in list order. Expression rows provide separate visibility and
+appearance controls, Studio-compatible semantic color styles, configurable
+labels, and natural VGA normalization for individual vectors and bivectors.
+Appearance applies to a whole list and never changes its element values. Hidden
+objects retain their evaluated text. The application supports session-level
+system, light, and dark themes; restoring the selection across reloads remains
+part of planned view-state persistence. Each single-vector or single-bivector
+row also owns an optional position expression; lists instead preserve the
+inherited positions of their elements. Positioned vectors render from that
+position to their derived head. Positioned bivectors render as signed
+oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when its
+construction is safely available. `V.position` and `V.head`, and `B.position`,
+may be referenced by other expressions. Position metadata remains separate from
+multivector coefficients. Scalars, rotors, and mixed-grade values retain
+textual states when the viewport has no spatial visualization for them. The
+header's VGA badge opens an algebra-information sheet, and the bottom of the
+expression panel provides a reference limited to the expression syntax
+currently implemented. A neighboring clear control requires a one-second
+pointer or keyboard hold, removes all expressions and their appearance records,
+and returns focus to the add-expression control.
 
-Persistence, appearance controls, direct manipulation, animation, and
-additional algebras remain planned work.
+Canonical document persistence, direct manipulation, animation, and additional
+algebras remain planned work.
+
 The current slice is implementation evidence toward the VGA 2D Foundation, not
 a completed public release.
 

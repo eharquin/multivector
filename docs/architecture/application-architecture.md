@@ -138,6 +138,46 @@ bivectors produce spatial primitives from their separately owned positions.
 Direct named-vector outer products may retain enough surface construction
 provenance to select a parallelogram without changing value-based interpretation.
 
+The in-memory document owns renderer-independent item appearance records keyed
+by stable item identity. Visibility, label visibility, label text, and semantic
+style identifiers never enter owned multivectors. One appearance record applies
+to every rendered element of a list. Natural normalization is a separate
+algebraic item flag applied before dependent expressions resolve; it is not
+appearance metadata. Its canonical document representation is the nullable
+`Item.normalization` field, whose initial non-null value is `natural`. Theme
+selection changes CSS display tokens only. It is session state in the current
+slice; the persistence boundary will later read and write the canonical
+`ViewState.display.theme` field without affecting evaluation.
+
+The interface layer owns the presentation defaults applied when a stored
+appearance property is absent, including the mapping from semantic object kind
+to style identifier and the fallback from empty label text to the declared name.
+One resolver serves both the expression row and the visualizer so an item cannot
+be described one way and drawn another. The kind-to-style mapping is an ordered
+table rather than a branch, so the algebra reference documents it from the same
+source the renderer resolves through. Transient appearance surfaces render to
+the document body with viewport-aware placement and return focus to the control
+that opened them.
+
+Reference content is authored as data and rendered through one shared definition
+table, so a presentation change never edits documentation text. The algebra
+reference composes those algebra facts with the interface-owned default palette
+at render time; color remains absent from algebra data.
+
+The initial semantic style registry contains six shades for each red, blue,
+green, yellow, and neutral ramp. Documents store only registered identifiers;
+the renderer owns their concrete colors. Canonical validation rejects unknown
+identifiers, while the interface resolver uses `blue-4` only as a defensive
+fallback for unvalidated in-memory state. Non-spatial values use the resolved
+color in the expression panel without gaining visibility or label controls.
+
+Document update operations also include an atomic clear transition that removes
+all expression items and their item-keyed appearance records while retaining the
+document object and its identity. Because history is not implemented in the
+current slice, the interface exposes that transition only after a one-second
+sustained pointer or keyboard activation, closes transient appearance UI, and
+returns focus to the add-expression control.
+
 The common evaluator owns a multivector-or-flat-list value union above the
 algebra engine. List literals and ranges create stable element records;
 distributive unary and binary operations preserve order and derive deterministic

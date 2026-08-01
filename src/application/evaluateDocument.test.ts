@@ -20,6 +20,24 @@ function evaluateItems(items: readonly ExpressionItem[]) {
 }
 
 describe('document dependency evaluation', () => {
+  it('applies natural normalization before dependent expressions resolve', () => {
+    const [vector, doubled] = evaluateItems([
+      { id: 'vector', source: 'V = vector(3, 4)', normalization: 'natural' },
+      { id: 'doubled', source: 'W = 2 * V' },
+    ])
+
+    if (vector.evaluation?.status !== 'valid' || vector.evaluation.valueType !== 'single' ||
+        doubled.evaluation?.status !== 'valid' || doubled.evaluation.valueType !== 'single') {
+      throw new Error('Expected valid single values')
+    }
+    expect(vector.evaluation.value.coefficients).toEqual([
+      0, expect.closeTo(0.6), expect.closeTo(0.8), 0,
+    ])
+    expect(doubled.evaluation.value.coefficients).toEqual([
+      0, expect.closeTo(1.2), expect.closeTo(1.6), 0,
+    ])
+  })
+
   it('broadcasts named lists and preserves stable derived identities', () => {
     const items = [
       { id: 'list', source: 'L = [e1, e2]' },

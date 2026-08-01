@@ -270,9 +270,9 @@ The normative language is specified in
 - **APP-001:** Algebraic values shall not contain visual placement or style.
 - **APP-002:** Appearance sources shall use the common language and dependency
   graph where supported.
-- **APP-003:** Every visual item shall store visibility, label visibility, and a
-  palette-independent style reference; renderers shall apply explicit defaults
-  when a property is absent.
+- **APP-003:** Every visual item shall store visibility, label visibility, label
+  text, and a palette-independent style reference; renderers shall apply
+  explicit defaults when a property is absent.
 - **APP-004:** Appearance applies to a whole list in the initial workflow;
   per-element appearance is outside that workflow.
 - **APP-005:** Position is a separate expression source owned by the item.
@@ -290,6 +290,13 @@ explicitly include configurable display settings.
   capability. It is disabled when no visualizer is active and for entity kinds
   that do not support position. Disabling it shall preserve stored position
   sources without evaluating them or attaching position diagnostics.
+- **APP-008:** Canonical appearance shall reference a registered semantic style
+  identifier rather than a concrete color value. Unknown identifiers shall fail
+  canonical validation; renderers may use an explicit defensive fallback only
+  before validation.
+- **APP-009:** A non-spatial value may use its style in textual presentation,
+  but shall not expose object-visibility or visualizer-label controls when it
+  has no render primitive.
 
 The direct-manipulation requirements below have **Milestone** commitment and
 apply only to milestones that explicitly include interactive source editing.
@@ -328,6 +335,10 @@ milestones that explicitly include advanced history behavior.
   history entry.
 - **CMD-008:** Undo and redo shall restore source, appearance, controls, algebra
   configuration, and deterministic derived results atomically.
+- **CMD-009:** Until document history makes clearing recoverable, clearing all
+  expressions shall require a sustained pointer or keyboard activation. The
+  command shall remove every item and item-keyed appearance record while
+  preserving document identity, then move focus to the add-expression control.
 
 The scalar-control and animation requirements below have **Milestone**
 commitment and apply only to milestones that explicitly include controls or

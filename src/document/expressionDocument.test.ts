@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   addExpression,
+  clearExpressions,
   deleteExpression,
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
   updateExpression,
+  updateExpressionAppearance,
   updateExpressionPosition,
+  updateExpressionNormalization,
 } from './expressionDocument'
 
 describe('expression document', () => {
@@ -46,6 +49,49 @@ describe('expression document', () => {
       source: 'e1',
       positionSource: 'vector(2, 3)',
     })
+  })
+
+  it('updates appearance without changing mathematical or position source', () => {
+    const document = expressionDocument([{
+      id: 'item-1', source: 'V = e1', positionSource: '(1, 2)',
+    }])
+
+    const updated = updateExpressionAppearance(document, 'item-1', {
+      visible: false, style: 'blue-4', labelVisible: true, label: 'Velocity',
+    })
+    expect(updated.items[0]).toEqual({
+      id: 'item-1',
+      source: 'V = e1',
+      positionSource: '(1, 2)',
+    })
+    expect(updated.appearance['item-1']).toEqual({
+      visible: false,
+      style: 'blue-4',
+      labelVisible: true,
+      label: 'Velocity',
+    })
+  })
+
+  it('toggles natural normalization without rewriting source', () => {
+    const document = expressionDocument([{ id: 'item-1', source: 'V = 2e1' }])
+    expect(updateExpressionNormalization(document, 'item-1', 'natural').items[0])
+      .toEqual({ id: 'item-1', source: 'V = 2e1', normalization: 'natural' })
+  })
+
+  it('clears every item and its appearance together', () => {
+    const document = updateExpressionAppearance(
+      expressionDocument([
+        { id: 'item-1', source: 'V = e1' },
+        { id: 'item-2', source: 'W = e2' },
+      ]),
+      'item-1',
+      { visible: false },
+    )
+
+    const cleared = clearExpressions(document)
+
+    expect(cleared.items).toEqual([])
+    expect(cleared.appearance).toEqual({})
   })
 
   it('does not exceed the normative document item limit', () => {
