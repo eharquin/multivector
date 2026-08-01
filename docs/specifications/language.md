@@ -38,8 +38,8 @@ integer ranges, zero-based indexing, value/list and singleton/equal-length
 list broadcasting, distributive supported operations, stable derived element
 identities, and deterministic generated-value and work limits. Nested lists
 and partial list results are rejected. Positioned vector and bivector elements
-retain positions through supported list operations; `position` and vector
-`head` distribute over compatible lists.
+retain positions through supported list operations without a list-level
+position field; `position` and vector `head` distribute over compatible lists.
 
 Annotations, the remaining properties, operators and functions,
 serialization, and the generalized algebra-symbol and capability registries in this

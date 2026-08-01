@@ -45,11 +45,9 @@ describe('document dependency evaluation', () => {
 
   it('distributes positions and heads over vector lists', () => {
     const results = evaluateItems([
-      {
-        id: 'vectors',
-        source: 'V = [e1, 2e2]',
-        positionSource: '[(1, 2), (-1, 3)]',
-      },
+      { id: 'vector-1', source: 'V1 = e1', positionSource: '(1, 2)' },
+      { id: 'vector-2', source: 'V2 = 2e2', positionSource: '(-1, 3)' },
+      { id: 'vectors', source: 'V = [V1, V2]' },
       { id: 'positions', source: 'P = V.position' },
       { id: 'heads', source: 'H = V.head' },
       { id: 'derived', source: 'W = V + e1' },
@@ -58,6 +56,8 @@ describe('document dependency evaluation', () => {
     ])
 
     expect(results.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: 'e1' },
+      { status: 'valid', inspection: '2e2' },
       { status: 'valid', inspection: '[e1, 2e2]' },
       { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
       { status: 'valid', inspection: '[2e1 + 2e2, -e1 + 5e2]' },
@@ -72,14 +72,14 @@ describe('document dependency evaluation', () => {
       { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
       { status: 'valid', inspection: '[3e1 + 2e2, 5e2]' },
     ])
-    expect(results[0].headInspection).toBe('[2e1 + 2e2, -e1 + 5e2]')
+    expect(results[2].headInspection).toBe('[2e1 + 2e2, -e1 + 5e2]')
   })
 
   it('preserves the individual positions of named vectors collected in a list', () => {
     const results = evaluateItems([
       { id: 'vector-1', source: 'V1 = vector(2, 1)', positionSource: '(1, 1)' },
       { id: 'vector-2', source: 'V2 = vector(1, -1)', positionSource: '(0.1, 0.1)' },
-      { id: 'list', source: 'L = [V1, V2]' },
+      { id: 'list', source: 'L = [V1, V2]', positionSource: '(9, 9)' },
       { id: 'positions', source: 'P = L.position' },
     ])
 
@@ -98,9 +98,11 @@ describe('document dependency evaluation', () => {
   })
 
   it('reports conflicting inherited list positions without changing values', () => {
-    const [,, result] = evaluateItems([
-      { id: 'a', source: 'A = [e1]', positionSource: '(1, 0)' },
-      { id: 'b', source: 'B = [e2]', positionSource: '(2, 0)' },
+    const [,,,, result] = evaluateItems([
+      { id: 'vector-a', source: 'VA = e1', positionSource: '(1, 0)' },
+      { id: 'vector-b', source: 'VB = e2', positionSource: '(2, 0)' },
+      { id: 'a', source: 'A = [VA]' },
+      { id: 'b', source: 'B = [VB]' },
       { id: 'sum', source: 'C = A + B' },
     ])
 

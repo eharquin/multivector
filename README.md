@@ -59,7 +59,8 @@ adapter and value-based standard interpretation. The expression panel identifies
 scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
 canonical values. Supported vectors and bivectors, including list elements,
 render together in list
-order. Each vector or bivector row also owns an optional position expression;
+order. Each single-vector or single-bivector row also owns an optional position
+expression; lists instead preserve the inherited positions of their elements.
 positioned vectors render from that position to their derived head. Positioned bivectors render as
 signed oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when
 its construction is safely available. `V.position` and `V.head`, and

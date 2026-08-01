@@ -127,9 +127,10 @@ evaluated against one document-level declaration table. References may point
 forward or backward in row order. Declaration names are unique and
 case-sensitive; built-in VGA names remain reserved. Supported primitives are
 composed in document order, regardless of evaluation order. Each item may own a
-separate position source. Position nodes are active for vectors and bivectors;
-scalars, rotors, and mixed multivectors preserve any stored position source
-without evaluating it. Bare references target value nodes, `V.position` and
+separate position source. Position nodes are active for single vectors and
+single bivectors; lists inherit element positions, while scalars, rotors, mixed
+multivectors, and lists preserve any stored position source without evaluating
+it. Bare references target value nodes, `V.position` and
 `B.position` target position nodes, and vector-only `V.head` derives the sum of
 the vector value and position. Missing or invalid position results use the
 origin without changing or invalidating a valid positioned value. Vectors and

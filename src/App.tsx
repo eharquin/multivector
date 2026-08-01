@@ -304,11 +304,8 @@ function App() {
                 positionEvaluation?.status === 'invalid'
               const supportsPosition =
                 evaluation?.status === 'valid' &&
-                (evaluation.valueType === 'list'
-                  ? evaluation.elements.length > 0 &&
-                    evaluation.elements.every((element) =>
-                      supportsVga2Position(element.entity))
-                  : supportsVga2Position(evaluation.entity))
+                evaluation.valueType === 'single' &&
+                supportsVga2Position(evaluation.entity)
 
               return (
                 <article

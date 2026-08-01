@@ -135,6 +135,12 @@ function supportsEvaluationPosition(
     : supportsVga2Position(evaluation.entity)
 }
 
+function supportsDirectPosition(
+  evaluation: Extract<EvaluationState, { status: 'valid' }>,
+): boolean {
+  return evaluation.valueType === 'single' && supportsVga2Position(evaluation.entity)
+}
+
 function addPositionValues(
   value: LanguageValue,
   position: LanguageValue,
@@ -361,7 +367,9 @@ export function evaluateDocument(
         return invalid
       }
 
-      const positionNode = nodes.get(nodeKey(target.item.id, 'position'))
+      const positionNode = supportsDirectPosition(valueResult)
+        ? nodes.get(nodeKey(target.item.id, 'position'))
+        : undefined
       let positionValue: LanguageValue = valueResult.valueType === 'list'
         ? ownedList(valueResult.elements.map((element) => ({
             id: element.id,
@@ -377,7 +385,7 @@ export function evaluateDocument(
           if (candidate.property !== 'position') continue
           const candidateValue = results.get(nodeKey(candidate.item.id, 'value'))
           if (candidateValue?.status === 'valid' &&
-              supportsEvaluationPosition(candidateValue)) {
+              supportsDirectPosition(candidateValue)) {
             evaluateNode(candidate)
           }
         }
@@ -538,7 +546,7 @@ export function evaluateDocument(
     const valueResult = results.get(nodeKey(node.item.id, 'value'))
     if (
       valueResult?.status === 'valid' &&
-      supportsEvaluationPosition(valueResult)
+      supportsDirectPosition(valueResult)
     ) {
       evaluateNode(node)
     }
