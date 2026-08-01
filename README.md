@@ -89,6 +89,10 @@ algebras remain planned work.
 The current slice is implementation evidence toward the VGA 2D Foundation, not
 a completed public release.
 
+The keyboard-only [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md)
+and its [acceptance record](docs/acceptance/vga-2d-foundation.md) track the
+release workflow and remaining manual evidence.
+
 ## Documentation
 
 - [Design requirements](docs/design-requirements.md)

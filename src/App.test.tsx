@@ -10,6 +10,52 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 afterEach(cleanup)
 
 describe('VGA 2D vertical slice', () => {
+  it('authors the documented foundation example with keyboard row insertion', () => {
+    render(<App />)
+    const enter = (position: number, source: string) => {
+      const input = screen.getByRole('textbox', { name: `Expression ${position}` })
+      fireEvent.change(input, { target: { value: source } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+    }
+
+    enter(1, 's = 2')
+    expect(document.activeElement).toBe(
+      screen.getByRole('textbox', { name: 'Expression 2' }),
+    )
+    enter(2, 'V1 = vector(s, 1)')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 2' }), {
+      target: { value: '(1, 1)' },
+    })
+    enter(3, 'V2 = vector(1, -1)')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 3' }), {
+      target: { value: '(0.1, 0.1)' },
+    })
+    enter(4, 'L = [V1, V2]')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 5' }), {
+      target: { value: 'H = V1.head' },
+    })
+
+    expect(screen.getByText('List (2)')).toBeInTheDocument()
+    expect(screen.getByText('3e1 + 2e2', { selector: 'output' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent(
+      '5 vectors and 0 bivectors are visible.',
+    )
+
+    const secondVector = screen.getByRole('textbox', { name: 'Expression 3' })
+    fireEvent.change(secondVector, { target: { value: 'V2 = vector(1)' } })
+    expect(secondVector).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('Expected “,” between vector components.'))
+      .toBeInTheDocument()
+    fireEvent.change(secondVector, {
+      target: { value: 'V2 = vector(1, -1)' },
+    })
+    expect(secondVector).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByRole('img')).toHaveTextContent(
+      '5 vectors and 0 bivectors are visible.',
+    )
+  })
+
   it('inspects heterogeneous lists and renders supported elements in order', () => {
     render(<App />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
@@ -337,6 +383,23 @@ describe('VGA 2D vertical slice', () => {
 
     fireEvent.click(swatch)
     fireEvent.click(screen.getByRole('button', { name: 'Close appearance' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(swatch).toHaveFocus()
+  })
+
+  it('closes appearance with Escape and restores focus without a keyboard trap', () => {
+    render(<App />)
+    const swatch = screen.getByRole('button', {
+      name: 'Edit appearance for Vector',
+    })
+
+    fireEvent.click(swatch)
+    expect(screen.getByRole('dialog', { name: 'Appearance — Vector' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Visible' })).toHaveFocus()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(swatch).toHaveFocus()
