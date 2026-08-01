@@ -20,6 +20,99 @@ function evaluateItems(items: readonly ExpressionItem[]) {
 }
 
 describe('document dependency evaluation', () => {
+  it('broadcasts named lists and preserves stable derived identities', () => {
+    const items = [
+      { id: 'list', source: 'L = [e1, e2]' },
+      { id: 'sum', source: 'M = L + [e2]' },
+      { id: 'selected', source: 'S = M[1]' },
+    ]
+    const first = evaluateItems(items)
+    const second = evaluateItems(items)
+
+    expect(first.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: '[e1, e2]' },
+      { status: 'valid', inspection: '[e1 + e2, 2e2]' },
+      { status: 'valid', inspection: '2e2', elementId: expect.any(String) },
+    ])
+    const firstList = first[1].evaluation
+    const secondList = second[1].evaluation
+    if (firstList?.status !== 'valid' || firstList.valueType !== 'list' ||
+        secondList?.status !== 'valid' || secondList.valueType !== 'list') return
+    expect(firstList.value.elements.map((element) => element.id)).toEqual(
+      secondList.value.elements.map((element) => element.id),
+    )
+  })
+
+  it('distributes positions and heads over vector lists', () => {
+    const results = evaluateItems([
+      { id: 'vector-1', source: 'V1 = e1', positionSource: '(1, 2)' },
+      { id: 'vector-2', source: 'V2 = 2e2', positionSource: '(-1, 3)' },
+      { id: 'vectors', source: 'V = [V1, V2]' },
+      { id: 'positions', source: 'P = V.position' },
+      { id: 'heads', source: 'H = V.head' },
+      { id: 'derived', source: 'W = V + e1' },
+      { id: 'derived-positions', source: 'WP = W.position' },
+      { id: 'derived-heads', source: 'WH = W.head' },
+    ])
+
+    expect(results.map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', inspection: 'e1' },
+      { status: 'valid', inspection: '2e2' },
+      { status: 'valid', inspection: '[e1, 2e2]' },
+      { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
+      { status: 'valid', inspection: '[2e1 + 2e2, -e1 + 5e2]' },
+      {
+        status: 'valid',
+        inspection: '[2e1, e1 + 2e2]',
+        elements: [
+          { primitive: { start: { x: 1, y: 2 }, end: { x: 3, y: 2 } } },
+          { primitive: { start: { x: -1, y: 3 }, end: { x: 0, y: 5 } } },
+        ],
+      },
+      { status: 'valid', inspection: '[e1 + 2e2, -e1 + 3e2]' },
+      { status: 'valid', inspection: '[3e1 + 2e2, 5e2]' },
+    ])
+    expect(results[2].headInspection).toBe('[2e1 + 2e2, -e1 + 5e2]')
+  })
+
+  it('preserves the individual positions of named vectors collected in a list', () => {
+    const results = evaluateItems([
+      { id: 'vector-1', source: 'V1 = vector(2, 1)', positionSource: '(1, 1)' },
+      { id: 'vector-2', source: 'V2 = vector(1, -1)', positionSource: '(0.1, 0.1)' },
+      { id: 'list', source: 'L = [V1, V2]', positionSource: '(9, 9)' },
+      { id: 'positions', source: 'P = L.position' },
+    ])
+
+    expect(results[2].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '[2e1 + e2, e1 - e2]',
+      elements: [
+        { primitive: { start: { x: 1, y: 1 }, end: { x: 3, y: 2 } } },
+        { primitive: { start: { x: 0.1, y: 0.1 }, end: { x: 1.1, y: -0.9 } } },
+      ],
+    })
+    expect(results[3].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '[e1 + e2, 0.1e1 + 0.1e2]',
+    })
+  })
+
+  it('reports conflicting inherited list positions without changing values', () => {
+    const [,,,, result] = evaluateItems([
+      { id: 'vector-a', source: 'VA = e1', positionSource: '(1, 0)' },
+      { id: 'vector-b', source: 'VB = e2', positionSource: '(2, 0)' },
+      { id: 'a', source: 'A = [VA]' },
+      { id: 'b', source: 'B = [VB]' },
+      { id: 'sum', source: 'C = A + B' },
+    ])
+
+    expect(result.evaluation).toMatchObject({
+      status: 'valid', inspection: '[e1 + e2]',
+    })
+    expect(result.positionEvaluation).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'GEOM_POSITION_CONFLICT' },
+    })
+  })
   it('evaluates named expressions and forward references by dependency order', () => {
     const results = evaluate(
       'B = V1 * V2',

@@ -6,11 +6,20 @@ import type {
 import type { SourceSpan } from '../domain/diagnostic'
 import {
   inspectMultivector,
+  ownedMultivector,
   type OwnedMultivector,
 } from '../domain/multivector'
 import {
+  elementIdentity,
+  inspectLanguageValue,
+  ownedList,
+  retainElementIdentity,
+  type LanguageValue,
+} from '../domain/languageValue'
+import {
   evaluateExpression,
   ExpressionEvaluationError,
+  type EvaluationBudget,
 } from '../evaluation/evaluateExpression'
 import {
   supportsVga2Position,
@@ -93,6 +102,13 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
       return expression.components.flatMap(collectReferences)
     case 'call-expression':
       return expression.arguments.flatMap(collectReferences)
+    case 'list-expression':
+      return expression.elements.flatMap(collectReferences)
+    case 'range-expression':
+      return [expression.start, ...(expression.next ? [expression.next] : []), expression.end]
+        .flatMap(collectReferences)
+    case 'index-expression':
+      return [...collectReferences(expression.object), ...collectReferences(expression.index)]
     case 'scalar-literal':
     case 'basis-blade':
     case 'pseudoscalar':
@@ -100,9 +116,58 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
   }
 }
 
-function isPositionValue(value: OwnedMultivector): boolean {
+function isPositionMultivector(value: OwnedMultivector): boolean {
   const [scalar, , , bivector] = value.coefficients
   return scalar === 0 && bivector === 0
+}
+
+function isPositionValue(value: LanguageValue): boolean {
+  return value.kind === 'multivector'
+    ? isPositionMultivector(value)
+    : value.elements.every((element) => isPositionMultivector(element.value))
+}
+
+function supportsEvaluationPosition(
+  evaluation: Extract<EvaluationState, { status: 'valid' }>,
+): boolean {
+  return evaluation.valueType === 'list'
+    ? evaluation.elements.every((element) => supportsVga2Position(element.entity))
+    : supportsVga2Position(evaluation.entity)
+}
+
+function supportsDirectPosition(
+  evaluation: Extract<EvaluationState, { status: 'valid' }>,
+): boolean {
+  return evaluation.valueType === 'single' && supportsVga2Position(evaluation.entity)
+}
+
+function addPositionValues(
+  value: LanguageValue,
+  position: LanguageValue,
+  engine: VgaEngine,
+): LanguageValue {
+  if (value.kind === 'multivector' && position.kind === 'multivector') {
+    return engine.add(position, value)
+  }
+  if (value.kind !== 'list') return value
+  const positions = position.kind === 'list' ? position.elements : null
+  if (positions && positions.length !== 1 && positions.length !== value.elements.length) {
+    throw new ExpressionEvaluationError(
+      'GEOM_POSITION_LENGTH',
+      `Position list length ${positions.length} does not match value list length ${value.elements.length}.`,
+      { start: 0, end: 0 },
+    )
+  }
+  return ownedList(value.elements.map((element, index) => ({
+    id: element.id,
+    sources: element.sources,
+    value: engine.add(
+      positions
+        ? positions[positions.length === 1 ? 0 : index].value
+        : position as OwnedMultivector,
+      element.value,
+    ),
+  })))
 }
 
 /**
@@ -117,6 +182,7 @@ export function evaluateDocument(
 ): readonly EvaluatedDocumentItem[] {
   const nodes = new Map<string, ParsedNode>()
   const results = new Map<string, EvaluationState | null>()
+  const evaluationBudget: EvaluationBudget = { work: 0, generatedValues: 0 }
 
   document.items.forEach((item, index) => {
     const valueKey = nodeKey(item.id, 'value')
@@ -239,7 +305,7 @@ export function evaluateDocument(
     const existing = results.get(node.key)
     if (existing !== undefined && existing !== null) return existing
 
-    const resolved = new Map<string, OwnedMultivector>()
+    const resolved = new Map<string, LanguageValue>()
     for (const reference of node.references) {
       const targets = declarations.get(reference.name)
       if (!targets) {
@@ -275,7 +341,7 @@ export function evaluateDocument(
 
       if (
         reference.property === 'position' &&
-        !supportsVga2Position(valueResult.entity)
+        !supportsEvaluationPosition(valueResult)
       ) {
         const invalid = diagnostic(
           'LANG_UNSUPPORTED_PROPERTY',
@@ -288,7 +354,9 @@ export function evaluateDocument(
 
       if (
         reference.property === 'head' &&
-        valueResult.entity.kind !== 'vector-2d'
+        (valueResult.valueType === 'list'
+          ? valueResult.elements.some((element) => element.entity.kind !== 'vector-2d')
+          : valueResult.entity.kind !== 'vector-2d')
       ) {
         const invalid = diagnostic(
           'LANG_UNSUPPORTED_PROPERTY',
@@ -299,8 +367,98 @@ export function evaluateDocument(
         return invalid
       }
 
-      const positionNode = nodes.get(nodeKey(target.item.id, 'position'))
-      let positionValue = engine.scalar(0)
+      const positionNode = supportsDirectPosition(valueResult)
+        ? nodes.get(nodeKey(target.item.id, 'position'))
+        : undefined
+      let positionValue: LanguageValue = valueResult.valueType === 'list'
+        ? ownedList(valueResult.elements.map((element) => ({
+            id: element.id,
+            value: engine.scalar(0),
+          })))
+        : engine.scalar(0)
+      if (
+        reference.property !== null &&
+        valueResult.valueType === 'list' &&
+        !positionNode
+      ) {
+        for (const candidate of nodes.values()) {
+          if (candidate.property !== 'position') continue
+          const candidateValue = results.get(nodeKey(candidate.item.id, 'value'))
+          if (candidateValue?.status === 'valid' &&
+              supportsDirectPosition(candidateValue)) {
+            evaluateNode(candidate)
+          }
+        }
+        const localLineage = new Map<string, readonly string[]>()
+        const localPositions = new Map<string, Readonly<{ x: number; y: number }>>()
+        for (const candidate of nodes.values()) {
+          if (candidate.property !== 'value') continue
+          const candidateValue = results.get(candidate.key)
+          if (candidateValue?.status !== 'valid') continue
+          if (candidateValue.valueType === 'list') {
+            candidateValue.value.elements.forEach((element) =>
+              localLineage.set(element.id, element.sources ?? []))
+          }
+          const candidatePosition = results.get(nodeKey(candidate.item.id, 'position'))
+          if (candidatePosition?.status !== 'valid') continue
+          if (candidateValue.valueType === 'single') {
+            if (candidateValue.elementId && candidatePosition.value.kind === 'multivector') {
+              localPositions.set(candidateValue.elementId, {
+                x: candidatePosition.value.coefficients[1],
+                y: candidatePosition.value.coefficients[2],
+              })
+            }
+            continue
+          }
+          candidateValue.value.elements.forEach((element, elementIndex) => {
+            const position = candidatePosition.value.kind === 'list'
+              ? candidatePosition.value.elements[
+                  candidatePosition.value.elements.length === 1 ? 0 : elementIndex
+                ]?.value
+              : candidatePosition.value
+            if (position) localPositions.set(element.id, {
+              x: position.coefficients[1], y: position.coefficients[2],
+            })
+          })
+        }
+        const resolvePosition = (
+          elementId: string,
+          visiting = new Set<string>(),
+        ): Readonly<{ position: Readonly<{ x: number; y: number }> | null; conflict: boolean }> => {
+          const direct = localPositions.get(elementId)
+          if (direct) return { position: direct, conflict: false }
+          if (visiting.has(elementId)) return { position: null, conflict: false }
+          visiting.add(elementId)
+          const inherited = (localLineage.get(elementId) ?? [])
+            .map((source) => resolvePosition(source, visiting))
+            .filter((result) => result.position !== null)
+          visiting.delete(elementId)
+          const first = inherited[0]?.position ?? null
+          const conflict = inherited.some((result) => result.conflict) ||
+            inherited.some((result) =>
+              result.position!.x !== first!.x || result.position!.y !== first!.y)
+          return { position: conflict ? null : first, conflict }
+        }
+        const inherited = valueResult.value.elements.map((element) =>
+          resolvePosition(element.id))
+        if (inherited.some((result) => result.conflict)) {
+          const invalid = diagnostic(
+            'GEOM_POSITION_CONFLICT',
+            `The dependency “${reference.name}.position” has conflicting inherited positions.`,
+            reference.span,
+          )
+          results.set(node.key, invalid)
+          return invalid
+        }
+        positionValue = ownedList(valueResult.value.elements.map((element, elementIndex) => {
+          const position = inherited[elementIndex].position ?? { x: 0, y: 0 }
+          return {
+            id: element.id,
+            sources: element.sources,
+            value: ownedMultivector([0, position.x, position.y, 0]),
+          }
+        }))
+      }
       if (reference.property !== null && positionNode) {
         const positionResult = evaluateNode(positionNode)
         if (positionResult.status === 'invalid') {
@@ -312,15 +470,30 @@ export function evaluateDocument(
           results.set(node.key, invalid)
           return invalid
         }
+        if (
+          valueResult.value.kind === 'list' &&
+          positionResult.value.kind === 'list' &&
+          positionResult.value.elements.length !== 1 &&
+          positionResult.value.elements.length !== valueResult.value.elements.length
+        ) {
+          const invalid = diagnostic(
+            'GEOM_POSITION_LENGTH',
+            `Position list length ${positionResult.value.elements.length} does not match value list length ${valueResult.value.elements.length}.`,
+            reference.span,
+          )
+          results.set(node.key, invalid)
+          return invalid
+        }
         positionValue = positionResult.value
       }
 
-      let value = positionValue
+      let value: LanguageValue = positionValue
       if (reference.property !== 'position') {
-        value =
-          reference.property === 'head'
-            ? engine.add(positionValue, valueResult.value)
-            : valueResult.value
+        if (reference.property === 'head') {
+          value = addPositionValues(valueResult.value, positionValue, engine)
+        } else {
+          value = valueResult.value
+        }
       }
       resolved.set(
         `${reference.name}:${reference.property ?? 'value'}`,
@@ -328,13 +501,15 @@ export function evaluateDocument(
       )
     }
 
-    let value: OwnedMultivector
+    let value: LanguageValue
     try {
       value = evaluateExpression(
         lowerExpression(node.expression),
         engine,
         (name, property) =>
           resolved.get(`${name}:${property ?? 'value'}`)!,
+        node.item.id,
+        evaluationBudget,
       )
     } catch (error) {
       if (!(error instanceof ExpressionEvaluationError)) throw error
@@ -352,6 +527,9 @@ export function evaluateDocument(
       return invalid
     }
 
+    if (node.property === 'value' && value.kind === 'multivector' && !elementIdentity(value)) {
+      retainElementIdentity(value, node.key)
+    }
     const presented = presentEvaluation(
       value,
       node.declaration?.name ?? `Vector ${node.position}`,
@@ -368,10 +546,67 @@ export function evaluateDocument(
     const valueResult = results.get(nodeKey(node.item.id, 'value'))
     if (
       valueResult?.status === 'valid' &&
-      supportsVga2Position(valueResult.entity)
+      supportsDirectPosition(valueResult)
     ) {
       evaluateNode(node)
     }
+  }
+
+  type Point = Readonly<{ x: number; y: number }>
+  const lineage = new Map<string, readonly string[]>()
+  const explicitPositions = new Map<string, Point>()
+  for (const node of nodes.values()) {
+    if (node.property !== 'value') continue
+    const valueResult = results.get(node.key)
+    if (valueResult?.status !== 'valid') continue
+    if (valueResult.valueType === 'list') {
+      valueResult.value.elements.forEach((element) => {
+        lineage.set(element.id, element.sources ?? [])
+      })
+    }
+    const positionResult = results.get(nodeKey(node.item.id, 'position'))
+    if (positionResult?.status !== 'valid') continue
+    if (valueResult.valueType === 'single') {
+      if (valueResult.elementId && positionResult.value.kind === 'multivector') {
+        explicitPositions.set(valueResult.elementId, {
+          x: positionResult.value.coefficients[1],
+          y: positionResult.value.coefficients[2],
+        })
+      }
+      continue
+    }
+    valueResult.value.elements.forEach((element, elementIndex) => {
+      const positionValue = positionResult.value
+      const position = positionValue.kind === 'list'
+        ? positionValue.elements[positionValue.elements.length === 1 ? 0 : elementIndex]?.value
+        : positionValue
+      if (!position) return
+      explicitPositions.set(element.id, {
+        x: position.coefficients[1],
+        y: position.coefficients[2],
+      })
+    })
+  }
+
+  const resolveInheritedPosition = (
+    elementId: string,
+    visiting = new Set<string>(),
+  ): Readonly<{ position: Point | null; conflict: boolean }> => {
+    const explicit = explicitPositions.get(elementId)
+    if (explicit) return { position: explicit, conflict: false }
+    if (visiting.has(elementId)) return { position: null, conflict: false }
+    visiting.add(elementId)
+    const inherited = (lineage.get(elementId) ?? [])
+      .map((source) => resolveInheritedPosition(source, visiting))
+      .filter((result) => result.position !== null)
+    visiting.delete(elementId)
+    if (inherited.some((result) => result.conflict)) {
+      return { position: null, conflict: true }
+    }
+    const first = inherited[0]?.position ?? null
+    const conflict = inherited.some((result) =>
+      result.position!.x !== first!.x || result.position!.y !== first!.y)
+    return { position: conflict ? null : first, conflict }
   }
 
   const directOuterProductSides = (
@@ -405,18 +640,111 @@ export function evaluateDocument(
     const valueEvaluation =
       results.get(nodeKey(item.id, 'value')) ?? null
 
+    if (valueEvaluation?.status === 'valid' && valueEvaluation.valueType === 'list') {
+      const rawPositionEvaluation =
+        results.get(nodeKey(item.id, 'position')) ?? null
+      const positionList = rawPositionEvaluation?.status === 'valid' &&
+        rawPositionEvaluation.valueType === 'list'
+          ? rawPositionEvaluation.value
+          : null
+      const positionLengthInvalid =
+        rawPositionEvaluation?.status === 'valid' &&
+        positionList !== null && positionList.elements.length !== 1 &&
+        positionList.elements.length !== valueEvaluation.value.elements.length
+      const inheritedConflict = rawPositionEvaluation?.status !== 'valid' &&
+        valueEvaluation.value.elements.some((element) =>
+          resolveInheritedPosition(element.id).conflict)
+      const positionEvaluation = positionLengthInvalid
+        ? diagnostic(
+            'GEOM_POSITION_LENGTH',
+            `Position list length ${positionList!.elements.length} does not match value list length ${valueEvaluation.value.elements.length}.`,
+            nodes.get(nodeKey(item.id, 'position'))?.expression.span ?? { start: 0, end: 0 },
+          )
+        : inheritedConflict
+          ? diagnostic(
+              'GEOM_POSITION_CONFLICT',
+              'Corresponding list elements have conflicting inherited positions.',
+              nodes.get(nodeKey(item.id, 'value'))?.expression.span ?? { start: 0, end: 0 },
+            )
+        : rawPositionEvaluation
+      const positionAt = (
+        elementIndex: number,
+        elementId: string,
+      ): Readonly<{ x: number; y: number }> => {
+        if (positionEvaluation?.status !== 'valid') {
+          return resolveInheritedPosition(elementId).position ?? { x: 0, y: 0 }
+        }
+        const positionValue = positionEvaluation.value
+        const multivector = positionValue.kind === 'list'
+          ? positionValue.elements[positionValue.elements.length === 1 ? 0 : elementIndex]?.value
+          : positionValue
+        return multivector
+          ? { x: multivector.coefficients[1], y: multivector.coefficients[2] }
+          : { x: 0, y: 0 }
+      }
+      const listName = nodes.get(nodeKey(item.id, 'value'))?.declaration?.name ??
+        `List ${index + 1}`
+      const elements = valueEvaluation.elements.map((element, elementIndex) => {
+        const position = positionAt(elementIndex, element.id)
+        const name = `${listName}[${elementIndex}]`
+        return {
+          ...element,
+          primitive: element.entity.kind === 'vector-2d'
+            ? vectorToPrimitive(element.entity, name, position)
+            : element.entity.kind === 'bivector-2d'
+              ? bivectorToPrimitive(element.entity, name, position)
+              : null,
+        }
+      })
+      const allVectors = elements.every((element) => element.entity.kind === 'vector-2d')
+      let headInspection: string | null = null
+      if (allVectors) {
+        const positions = positionEvaluation?.status === 'valid'
+          ? positionEvaluation.value
+          : ownedList(elements.map((element, elementIndex) => {
+              const position = positionAt(elementIndex, element.id)
+              return {
+                id: element.id,
+                value: ownedMultivector([0, position.x, position.y, 0]),
+              }
+            }))
+        headInspection = inspectLanguageValue(
+          addPositionValues(valueEvaluation.value, positions, engine),
+        )
+      }
+      return {
+        item,
+        position: index + 1,
+        evaluation: { ...valueEvaluation, elements },
+        positionEvaluation,
+        headInspection,
+      }
+    }
+
     if (
       valueEvaluation?.status === 'valid' &&
+      valueEvaluation.valueType === 'single' &&
       (valueEvaluation.entity.kind === 'vector-2d' ||
         valueEvaluation.entity.kind === 'bivector-2d')
     ) {
       const positionEvaluation =
         results.get(nodeKey(item.id, 'position')) ?? null
+      const inheritedPosition = valueEvaluation.elementId
+        ? resolveInheritedPosition(valueEvaluation.elementId)
+        : { position: null, conflict: false }
+      const effectivePositionEvaluation =
+        positionEvaluation ?? (inheritedPosition.conflict
+          ? diagnostic(
+              'GEOM_POSITION_CONFLICT',
+              'The selected element has conflicting inherited positions.',
+              nodes.get(nodeKey(item.id, 'value'))?.expression.span ?? { start: 0, end: 0 },
+            )
+          : null)
       const positionEntity =
         positionEvaluation?.status === 'valid' &&
         positionEvaluation.entity?.kind === 'vector-2d'
           ? positionEvaluation.entity
-          : { x: 0, y: 0 }
+          : inheritedPosition.position ?? { x: 0, y: 0 }
       if (valueEvaluation.entity.kind === 'bivector-2d') {
         return {
           item,
@@ -431,20 +759,25 @@ export function evaluateDocument(
               directOuterProductSides(item),
             ),
           },
-          positionEvaluation,
+          positionEvaluation: effectivePositionEvaluation,
           headInspection: null,
         }
       }
       return {
         item,
         position: index + 1,
-        positionEvaluation,
+        positionEvaluation: effectivePositionEvaluation,
         headInspection: inspectMultivector(
           engine.add(
             valueEvaluation.value,
-            positionEvaluation?.status === 'valid'
+            positionEvaluation?.status === 'valid' && positionEvaluation.valueType === 'single'
               ? positionEvaluation.value
-              : engine.scalar(0),
+              : ownedMultivector([
+                  0,
+                  inheritedPosition.position?.x ?? 0,
+                  inheritedPosition.position?.y ?? 0,
+                  0,
+                ]),
           ),
         ),
         evaluation: {

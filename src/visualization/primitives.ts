@@ -34,6 +34,18 @@ export type VisualizationPrimitive =
   | OrientedSegmentPrimitive
   | OrientedAreaPrimitive
 
+export const MAX_RENDERED_LIST_ELEMENTS = 1_000
+
+/** Preserves the renderable prefix and reports exact list truncation. */
+export function limitRenderedListElements<T>(
+  elements: readonly T[],
+): Readonly<{ visible: readonly T[]; omitted: number }> {
+  return Object.freeze({
+    visible: Object.freeze(elements.slice(0, MAX_RENDERED_LIST_ELEMENTS)),
+    omitted: Math.max(0, elements.length - MAX_RENDERED_LIST_ELEMENTS),
+  })
+}
+
 /** Converts a semantic vector and separate position into a render primitive. */
 export function vectorToPrimitive(
   entity: Vector2dEntity,

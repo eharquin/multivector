@@ -44,16 +44,24 @@ closed-form multivector exponentials, integer powers, inverse and division,
 the primary norm, explicit normalization, and the sandwich action. For example,
 `exp(-(pi/4) * e12) >>> e1` rotates `e1` to `e2`.
 
+Lists are ordered, flat collections with stable element identities. The
+language supports list literals, arithmetic integer ranges, zero-based
+indexing, and value/list or compatible list/list broadcasting. For example,
+`V = [1...3] * e1` creates three vectors and `V[1]` selects the second. Vector
+and bivector list elements retain separately evaluated positions and render in
+prefix order up to the documented visual limit.
+
 The document evaluator resolves forward references, evaluates acyclic
 dependencies in dependency order, and reports source-localized missing-name,
 duplicate-name, cycle, and invalid-dependency diagnostics while independent
 branches continue evaluating. Values pass through the isolated algebra-engine
 adapter and value-based standard interpretation. The expression panel identifies
 scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
-canonical values. Supported vectors and bivectors render together in list
-order. Each vector or bivector row also owns an optional position expression;
-positioned vectors
-render from that position to their derived head. Positioned bivectors render as
+canonical values. Supported vectors and bivectors, including list elements,
+render together in list
+order. Each single-vector or single-bivector row also owns an optional position
+expression; lists instead preserve the inherited positions of their elements.
+positioned vectors render from that position to their derived head. Positioned bivectors render as
 signed oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when
 its construction is safely available. `V.position` and `V.head`, and
 `B.position`, may be referenced by other expressions. Position metadata remains
@@ -63,7 +71,7 @@ visualization for them. The header's VGA badge opens an algebra-information
 sheet, and the bottom of the expression panel provides a reference limited to
 the expression syntax currently implemented.
 
-Persistence, lists, appearance controls, direct manipulation, animation, and
+Persistence, appearance controls, direct manipulation, animation, and
 additional algebras remain planned work.
 The current slice is implementation evidence toward the VGA 2D Foundation, not
 a completed public release.

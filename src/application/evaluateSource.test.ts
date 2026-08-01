@@ -7,10 +7,98 @@ const engine = createVga2Engine()
 function validValue(source: string) {
   const result = evaluateSource(source, engine)
   if (result.status !== 'valid') throw new Error(result.diagnostic.message)
+  if (result.valueType !== 'single') throw new Error('Expected one multivector')
   return result.value
 }
 
 describe('source evaluation pipeline', () => {
+  it('evaluates heterogeneous lists with stable element identities and text', () => {
+    const first = evaluateSource('[1, e1, 2e12]', engine, 'L')
+    const second = evaluateSource('[1, e1, 2e12]', engine, 'L')
+
+    expect(first).toMatchObject({
+      status: 'valid',
+      valueType: 'list',
+      inspection: '[1, e1, 2e12]',
+      entity: { kind: 'list', length: 3 },
+      elements: [
+        { entity: { kind: 'scalar' }, primitive: null },
+        { entity: { kind: 'vector-2d' } },
+        { entity: { kind: 'bivector-2d' } },
+      ],
+    })
+    if (first.status !== 'valid' || first.valueType !== 'list' ||
+        second.status !== 'valid' || second.valueType !== 'list') return
+    expect(first.value.elements.map((element) => element.id)).toEqual(
+      second.value.elements.map((element) => element.id),
+    )
+  })
+
+  it.each([
+    ['[1...3]', '[1, 2, 3]'],
+    ['[3...1]', '[3, 2, 1]'],
+    ['[1,3...6]', '[1, 3, 5]'],
+    ['[3,1...0]', '[3, 1]'],
+  ])('evaluates arithmetic range %s', (source, inspection) => {
+    expect(evaluateSource(source, engine)).toMatchObject({
+      status: 'valid', valueType: 'list', inspection,
+    })
+  })
+
+  it('broadcasts values and singleton lists without nesting', () => {
+    expect(evaluateSource('[e1, e2] + 2e1', engine)).toMatchObject({
+      status: 'valid', inspection: '[3e1, 2e1 + e2]',
+    })
+    expect(evaluateSource('[e1, e2] + [e2]', engine)).toMatchObject({
+      status: 'valid', inspection: '[e1 + e2, 2e2]',
+    })
+    expect(evaluateSource('[] + e1', engine)).toMatchObject({
+      status: 'valid', inspection: '[]',
+    })
+  })
+
+  it('indexes lists and reports range, length, and nesting diagnostics', () => {
+    expect(evaluateSource('[e1, e2][1]', engine)).toMatchObject({
+      status: 'valid', valueType: 'single', inspection: 'e2',
+    })
+    expect(evaluateSource('[e1, e2][2]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_INDEX_RANGE' },
+    })
+    expect(evaluateSource('[e1, e2] + [e1, e2, e1]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_LIST_LENGTH' },
+    })
+    expect(evaluateSource('[e1, [e2]]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_NESTED_LIST' },
+    })
+    expect(evaluateSource('[1,1...3]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_RANGE_DIRECTION' },
+    })
+    expect(evaluateSource('[1,1...1]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_RANGE_DIRECTION' },
+    })
+    expect(evaluateSource('[0...10000]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LIMIT_GENERATED_VALUES' },
+    })
+    expect(evaluateSource('[] + [e1]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_LIST_LENGTH' },
+    })
+    expect(evaluateSource('[e1][-1]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_INDEX_DOMAIN' },
+    })
+    expect(evaluateSource('[e1][0.5]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_INDEX_DOMAIN' },
+    })
+    expect(evaluateSource('e1[0]', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_INDEX_TYPE' },
+    })
+    expect(evaluateSource('[1, 0].inverse', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: {
+        code: 'ALG_SINGULAR',
+        message: expect.stringContaining('List element 1'),
+      },
+    })
+  })
   it.each([
     ['vector(1, 2)', 'e1 + 2e2'],
     ['vector(3, -4)', '3e1 - 4e2'],

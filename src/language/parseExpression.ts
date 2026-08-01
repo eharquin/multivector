@@ -84,6 +84,10 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
       )
     case 'reference':
       return true
+    case 'list-expression':
+    case 'range-expression':
+    case 'index-expression':
+      return false
   }
 }
 
@@ -324,7 +328,24 @@ class Parser {
     let expression = this.parsePrimary()
     if (!expression.ok) return expression
 
-    while (this.consume('dot')) {
+    while (this.current().kind === 'dot' || this.current().kind === 'left-bracket') {
+      const leftBracket = this.consume('left-bracket')
+      if (leftBracket) {
+        const index = this.parseAdditive()
+        if (!index.ok) return index
+        const rightBracket = this.consume('right-bracket')
+        if (!rightBracket) {
+          return { ok: false, diagnostic: syntaxDiagnostic(
+            'Expected “]” after the list index.', insertionAt(this.current()),
+          ) }
+        }
+        expression = { ok: true, node: {
+          kind: 'index-expression', object: expression.node, index: index.node,
+          span: { start: expression.node.span.start, end: rightBracket.span.end },
+        } }
+        continue
+      }
+      this.consume('dot')
       const propertyToken =
         this.consume('identifier') ?? this.consume('blade')
       if (!propertyToken) {
@@ -375,6 +396,8 @@ class Parser {
 
   private parsePrimary(): NodeResult {
     const token = this.current()
+
+    if (this.consume('left-bracket')) return this.parseList(token)
 
     if (this.consume('number')) {
       const value = Number(token.text)
@@ -519,6 +542,82 @@ class Parser {
       ok: false,
       diagnostic: syntaxDiagnostic('Expected an expression.', token.span),
     }
+  }
+
+  private parseList(leftBracket: Token): NodeResult {
+    const emptyEnd = this.consume('right-bracket')
+    if (emptyEnd) {
+      return { ok: true, node: {
+        kind: 'list-expression', elements: [],
+        span: { start: leftBracket.span.start, end: emptyEnd.span.end },
+      } }
+    }
+
+    const first = this.parseAdditive()
+    if (!first.ok) return first
+    if (this.consume('ellipsis')) {
+      const end = this.parseAdditive()
+      if (!end.ok) return end
+      const right = this.consume('right-bracket')
+      if (!right) return { ok: false, diagnostic: syntaxDiagnostic(
+        'Expected “]” after the range.', insertionAt(this.current()),
+      ) }
+      return { ok: true, node: {
+        kind: 'range-expression', start: first.node, next: null, end: end.node,
+        span: { start: leftBracket.span.start, end: right.span.end },
+      } }
+    }
+
+    const singleEnd = this.consume('right-bracket')
+    if (singleEnd) {
+      return { ok: true, node: {
+        kind: 'list-expression', elements: [first.node],
+        span: { start: leftBracket.span.start, end: singleEnd.span.end },
+      } }
+    }
+
+    if (!this.consume('comma')) {
+      return { ok: false, diagnostic: syntaxDiagnostic(
+        'Expected “,” or “...” in the list.', insertionAt(this.current()),
+      ) }
+    }
+    if (this.consume('right-bracket')) {
+      return { ok: true, node: {
+        kind: 'list-expression', elements: [first.node],
+        span: { start: leftBracket.span.start, end: this.tokens[this.offset - 1].span.end },
+      } }
+    }
+
+    const second = this.parseAdditive()
+    if (!second.ok) return second
+    if (this.consume('ellipsis')) {
+      const end = this.parseAdditive()
+      if (!end.ok) return end
+      const right = this.consume('right-bracket')
+      if (!right) return { ok: false, diagnostic: syntaxDiagnostic(
+        'Expected “]” after the range.', insertionAt(this.current()),
+      ) }
+      return { ok: true, node: {
+        kind: 'range-expression', start: first.node, next: second.node, end: end.node,
+        span: { start: leftBracket.span.start, end: right.span.end },
+      } }
+    }
+
+    const elements: SurfaceExpressionNode[] = [first.node, second.node]
+    while (this.consume('comma')) {
+      if (this.current().kind === 'right-bracket') break
+      const element = this.parseAdditive()
+      if (!element.ok) return element
+      elements.push(element.node)
+    }
+    const right = this.consume('right-bracket')
+    if (!right) return { ok: false, diagnostic: syntaxDiagnostic(
+      'Expected “]” after the list.', insertionAt(this.current()),
+    ) }
+    return { ok: true, node: {
+      kind: 'list-expression', elements,
+      span: { start: leftBracket.span.start, end: right.span.end },
+    } }
   }
 
 

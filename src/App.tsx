@@ -25,6 +25,7 @@ import {
   type ExpressionItem,
 } from './document/expressionDocument'
 import { toScreen, type Viewport2d } from './visualization/viewport'
+import { limitRenderedListElements } from './visualization/primitives'
 import './App.css'
 
 const engine = createVga2Engine()
@@ -64,30 +65,41 @@ function App() {
   )
 
   const origin = toScreen(viewport, { x: 0, y: 0 })
-  const renderedVectors = evaluatedItems.flatMap((evaluated) => {
-    const primitive =
-      evaluated.evaluation?.status === 'valid'
-        ? evaluated.evaluation.primitive
-        : null
-    if (!primitive || primitive.kind !== 'oriented-segment') return []
-    return [
-      {
-        id: evaluated.item.id,
+  const renderedPrimitives = evaluatedItems.flatMap((evaluated) => {
+    if (evaluated.evaluation?.status !== 'valid') return []
+    return evaluated.evaluation.valueType === 'list'
+      ? limitRenderedListElements(
+          evaluated.evaluation.elements.filter((element) => element.primitive),
+        ).visible
+        .flatMap((element) => element.primitive
+        ? [{ id: `${evaluated.item.id}:${element.id}`, primitive: element.primitive }]
+        : [])
+      : evaluated.evaluation.primitive
+        ? [{ id: evaluated.item.id, primitive: evaluated.evaluation.primitive }]
+        : []
+  })
+  const omittedRenderElements = evaluatedItems.reduce((total, evaluated) => {
+    if (evaluated.evaluation?.status !== 'valid' ||
+        evaluated.evaluation.valueType !== 'list') return total
+    return total + limitRenderedListElements(
+      evaluated.evaluation.elements.filter((element) => element.primitive),
+    ).omitted
+  }, 0)
+  const renderedVectors = renderedPrimitives.flatMap(({ id, primitive }) => {
+    if (primitive.kind !== 'oriented-segment') return []
+    return [{
+        id,
         primitive,
         start: toScreen(viewport, primitive.start),
         end: toScreen(viewport, primitive.end),
-      },
-    ]
+      }]
   })
-  const renderedAreas = evaluatedItems.flatMap((evaluated) => {
-    const primitive = evaluated.evaluation?.status === 'valid'
-      ? evaluated.evaluation.primitive
-      : null
-    if (!primitive || primitive.kind !== 'oriented-area') return []
+  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive }) => {
+    if (primitive.kind !== 'oriented-area') return []
     if (primitive.shape.kind === 'parallelogram') {
       const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
       return [{
-        id: evaluated.item.id,
+        id,
         primitive,
         path: `${points.map((point, index) =>
           `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
@@ -97,7 +109,7 @@ function App() {
     const radius = primitive.shape.radius * viewport.pixelsPerUnit
     const sweep = primitive.orientation === 'counterclockwise' ? 1 : 0
     return [{
-      id: evaluated.item.id,
+      id,
       primitive,
       path: `M ${center.x + radius} ${center.y} ` +
         `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
@@ -230,7 +242,9 @@ function App() {
           )
           .join(' ')} ${renderedAreas
           .map(({ primitive }) => primitive.accessibleDescription)
-          .join(' ')}`
+          .join(' ')}${omittedRenderElements > 0
+            ? ` ${omittedRenderElements} additional list elements are omitted by the rendering limit.`
+            : ''}`
 
   return (
     <div className="app-shell">
@@ -290,6 +304,7 @@ function App() {
                 positionEvaluation?.status === 'invalid'
               const supportsPosition =
                 evaluation?.status === 'valid' &&
+                evaluation.valueType === 'single' &&
                 supportsVga2Position(evaluation.entity)
 
               return (
@@ -333,7 +348,9 @@ function App() {
                           {evaluation?.status === 'valid' ? (
                             <>
                               <span className="object-kind">
-                                {describeVga2Entity(evaluation.entity)}
+                                {evaluation.valueType === 'list'
+                                  ? `List (${evaluation.value.elements.length})`
+                                  : describeVga2Entity(evaluation.entity)}
                               </span>
                               <output>{evaluation.inspection}</output>
                             </>

@@ -61,6 +61,27 @@ export type CallExpressionNode = Readonly<{
   span: SourceSpan
 }>
 
+export type ListExpressionNode = Readonly<{
+  kind: 'list-expression'
+  elements: readonly SurfaceExpressionNode[]
+  span: SourceSpan
+}>
+
+export type RangeExpressionNode = Readonly<{
+  kind: 'range-expression'
+  start: SurfaceExpressionNode
+  next: SurfaceExpressionNode | null
+  end: SurfaceExpressionNode
+  span: SourceSpan
+}>
+
+export type IndexExpressionNode = Readonly<{
+  kind: 'index-expression'
+  object: SurfaceExpressionNode
+  index: SurfaceExpressionNode
+  span: SourceSpan
+}>
+
 export type SurfaceExpressionNode =
   | ScalarLiteralNode
   | BasisBladeNode
@@ -71,6 +92,9 @@ export type SurfaceExpressionNode =
   | BinaryExpressionNode
   | VectorConstructorNode
   | CallExpressionNode
+  | ListExpressionNode
+  | RangeExpressionNode
+  | IndexExpressionNode
 
 type CoreNodeBase = Readonly<{
   /** Span of the surface expression responsible for this core operation. */
@@ -83,6 +107,22 @@ export type CoreExpressionNode =
         kind: 'scalar'
         value: number
       }>)
+  | (CoreNodeBase & Readonly<{
+      kind: 'list'
+      elements: readonly CoreExpressionNode[]
+      elementOrigins: readonly SourceSpan[]
+    }>)
+  | (CoreNodeBase & Readonly<{
+      kind: 'range'
+      start: CoreExpressionNode
+      next: CoreExpressionNode | null
+      end: CoreExpressionNode
+    }>)
+  | (CoreNodeBase & Readonly<{
+      kind: 'index'
+      object: CoreExpressionNode
+      index: CoreExpressionNode
+    }>)
   | (CoreNodeBase & Readonly<{ kind: 'pseudoscalar' }>)
   | (CoreNodeBase &
       Readonly<{

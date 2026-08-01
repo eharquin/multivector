@@ -23,6 +23,9 @@ export type TokenKind =
   | 'left-parenthesis'
   | 'right-parenthesis'
   | 'comma'
+  | 'left-bracket'
+  | 'right-bracket'
+  | 'ellipsis'
   | 'end'
 
 export type Token = Readonly<{
@@ -71,10 +74,15 @@ export function tokenize(source: string): TokenizeResult {
     NUMBER_PATTERN.lastIndex = offset
     const number = NUMBER_PATTERN.exec(source)
     if (number) {
-      const end = NUMBER_PATTERN.lastIndex
+      let end = NUMBER_PATTERN.lastIndex
+      let text = number[0]
+      if (text.endsWith('.') && source.startsWith('..', end)) {
+        end -= 1
+        text = text.slice(0, -1)
+      }
       tokens.push({
         kind: 'number',
-        text: number[0],
+        text,
         span: { start: offset, end },
       })
       offset = end
@@ -127,6 +135,11 @@ export function tokenize(source: string): TokenizeResult {
       offset += 3
       continue
     }
+    if (source.startsWith('...', offset)) {
+      tokens.push({ kind: 'ellipsis', text: '...', span: { start: offset, end: offset + 3 } })
+      offset += 3
+      continue
+    }
     if (source.startsWith('**', offset)) {
       tokens.push({ kind: 'power', text: '**', span: { start: offset, end: offset + 2 } })
       offset += 2
@@ -146,6 +159,8 @@ export function tokenize(source: string): TokenizeResult {
       '(': 'left-parenthesis',
       ')': 'right-parenthesis',
       ',': 'comma',
+      '[': 'left-bracket',
+      ']': 'right-bracket',
       '=': 'equals',
       '.': 'dot',
     }
