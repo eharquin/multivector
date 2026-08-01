@@ -21,6 +21,7 @@ import {
 } from './geometry/vga2Interpretation'
 import {
   addExpression,
+  addExpressionBefore,
   clearExpressions,
   deleteExpression,
   expressionDocument,
@@ -29,6 +30,7 @@ import {
   updateExpressionAppearance,
   updateExpressionPosition,
   updateExpressionNormalization,
+  vga2FoundationExampleDocument,
   type ExpressionItem,
 } from './document/expressionDocument'
 import { toScreen, type Viewport2d } from './visualization/viewport'
@@ -67,7 +69,9 @@ function App() {
   )
   const [initial] = useState(() => {
     const fallback = {
-      document: expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }]),
+      document: import.meta.env.MODE === 'test'
+        ? expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }])
+        : vga2FoundationExampleDocument(),
       theme: 'system' as ThemeMode,
       diagnostic: null as string | null,
     }
@@ -98,6 +102,9 @@ function App() {
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
   const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
+  const [expandedListIds, setExpandedListIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
   const [theme, setTheme] = useState<ThemeMode>(initial.theme)
   const [documentDiagnostic, setDocumentDiagnostic] = useState<string | null>(
     initial.diagnostic,
@@ -283,7 +290,10 @@ function App() {
     setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(maximum, next)))
   }
 
-  const insertExpression = (afterId?: string) => {
+  const insertExpression = (
+    anchorId?: string,
+    placement: 'before' | 'after' = 'after',
+  ) => {
     if (expressionDoc.items.length >= MAX_EXPRESSION_ITEMS) return
     let id = `item-${nextId.current++}`
     while (expressionDoc.items.some((item) => item.id === id)) {
@@ -291,7 +301,9 @@ function App() {
     }
     pendingFocus.current = id
     setExpressionDoc((current) =>
-      addExpression(current, { id, source: '' }, afterId),
+      anchorId && placement === 'before'
+        ? addExpressionBefore(current, { id, source: '' }, anchorId)
+        : addExpression(current, { id, source: '' }, anchorId),
     )
   }
 
@@ -306,6 +318,7 @@ function App() {
       setExpressionDoc(imported.document)
       setTheme(imported.theme)
       setAppearanceItemId(null)
+      setExpandedListIds(new Set())
       nextId.current = imported.document.items.length + 1
       setDocumentDiagnostic(null)
     } catch (error) {
@@ -348,6 +361,12 @@ function App() {
       expressionDoc.items[index + 1] ??
       null
     pendingFocus.current = neighbor?.id ?? null
+    setExpandedListIds((current) => {
+      if (!current.has(id)) return current
+      const next = new Set(current)
+      next.delete(id)
+      return next
+    })
     setExpressionDoc((current) => deleteExpression(current, id))
     if (!neighbor) {
       requestAnimationFrame(() => addButtonRef.current?.focus())
@@ -356,6 +375,7 @@ function App() {
 
   const clearAllExpressions = () => {
     setAppearanceItemId(null)
+    setExpandedListIds(new Set())
     setExpressionDoc(clearExpressions)
     requestAnimationFrame(() => addButtonRef.current?.focus())
   }
@@ -367,7 +387,7 @@ function App() {
   ) => {
     if (event.key === 'Enter') {
       event.preventDefault()
-      insertExpression(item.id)
+      insertExpression(item.id, event.shiftKey ? 'before' : 'after')
     } else if (event.key === 'Backspace' && item.source === '') {
       event.preventDefault()
       removeExpression(item.id)
@@ -515,6 +535,8 @@ function App() {
               const objectName = displayLabel ?? kind
               const valid = evaluation?.status === 'valid'
               const empty = item.source.trim() === ''
+              const listExpanded = expandedListIds.has(item.id)
+              const listDetailsId = `list-details-${item.id}`
 
               return (
                 <article
@@ -615,9 +637,28 @@ function App() {
                         >
                           {evaluation?.status === 'valid' ? (
                             <>
-                              <span className="object-kind" style={{ color }}>
-                                {kind}
-                              </span>
+                              {evaluation.valueType === 'list' ? (
+                                <button
+                                  type="button"
+                                  className="list-inspection-toggle object-kind"
+                                  style={{ color }}
+                                  aria-expanded={listExpanded}
+                                  aria-controls={listDetailsId}
+                                  onClick={() => setExpandedListIds((current) => {
+                                    const next = new Set(current)
+                                    if (next.has(item.id)) next.delete(item.id)
+                                    else next.add(item.id)
+                                    return next
+                                  })}
+                                >
+                                  <span aria-hidden="true">{listExpanded ? '▾' : '▸'}</span>
+                                  {kind}
+                                </button>
+                              ) : (
+                                <span className="object-kind" style={{ color }}>
+                                  {kind}
+                                </span>
+                              )}
                               <output>{evaluation.inspection}</output>
                             </>
                           ) : evaluation?.status === 'invalid' ? (
@@ -655,6 +696,40 @@ function App() {
                         </div>
                       ) : null}
 
+                      {evaluation?.status === 'valid' &&
+                        evaluation.valueType === 'list' &&
+                        listExpanded && (
+                          <ol
+                            id={listDetailsId}
+                            className="list-inspection"
+                            aria-label={`Elements of ${objectName}`}
+                          >
+                            {evaluation.elements.map((element, elementIndex) => (
+                              <li key={element.id} className="list-inspection-item">
+                                <span
+                                  className="list-element-index"
+                                  aria-label={`Element ${elementIndex}`}
+                                >
+                                  {elementIndex}
+                                </span>
+                                <span className="list-element-kind">
+                                  {describeVga2Entity(element.entity)}
+                                </span>
+                                <code>{element.inspection}</code>
+                                {element.positionConflict ? (
+                                  <span className="list-element-position is-error">
+                                    position conflict
+                                  </span>
+                                ) : element.position ? (
+                                  <span className="list-element-position">
+                                    position ({element.position.x}, {element.position.y})
+                                  </span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ol>
+                      )}
+
                       {supportsPosition && (
                         <div className="position-input-row">
                           <span className="position-prefix" aria-hidden="true">position</span>
@@ -673,6 +748,14 @@ function App() {
                                 ),
                               )
                             }
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter') return
+                              event.preventDefault()
+                              insertExpression(
+                                item.id,
+                                event.shiftKey ? 'before' : 'after',
+                              )
+                            }}
                             aria-invalid={invalidPosition}
                             aria-describedby={
                               positionEvaluation ? feedbackId : undefined

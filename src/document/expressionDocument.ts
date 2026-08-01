@@ -108,6 +108,34 @@ export function expressionDocument(
   }
 }
 
+/** The documented VGA(2) workflow shown for a new local browser session. */
+export function vga2FoundationExampleDocument(): ExpressionDocument {
+  return expressionDocument(
+    [
+      { id: 'item-1', source: 's = 2' },
+      {
+        id: 'item-2',
+        source: 'V1 = vector(s, 1)',
+        positionSource: '(1, 1)',
+      },
+      {
+        id: 'item-3',
+        source: 'V2 = vector(1, -1)',
+        positionSource: '(0.1, 0.1)',
+      },
+      { id: 'item-4', source: 'L = [V1, V2]' },
+      { id: 'item-5', source: 'H = V1.head' },
+    ],
+    {},
+    {
+      id: 'vga2-foundation-example',
+      title: 'VGA 2D Foundation Example',
+      description:
+        'Two independently positioned vectors, their list, and a derived head.',
+    },
+  )
+}
+
 /** Toggles the item's algebraic natural-normalization control. */
 export function updateExpressionNormalization(
   document: ExpressionDocument,
@@ -160,6 +188,25 @@ export function addExpression(
       ...document.items.slice(0, insertionIndex),
       { ...item },
       ...document.items.slice(insertionIndex),
+    ],
+  }
+}
+
+/** Inserts an expression immediately before the requested item. */
+export function addExpressionBefore(
+  document: ExpressionDocument,
+  item: ExpressionItem,
+  beforeId: string,
+): ExpressionDocument {
+  if (document.items.length >= MAX_EXPRESSION_ITEMS) return document
+  const index = document.items.findIndex((candidate) => candidate.id === beforeId)
+  if (index < 0) return addExpression(document, item)
+  return {
+    ...document,
+    items: [
+      ...document.items.slice(0, index),
+      { ...item },
+      ...document.items.slice(index),
     ],
   }
 }

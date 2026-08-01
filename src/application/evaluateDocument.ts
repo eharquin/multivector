@@ -677,25 +677,34 @@ export function evaluateDocument(
       const positionAt = (
         elementIndex: number,
         elementId: string,
-      ): Readonly<{ x: number; y: number }> => {
+      ): Readonly<{
+        position: Readonly<{ x: number; y: number }> | null
+        conflict: boolean
+      }> => {
         if (positionEvaluation?.status !== 'valid') {
-          return resolveInheritedPosition(elementId).position ?? { x: 0, y: 0 }
+          return resolveInheritedPosition(elementId)
         }
         const positionValue = positionEvaluation.value
         const multivector = positionValue.kind === 'list'
           ? positionValue.elements[positionValue.elements.length === 1 ? 0 : elementIndex]?.value
           : positionValue
-        return multivector
-          ? { x: multivector.coefficients[1], y: multivector.coefficients[2] }
-          : { x: 0, y: 0 }
+        return {
+          position: multivector
+            ? { x: multivector.coefficients[1], y: multivector.coefficients[2] }
+            : null,
+          conflict: false,
+        }
       }
       const listName = nodes.get(nodeKey(item.id, 'value'))?.declaration?.name ??
         `List ${index + 1}`
       const elements = valueEvaluation.elements.map((element, elementIndex) => {
-        const position = positionAt(elementIndex, element.id)
+        const positionState = positionAt(elementIndex, element.id)
+        const position = positionState.position ?? { x: 0, y: 0 }
         const name = `${listName}[${elementIndex}]`
         return {
           ...element,
+          position: positionState.position,
+          positionConflict: positionState.conflict,
           primitive: element.entity.kind === 'vector-2d'
             ? vectorToPrimitive(element.entity, name, position)
             : element.entity.kind === 'bivector-2d'
@@ -709,7 +718,8 @@ export function evaluateDocument(
         const positions = positionEvaluation?.status === 'valid'
           ? positionEvaluation.value
           : ownedList(elements.map((element, elementIndex) => {
-              const position = positionAt(elementIndex, element.id)
+              const position = positionAt(elementIndex, element.id).position ??
+                { x: 0, y: 0 }
               return {
                 id: element.id,
                 value: ownedMultivector([0, position.x, position.y, 0]),

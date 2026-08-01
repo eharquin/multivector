@@ -1,4 +1,11 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import {
@@ -10,6 +17,52 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 afterEach(cleanup)
 
 describe('VGA 2D vertical slice', () => {
+  it('authors the documented foundation example with keyboard row insertion', () => {
+    render(<App />)
+    const enter = (position: number, source: string) => {
+      const input = screen.getByRole('textbox', { name: `Expression ${position}` })
+      fireEvent.change(input, { target: { value: source } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+    }
+
+    enter(1, 's = 2')
+    expect(document.activeElement).toBe(
+      screen.getByRole('textbox', { name: 'Expression 2' }),
+    )
+    enter(2, 'V1 = vector(s, 1)')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 2' }), {
+      target: { value: '(1, 1)' },
+    })
+    enter(3, 'V2 = vector(1, -1)')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 3' }), {
+      target: { value: '(0.1, 0.1)' },
+    })
+    enter(4, 'L = [V1, V2]')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 5' }), {
+      target: { value: 'H = V1.head' },
+    })
+
+    expect(screen.getByText('List (2)')).toBeInTheDocument()
+    expect(screen.getByText('3e1 + 2e2', { selector: 'output' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('img')).toHaveTextContent(
+      '5 vectors and 0 bivectors are visible.',
+    )
+
+    const secondVector = screen.getByRole('textbox', { name: 'Expression 3' })
+    fireEvent.change(secondVector, { target: { value: 'V2 = vector(1)' } })
+    expect(secondVector).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('Expected “,” between vector components.'))
+      .toBeInTheDocument()
+    fireEvent.change(secondVector, {
+      target: { value: 'V2 = vector(1, -1)' },
+    })
+    expect(secondVector).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByRole('img')).toHaveTextContent(
+      '5 vectors and 0 bivectors are visible.',
+    )
+  })
+
   it('inspects heterogeneous lists and renders supported elements in order', () => {
     render(<App />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
@@ -54,6 +107,23 @@ describe('VGA 2D vertical slice', () => {
     expect(
       screen.queryByRole('textbox', { name: 'Position 3' }),
     ).not.toBeInTheDocument()
+
+    const inspectionToggle = screen.getByRole('button', {
+      name: 'List (2)',
+    })
+    expect(inspectionToggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(inspectionToggle)
+
+    const details = screen.getByRole('list', { name: 'Elements of V' })
+    const elements = within(details).getAllByRole('listitem')
+    expect(elements).toHaveLength(2)
+    expect(within(elements[0]).getByLabelText('Element 0')).toHaveTextContent('0')
+    expect(elements[0]).toHaveTextContent('Vector')
+    expect(elements[0]).toHaveTextContent('e1')
+    expect(elements[0]).toHaveTextContent('position (1, 2)')
+    expect(elements[1]).toHaveTextContent('Vector')
+    expect(elements[1]).toHaveTextContent('e2')
+    expect(elements[1]).toHaveTextContent('position (-1, 3)')
   })
   it('edits an expression and exposes its value and SVG vector in text', () => {
     render(<App />)
@@ -342,6 +412,23 @@ describe('VGA 2D vertical slice', () => {
     expect(swatch).toHaveFocus()
   })
 
+  it('closes appearance with Escape and restores focus without a keyboard trap', () => {
+    render(<App />)
+    const swatch = screen.getByRole('button', {
+      name: 'Edit appearance for Vector',
+    })
+
+    fireEvent.click(swatch)
+    expect(screen.getByRole('dialog', { name: 'Appearance — Vector' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Visible' })).toHaveFocus()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(swatch).toHaveFocus()
+  })
+
   it('offers system, light, and dark application themes', () => {
     render(<App />)
     const theme = screen.getByRole('combobox', { name: 'Theme' })
@@ -463,6 +550,36 @@ describe('VGA 2D vertical slice', () => {
       screen.queryByRole('textbox', { name: 'Expression 2' }),
     ).not.toBeInTheDocument()
     expect(first).toHaveFocus()
+  })
+
+  it('inserts below from a position field with Enter', () => {
+    render(<App />)
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    fireEvent.change(position, { target: { value: '(1, 1)' } })
+
+    fireEvent.keyDown(position, { key: 'Enter' })
+
+    expect(screen.getByRole('textbox', { name: 'Position 1' }))
+      .toHaveValue('(1, 1)')
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+  })
+
+  it('inserts above from expression and position fields with Shift+Enter', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+
+    fireEvent.keyDown(expression, { key: 'Enter', shiftKey: true })
+
+    expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Expression 2' }))
+      .toHaveValue('vector(2, 1)')
+
+    const position = screen.getByRole('textbox', { name: 'Position 2' })
+    fireEvent.keyDown(position, { key: 'Enter', shiftKey: true })
+
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Expression 3' }))
+      .toHaveValue('vector(2, 1)')
   })
 
   it('keeps sibling results when one expression is invalid or deleted', () => {
