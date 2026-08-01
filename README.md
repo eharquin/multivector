@@ -50,8 +50,9 @@ duplicate-name, cycle, and invalid-dependency diagnostics while independent
 branches continue evaluating. Values pass through the isolated algebra-engine
 adapter and value-based standard interpretation. The expression panel identifies
 scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
-canonical values. Supported vectors and bivectors render together in list order. Each vector
-or bivector row also owns an optional position expression; positioned vectors
+canonical values. Supported vectors and bivectors render together in list
+order. Each vector or bivector row also owns an optional position expression;
+positioned vectors
 render from that position to their derived head. Positioned bivectors render as
 signed oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when
 its construction is safely available. `V.position` and `V.head`, and
