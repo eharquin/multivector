@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
@@ -32,12 +33,20 @@ import {
 } from './document/expressionDocument'
 import { toScreen, type Viewport2d } from './visualization/viewport'
 import { limitRenderedListElements } from './visualization/primitives'
+import {
+  DocumentFormatError,
+  fromCanonicalDocument,
+  parseCanonicalDocumentBytes,
+  serializeCanonicalDocument,
+  toCanonicalDocument,
+  type ThemeMode,
+} from './document/canonicalDocument'
+import { browserDocumentStorage } from './document/documentStorage'
 import './App.css'
 
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 720
-type ThemeMode = 'system' | 'light' | 'dark'
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -52,13 +61,35 @@ const viewport: Viewport2d = {
 }
 
 function App() {
-  const [expressionDoc, setExpressionDoc] = useState(() =>
-    expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }]),
+  const persistence = useMemo(
+    () => browserDocumentStorage(window.localStorage),
+    [],
   )
+  const [initial] = useState(() => {
+    const fallback = {
+      document: expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }]),
+      theme: 'system' as ThemeMode,
+      diagnostic: null as string | null,
+    }
+    if (import.meta.env.MODE === 'test') return fallback
+    try {
+      const stored = persistence.load()
+      return stored === null ? fallback : { ...fromCanonicalDocument(stored), diagnostic: null }
+    } catch (error) {
+      return {
+        ...fallback,
+        diagnostic: error instanceof DocumentFormatError
+          ? error.code + ': ' + error.message
+          : 'STORE_READ_FAILED: The saved document could not be restored.',
+      }
+    }
+  })
+  const [expressionDoc, setExpressionDoc] = useState(initial.document)
   const nextId = useRef(2)
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
   const pendingFocus = useRef<string | null>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
   const expressionReferenceButtonRef = useRef<HTMLButtonElement>(null)
   const resizeDrag = useRef<Readonly<{ startX: number; startWidth: number }> | null>(
@@ -67,7 +98,10 @@ function App() {
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
   const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
-  const [theme, setTheme] = useState<ThemeMode>('system')
+  const [theme, setTheme] = useState<ThemeMode>(initial.theme)
+  const [documentDiagnostic, setDocumentDiagnostic] = useState<string | null>(
+    initial.diagnostic,
+  )
   const [infoDialog, setInfoDialog] = useState<
     'algebra' | 'expressions' | null
   >(null)
@@ -78,10 +112,31 @@ function App() {
     () => evaluateDocument(expressionDoc, engine),
     [expressionDoc],
   )
+  const resolvedStyles = useMemo(
+    () => Object.fromEntries(evaluatedItems.map(({ item, evaluation }) => {
+      const kind = evaluation?.status === 'valid'
+        ? evaluation.valueType === 'list'
+          ? 'List'
+          : describeVga2Entity(evaluation.entity)
+        : 'Object'
+      return [item.id, resolveItemAppearance(expressionDoc.appearance[item.id], kind, declaredName(item.source)).styleId]
+    })),
+    [evaluatedItems, expressionDoc.appearance],
+  )
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    if (import.meta.env.MODE === 'test') return
+    try {
+      persistence.save(toCanonicalDocument(expressionDoc, theme, resolvedStyles))
+      setDocumentDiagnostic(null)
+    } catch {
+      setDocumentDiagnostic('STORE_WRITE_FAILED: Changes remain open, but the last saved revision was retained.')
+    }
+  }, [expressionDoc, persistence, resolvedStyles, theme])
 
   const origin = toScreen(viewport, { x: 0, y: 0 })
   const renderedPrimitives = evaluatedItems.flatMap((evaluated) => {
@@ -230,11 +285,60 @@ function App() {
 
   const insertExpression = (afterId?: string) => {
     if (expressionDoc.items.length >= MAX_EXPRESSION_ITEMS) return
-    const id = `item-${nextId.current++}`
+    let id = `item-${nextId.current++}`
+    while (expressionDoc.items.some((item) => item.id === id)) {
+      id = `item-${nextId.current++}`
+    }
     pendingFocus.current = id
     setExpressionDoc((current) =>
       addExpression(current, { id, source: '' }, afterId),
     )
+  }
+
+  const importDocument = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    try {
+      const imported = fromCanonicalDocument(
+        parseCanonicalDocumentBytes(new Uint8Array(await file.arrayBuffer())),
+      )
+      setExpressionDoc(imported.document)
+      setTheme(imported.theme)
+      setAppearanceItemId(null)
+      nextId.current = imported.document.items.length + 1
+      setDocumentDiagnostic(null)
+    } catch (error) {
+      setDocumentDiagnostic(
+        error instanceof DocumentFormatError
+          ? error.code + ': ' + error.message
+          : 'DOCUMENT_IMPORT_FAILED: The document could not be imported.',
+      )
+    }
+  }
+
+  const exportDocument = () => {
+    try {
+      const source = serializeCanonicalDocument(
+        toCanonicalDocument(expressionDoc, theme, resolvedStyles),
+      )
+      const blob = new Blob([source], { type: 'application/json;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const basename = (expressionDoc.title || 'multivector-document')
+        .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'multivector-document'
+      link.href = url
+      link.download = basename + '.multivector.json'
+      link.click()
+      URL.revokeObjectURL(url)
+      setDocumentDiagnostic(null)
+    } catch (error) {
+      setDocumentDiagnostic(
+        error instanceof DocumentFormatError
+          ? error.code + ': ' + error.message
+          : 'DOCUMENT_EXPORT_FAILED: The document could not be exported.',
+      )
+    }
   }
 
   const removeExpression = (id: string) => {
@@ -327,7 +431,27 @@ function App() {
           </select>
         </label>
         <span className="app-status">Research preview</span>
+        <input
+          ref={importInputRef}
+          className="document-file-input"
+          type="file"
+          accept="application/json,.json"
+          aria-label="Import document file"
+          onChange={importDocument}
+        />
+        <button type="button" className="document-command" onClick={() => importInputRef.current?.click()}>
+          Import
+        </button>
+        <button type="button" className="document-command" onClick={exportDocument}>
+          Export
+        </button>
       </header>
+
+      {documentDiagnostic && (
+        <div className="document-diagnostic" role="alert">
+          {documentDiagnostic}
+        </div>
+      )}
 
       <main className="workspace">
         <aside

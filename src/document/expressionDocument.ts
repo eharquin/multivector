@@ -7,14 +7,59 @@ export type ExpressionAppearance = Readonly<{
   label?: string
 }>
 
+export type ExpressionControl = Readonly<{
+  mode: 'number' | 'slider'
+  minimumSource: string
+  maximumSource: string
+  stepSource: string
+  animation: Readonly<{
+    mode: 'once' | 'loop' | 'ping-pong'
+    direction: 'forward' | 'reverse'
+    durationSeconds: number
+  }> | null
+}>
+
 export type ExpressionItem = Readonly<{
   id: string
+  kind?: 'expression' | 'annotation'
   source: string
   positionSource?: string
   normalization?: 'natural'
+  control?: ExpressionControl
 }>
 
 export type ExpressionDocument = Readonly<{
+  id: string
+  title: string
+  description: string
+  languageVersion: number
+  algebra: Readonly<{
+    algebraId: string
+    definitionVersion: number
+    conventionVersion: number
+    parameters: Readonly<Record<string, unknown>>
+  }>
+  interpretation: Readonly<{
+    interpretationId: string
+    interpretationVersion: number
+  }> | null
+  view: Readonly<{
+    visualizerId: string | null
+    positionEnabled: boolean
+    viewport: Readonly<{
+      kind: 'two-dimensional'
+      centerX: number
+      centerY: number
+      zoom: number
+    }>
+    display: Readonly<{
+      decimalPlaces: number
+      axisLabelsVisible: boolean
+      graduationsVisible: boolean
+      gridVisible: boolean
+      objectScale: number
+    }>
+  }>
   items: readonly ExpressionItem[]
   appearance: Readonly<Record<string, ExpressionAppearance>>
 }>
@@ -23,10 +68,37 @@ export type ExpressionDocument = Readonly<{
 export function expressionDocument(
   items: readonly ExpressionItem[],
   appearance: Readonly<Record<string, ExpressionAppearance>> = {},
+  metadata: Readonly<{ id?: string; title?: string; description?: string }> = {},
 ): ExpressionDocument {
   const retainedItems = items.slice(0, MAX_EXPRESSION_ITEMS)
   const retainedIds = new Set(retainedItems.map((item) => item.id))
   return {
+    id: metadata.id ?? 'local-document',
+    title: metadata.title ?? 'Untitled document',
+    description: metadata.description ?? '',
+    languageVersion: 1,
+    algebra: {
+      algebraId: 'org.multivector.vga',
+      definitionVersion: 1,
+      conventionVersion: 1,
+      parameters: {},
+    },
+    interpretation: {
+      interpretationId: 'org.multivector.vga-2d',
+      interpretationVersion: 1,
+    },
+    view: {
+      visualizerId: 'org.multivector.vga-2d',
+      positionEnabled: true,
+      viewport: { kind: 'two-dimensional', centerX: 0, centerY: 0, zoom: 72 },
+      display: {
+        decimalPlaces: 6,
+        axisLabelsVisible: true,
+        graduationsVisible: true,
+        gridVisible: false,
+        objectScale: 1,
+      },
+    },
     items: retainedItems.map((item) => ({ ...item })),
     appearance: Object.fromEntries(
       Object.entries(appearance)

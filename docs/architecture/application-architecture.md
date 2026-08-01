@@ -213,7 +213,7 @@ enter interpretation or rendering state.
 
 | Location | Owns | Does not own |
 | --- | --- | --- |
-| `src/document` | Stable expression item identities, separately owned value and position sources, ordered item updates, and the document item-count boundary | Parsing, evaluation, dependencies, persistence, or React focus |
+| `src/document` | Stable expression item identities, separately owned value and position sources, canonical JSON validation and migration, ordered item updates, the document item-count boundary, and browser persistence behind a storage interface | Parsing, evaluation, dependencies, or React focus |
 | `src/language` | Tokenization, declaration and expression syntax, reference nodes, lowering to the core algebra AST, source spans, and syntax diagnostics | Document-wide name resolution, algebra computation, geometric meaning, rendering, or React state |
 | `src/evaluation` | Evaluation of owned core syntax against explicit algebra capabilities and resolved reference values | Parsing, dependency planning, backend construction, display formatting, or viewport behavior |
 | `src/algebra` | The algebra-engine interface and ganja.js adaptation | Public source semantics, UI state, geometric interpretation, or rendering |
@@ -283,22 +283,21 @@ These rules implement the replacement boundaries described in
 [Technology Decisions](technology-decisions.md) and the ownership constraints
 in the [Design Requirements](../design-requirements.md).
 
-## Planned extension points
+## Extension points
 
-The current vertical slice intentionally omits several capabilities needed by
-the VGA 2D Foundation milestone. When those capabilities enter implementation,
-their responsibilities should fit the existing dependency direction:
+The current vertical slice retains several extension points:
 
-- document state expands its current stable identities and value/position
-  source ownership to include algebra configuration, appearance, and persisted
-  revisions;
+- document state owns stable identities, value and position sources, algebra
+  configuration, appearance, view configuration, and the current persisted
+  revision;
 - dependency analysis expands from the current declaration table and acyclic
   traversal into bounded reusable planning nodes for every persisted source
   property;
 - commands own validated document changes and history boundaries rather than
   allowing UI components to mutate domain state directly;
 - persistence owns canonical JSON, migration, local storage, and failed-write
-  recovery behind an application-facing interface;
+  recovery behind an application-facing interface; its browser adapter can
+  move from one-key Web Storage to IndexedDB without changing document rules;
 - interaction translates pointer or keyboard intent into semantic edit
   requests; geometry and document rules decide whether source can be rewritten;
 - render adapters consume shared visualization primitives, allowing SVG to be

@@ -79,7 +79,11 @@ currently implemented. A neighboring clear control requires a one-second
 pointer or keyboard hold, removes all expressions and their appearance records,
 and returns focus to the add-expression control.
 
-Canonical document persistence, direct manipulation, animation, and additional
+Documents are saved locally after valid edits. The header provides explicit
+canonical JSON import and export; imports are validated before replacing the
+open document, and failed writes retain the last saved revision.
+
+Direct manipulation, animation, and additional
 algebras remain planned work.
 
 The current slice is implementation evidence toward the VGA 2D Foundation, not
