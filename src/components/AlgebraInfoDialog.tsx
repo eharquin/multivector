@@ -1,5 +1,7 @@
 import type { RefObject } from 'react'
 import { VGA_2_INFO } from '../algebra/vga2Info'
+import { DEFAULT_OBJECT_STYLES, paletteEntry } from './appearancePalette'
+import { DefinitionTable } from './DefinitionTable'
 import { InfoDialog } from './InfoDialog'
 
 type AlgebraInfoDialogProps = Readonly<{
@@ -7,16 +9,31 @@ type AlgebraInfoDialogProps = Readonly<{
   onClose: () => void
 }>
 
-function InfoTable({ rows }: Readonly<{ rows: readonly (readonly [string, string])[] }>) {
+/**
+ * Documents the presentation defaults applied to items without stored
+ * appearance. Colour is decorative here: the palette name carries the identity
+ * so the section survives greyscale and assistive technology (A11Y-002).
+ */
+function ObjectColorTable() {
   return (
     <table className="info-table">
       <tbody>
-        {rows.map(([label, value]) => (
-          <tr key={label}>
-            <th scope="row">{label}</th>
-            <td><code>{value}</code></td>
-          </tr>
-        ))}
+        {DEFAULT_OBJECT_STYLES.map(([kind, style]) => {
+          const entry = paletteEntry(style)
+          return (
+            <tr key={kind}>
+              <th scope="row">
+                <span
+                  className="object-color-swatch"
+                  style={{ backgroundColor: entry?.hex }}
+                  aria-hidden="true"
+                />
+                {kind}
+              </th>
+              <td title={entry?.hex}>{entry?.name}</td>
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   )
@@ -64,17 +81,26 @@ export function AlgebraInfoDialog({
 
       <section className="info-section">
         <h3>Geometric interpretation</h3>
-        <InfoTable rows={VGA_2_INFO.objects} />
+        <DefinitionTable rows={VGA_2_INFO.objects} codeTerms={false} />
+      </section>
+
+      <section className="info-section">
+        <h3>Object colors</h3>
+        <ObjectColorTable />
+        <p className="info-footnote">
+          Defaults. Any item can override its color from the appearance popover
+          in the expression panel.
+        </p>
       </section>
 
       <section className="info-section">
         <h3>Available operations</h3>
-        <InfoTable rows={VGA_2_INFO.operations} />
+        <DefinitionTable rows={VGA_2_INFO.operations} />
       </section>
 
       <section className="info-section">
         <h3>Sub-algebras</h3>
-        <InfoTable rows={VGA_2_INFO.subalgebras} />
+        <DefinitionTable rows={VGA_2_INFO.subalgebras} codeTerms={false} />
       </section>
 
       <section className="info-section">

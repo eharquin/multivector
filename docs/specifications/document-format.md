@@ -23,10 +23,30 @@ source, and an optional separate position source. Value and position sources
 are evaluated as distinct dependency nodes for interpreted single vectors and
 single bivectors; lists inherit element positions, and other value kinds
 preserve position source without activating it.
-Serialization, canonical JSON,
-migration, appearance, controls, and the remaining format-version-one fields
-are not implemented yet. This note records implementation evidence and does not
-change the normative serialized structure below.
+
+The current in-memory subset also owns sparse item-keyed appearance records:
+visibility, label visibility, label text, and style may each be absent, and one
+resolver supplies the deterministic defaults. These sparse records are
+application state, not canonical JSON; a canonical `Appearance` contains every
+required field described in section 2.2. A common list record applies to every
+rendered element. Theme selection is presentation-only. Natural normalization
+is modeled by the canonical nullable `normalization` field on an expression
+item. It changes the value seen by dependent expressions without rewriting
+source and remains separate from appearance and numeric controls. The current
+theme selector is session state and updates display tokens immediately; it will
+populate and restore canonical `ViewState.display.theme` when view-state
+persistence is implemented.
+
+The current document operations include an atomic clear transition. It replaces
+`items` with an empty array and `appearance` with an empty object while retaining
+all document-level identity and configuration fields. The sustained-hold
+confirmation and subsequent focus restoration are interface behavior and are
+not serialized.
+
+Canonical JSON serialization, migration, persistence of appearance and view
+state, numeric controls, and the remaining format-version-one fields are not
+implemented yet. This note records implementation evidence and does not change
+the normative serialized structure below.
 
 ## 2. Structure
 
@@ -61,6 +81,7 @@ classDiagram
       +expression|annotation kind
       +string source
       +string|null positionSource
+      +natural|null normalization
       +Control|null control
     }
     class Control {
@@ -78,6 +99,7 @@ classDiagram
     class Appearance {
       +boolean visible
       +boolean labelVisible
+      +string label
       +string style
     }
     class ViewState {
@@ -132,14 +154,20 @@ and its version is a positive integer.
 
 ### 2.2 Items, appearance, and controls
 
-An `Item` has exactly `id`, `kind`, `source`, `positionSource`, and `control`.
-Its identity is a non-empty opaque immutable string. `kind` is `expression` or
-`annotation`; `source` is stored verbatim. An annotation requires
-`positionSource` and `control` to be `null`.
+An `Item` has exactly `id`, `kind`, `source`, `positionSource`, `normalization`,
+and `control`. Its identity is a non-empty opaque immutable string. `kind` is
+`expression` or `annotation`; `source` is stored verbatim. An annotation
+requires `positionSource`, `normalization`, and `control` to be `null`.
 
 `positionSource` is either `null` or source text stored verbatim. It is preserved
 when position support is disabled. When enabled, it participates in the
 dependency graph described below.
+
+`normalization` is `null` or `natural`. `natural` requests the active algebra's
+versioned natural-normalization service after evaluating the item's source and
+before dependent expressions resolve it. When normalization is unavailable, the
+service returns the unchanged value according to the algebra convention. The
+field does not rewrite source and is independent of appearance and `control`.
 
 `control` is `null` or an object with exactly `mode`, `minimumSource`,
 `maximumSource`, `stepSource`, and `animation`. `mode` is `number` or `slider`.
@@ -150,10 +178,38 @@ its source snapshot are not stored. Animation may be configured in either
 control mode; both modes use the same minimum, maximum, step, and animation
 fields, and changing `mode` preserves them.
 
-An `Appearance` has exactly `visible`, `labelVisible`, and `style`. The first two
-fields are booleans. `style` is a non-empty palette-independent style identifier.
-Appearance is item-level in format version 1; list elements do not have
-independent stored appearance.
+An `Appearance` has exactly `visible`, `labelVisible`, `label`, and `style`. The
+first two fields are booleans. `label` is stored plain text; an empty value uses
+the deterministic semantic default. `style` is a registered non-empty,
+palette-independent style identifier. Appearance is item-level in format
+version 1; list elements do not have independent stored appearance.
+
+#### 2.2.1 Initial style registry
+
+The initial registry contains six ordered shades in each semantic ramp:
+`red-1` through `red-6`, `blue-1` through `blue-6`, `green-1` through
+`green-6`, `yellow-1` through `yellow-6`, and `neutral-1` through `neutral-6`.
+These identifiers are canonical document data. Their concrete color values are
+renderer-owned and are not serialized.
+
+When an item has no stored style, the current VGA interface applies these
+deterministic defaults:
+
+| Semantic kind | Style identifier |
+| --- | --- |
+| Scalar | `green-4` |
+| Vector | `yellow-4` |
+| Bivector | `red-4` |
+| Rotor | `blue-3` |
+| Mixed multivector | `blue-4` |
+| List | `green-3` |
+| Unregistered semantic kind | `blue-4` |
+
+Canonical validation rejects an unregistered style identifier. A renderer may
+use `blue-4` as a defensive display fallback for invalid or pre-validation
+in-memory data, but that fallback never makes the record canonically valid.
+For a scalar or another non-spatial value, style affects its expression-panel
+presentation only; visibility and visualizer-label controls are unavailable.
 
 ### 2.3 View state
 

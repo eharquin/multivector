@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { EXPRESSION_REFERENCE } from '../language/expressionReference'
+import { DefinitionTable } from './DefinitionTable'
 import { InfoDialog } from './InfoDialog'
 
 type ExpressionReferenceDialogProps = Readonly<{
@@ -21,16 +22,7 @@ export function ExpressionReferenceDialog({
       {EXPRESSION_REFERENCE.map((section) => (
         <section className="info-section" key={section.title}>
           <h3>{section.title}</h3>
-          <table className="info-table expression-reference-table">
-            <tbody>
-              {section.entries.map(([source, meaning]) => (
-                <tr key={source}>
-                  <th scope="row"><code>{source}</code></th>
-                  <td>{meaning}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DefinitionTable rows={section.entries} />
         </section>
       ))}
     </InfoDialog>
