@@ -1,11 +1,11 @@
 # VGA 2D Foundation Milestone
 
-**Status:** Draft for review
+**Status:** Accepted
 **Kind:** Product milestone
 **Depends on:** VGA Core
 **Applies:** VIZ2D-001 through VIZ2D-008; VIEW2D-001 through VIEW2D-003;
 VGA-INT-001 through VGA-INT-004
-**Date:** 2026-07-30
+**Date:** 2026-08-02
 
 ## Objective
 
