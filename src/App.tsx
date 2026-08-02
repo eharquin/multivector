@@ -7,6 +7,7 @@ import {
   useState,
   type ChangeEvent,
   type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent,
 } from 'react'
@@ -41,10 +42,15 @@ import {
   clampZoom,
   DEFAULT_PIXELS_PER_UNIT,
   panByScreen,
+  toMathematical,
   toScreen,
   zoomAt,
   type Viewport2d,
 } from './visualization/viewport'
+import {
+  nextVectorName,
+  vectorCreationSource,
+} from './visualization/viewportCreation'
 import { limitRenderedListElements } from './visualization/primitives'
 import {
   DocumentFormatError,
@@ -125,6 +131,7 @@ function App() {
   const lastEditorFocus = useRef<EditorFocus | null>(null)
   const pendingHistoryFocus = useRef(lastEditorFocus.current)
   const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
+  const viewportCreatedItemIds = useRef(new Set<string>())
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -160,6 +167,7 @@ function App() {
   const [documentDiagnostic, setDocumentDiagnostic] = useState<string | null>(
     initial.diagnostic,
   )
+  const [viewportAnnouncement, setViewportAnnouncement] = useState('')
   const [infoDialog, setInfoDialog] = useState<
     'algebra' | 'expressions' | null
   >(null)
@@ -285,6 +293,32 @@ function App() {
     } else return
     event.preventDefault()
     updateViewport(next)
+  }
+
+  const createVectorFromViewport = (event: ReactMouseEvent<SVGSVGElement>) => {
+    if (event.target !== event.currentTarget) return
+    if (expressionDoc.items.length >= MAX_EXPRESSION_ITEMS) {
+      setViewportAnnouncement(
+        `Vector not created. The document already contains the maximum of ${MAX_EXPRESSION_ITEMS} expressions.`,
+      )
+      return
+    }
+    let id = `item-${nextId.current++}`
+    while (expressionDoc.items.some((item) => item.id === id)) {
+      id = `item-${nextId.current++}`
+    }
+    const point = toMathematical(
+      viewport,
+      screenPoint(event.clientX, event.clientY),
+    )
+    const name = nextVectorName(expressionDoc.items.map(({ source }) => source))
+    const source = vectorCreationSource(name, point, viewport.pixelsPerUnit)
+    viewportCreatedItemIds.current.add(id)
+    pendingFocus.current = id
+    executeCommand({ kind: 'insert-item', item: { id, source } })
+    setViewportAnnouncement(`${name} created at ${
+      source.slice(source.indexOf('(') + 1, -1)
+    }.`)
   }
 
   useEffect(() => {
@@ -463,6 +497,11 @@ function App() {
         input = document.getElementById(fallback.id)
       }
     }
+    if (!(input instanceof HTMLInputElement) &&
+        viewportCreatedItemIds.current.has(selection.id.replace('expression-source-', ''))) {
+      viewportSvgRef.current?.focus({ preventScroll: true })
+      return
+    }
     if (!(input instanceof HTMLInputElement)) return
     input.focus()
     const maximum = input.value.length
@@ -585,6 +624,7 @@ function App() {
       setTheme(imported.theme)
       setAppearanceItemId(null)
       setExpandedListIds(new Set())
+      viewportCreatedItemIds.current.clear()
       nextId.current = imported.document.items.length + 1
       setDocumentDiagnostic(imported.recoveryDiagnostic)
     } catch (error) {
@@ -671,7 +711,8 @@ function App() {
 
   const visibleCount = renderedVectors.length + renderedAreas.length
   const canvasDescription = visibleCount === 0
-      ? `No spatial objects are visible from ${expressionDoc.items.length} expressions.`
+      ? `No spatial objects are visible from ${expressionDoc.items.length} expressions. ` +
+        'Double-click empty viewport space to create a vector.'
       : `${renderedVectors.length} ${renderedVectors.length === 1 ? 'vector' : 'vectors'} ` +
         `and ${renderedAreas.length} ${renderedAreas.length === 1 ? 'bivector' : 'bivectors'} ` +
         `are visible. ${renderedVectors
@@ -687,7 +728,7 @@ function App() {
           .map(({ primitive }) => primitive.accessibleDescription)
           .join(' ')}${omittedRenderElements > 0
             ? ` ${omittedRenderElements} additional list elements are omitted by the rendering limit.`
-            : ''}`
+            : ''} Double-click empty viewport space to create a vector.`
 
   return (
     <div className="app-shell">
@@ -1190,6 +1231,7 @@ function App() {
               onPointerCancel={cancelViewportPan}
               onLostPointerCapture={loseViewportCapture}
               onKeyDown={navigateViewportWithKeyboard}
+              onDoubleClick={createVectorFromViewport}
             >
               <title id="canvas-title">Two-dimensional VGA viewport</title>
               <desc id="canvas-description">{canvasDescription}</desc>
@@ -1284,6 +1326,9 @@ function App() {
                 </g>
               ))}
             </svg>
+            <output className="visually-hidden" aria-live="polite">
+              {viewportAnnouncement}
+            </output>
           </div>
         </section>}
       </main>
