@@ -50,6 +50,7 @@ describe('VGA 2D vertical slice', () => {
     const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
     first.focus()
     first.setSelectionRange(3, 3)
+    fireEvent.select(first)
     fireEvent.keyDown(first, { key: 'Enter' })
     expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
 
@@ -57,6 +58,25 @@ describe('VGA 2D vertical slice', () => {
 
     expect(screen.queryByRole('textbox', { name: 'Expression 2' })).not.toBeInTheDocument()
     expect(first).toHaveFocus()
+    expect(first.selectionStart).toBe(3)
+    expect(first.selectionEnd).toBe(3)
+  })
+
+  it('returns to the end of the originating position editor after insertion undo', () => {
+    render(<App />)
+    const position = screen.getByRole<HTMLInputElement>('textbox', { name: 'Position 1' })
+    fireEvent.change(position, { target: { value: '(1,0)' } })
+    position.focus()
+    position.setSelectionRange(position.value.length, position.value.length)
+    fireEvent.select(position)
+    fireEvent.keyDown(position, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+
+    expect(position).toHaveFocus()
+    expect(position.selectionStart).toBe(position.value.length)
+    expect(position.selectionEnd).toBe(position.value.length)
   })
 
   it('authors the documented foundation example with keyboard row insertion', () => {

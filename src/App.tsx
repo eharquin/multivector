@@ -48,6 +48,12 @@ import './App.css'
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 720
+type EditorFocus = Readonly<{
+  id: string
+  start: number
+  end: number
+  direction: 'forward' | 'backward' | 'none'
+}>
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -102,14 +108,9 @@ function App() {
   const nextId = useRef(2)
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
   const pendingFocus = useRef<string | null>(null)
-  const lastEditorFocus = useRef<Readonly<{
-    id: string
-    start: number
-    end: number
-    direction: 'forward' | 'backward' | 'none'
-  }> | null>(null)
+  const lastEditorFocus = useRef<EditorFocus | null>(null)
   const pendingHistoryFocus = useRef(lastEditorFocus.current)
-  const removedEditorFallbacks = useRef(new Map<string, string>())
+  const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -302,18 +303,22 @@ function App() {
     const selection = pendingHistoryFocus.current
     if (!selection) return
     pendingHistoryFocus.current = null
-    let input = document.getElementById(selection.id)
+    let restoredSelection = selection
+    let input = document.getElementById(restoredSelection.id)
     if (!(input instanceof HTMLInputElement)) {
-      const fallbackId = removedEditorFallbacks.current.get(selection.id)
-      input = fallbackId ? document.getElementById(fallbackId) : null
+      const fallback = removedEditorFallbacks.current.get(selection.id)
+      if (fallback) {
+        restoredSelection = fallback
+        input = document.getElementById(fallback.id)
+      }
     }
     if (!(input instanceof HTMLInputElement)) return
     input.focus()
     const maximum = input.value.length
     input.setSelectionRange(
-      Math.min(selection.start, maximum),
-      Math.min(selection.end, maximum),
-      selection.direction,
+      Math.min(restoredSelection.start, maximum),
+      Math.min(restoredSelection.end, maximum),
+      restoredSelection.direction,
     )
     rememberEditorFocus(input)
   }, [expressionDoc])
@@ -384,12 +389,17 @@ function App() {
     while (expressionDoc.items.some((item) => item.id === id)) {
       id = `item-${nextId.current++}`
     }
+    const originatingEditor = lastEditorFocus.current
     const fallbackItemId = anchorId ?? expressionDoc.items.at(-1)?.id
-    if (fallbackItemId) {
-      removedEditorFallbacks.current.set(
-        `expression-source-${id}`,
-        `expression-source-${fallbackItemId}`,
-      )
+    if (originatingEditor) {
+      removedEditorFallbacks.current.set(`expression-source-${id}`, originatingEditor)
+    } else if (fallbackItemId) {
+      removedEditorFallbacks.current.set(`expression-source-${id}`, {
+        id: `expression-source-${fallbackItemId}`,
+        start: 0,
+        end: 0,
+        direction: 'none',
+      })
     }
     pendingFocus.current = id
     executeCommand({
