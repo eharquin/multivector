@@ -186,6 +186,10 @@ export function evaluateDocument(
 
   document.items.forEach((item, index) => {
     const valueKey = nodeKey(item.id, 'value')
+    if (item.kind === 'annotation') {
+      results.set(valueKey, null)
+      return
+    }
     if (item.source.trim() === '') {
       results.set(valueKey, null)
     } else {
@@ -208,7 +212,9 @@ export function evaluateDocument(
       }
     }
 
-    const positionSource = item.positionSource?.trim() ?? ''
+    const positionSource = document.view.positionEnabled
+      ? item.positionSource?.trim() ?? ''
+      : ''
     if (!positionSource) return
     const positionKey = nodeKey(item.id, 'position')
     const parsedPosition = parseExpression(item.positionSource!)

@@ -43,14 +43,22 @@ confirmation and subsequent focus restoration are interface behavior and are
 not serialized.
 
 Canonical JSON serialization, strict version-one validation, local persistence,
-and explicit JSON import and export are implemented. Appearance, natural
+and explicit JSON import and export are implemented. Imports whose identity
+collides with the open document offer replacement or duplication; duplication
+regenerates the document and every item identity while preserving ordered
+canonical content. Appearance, natural
 normalization, source, position source, document identity, metadata, and theme
 round-trip through that boundary. Numeric-control records are validated and
 preserved through the nullable `control` field, but their interactive runtime
-behavior is not implemented yet. Viewport display controls and annotations have
-canonical representations but do not yet have dedicated editing interfaces. This note
-records implementation evidence and does not change the normative serialized
-structure below.
+behavior is not implemented yet. Annotation source is preserved as
+non-executable content and never enters parsing or evaluation. Both closed
+viewport variants restore deterministically: `none` disables the visualizer,
+while the supported two-dimensional record restores center and zoom. An
+unsupported visualizer/viewport combination remains in the document and
+produces an explicit recovery diagnostic. Viewport display controls and
+annotations do not yet have dedicated editing interfaces. This note records
+implementation evidence and does not change the normative serialized structure
+below.
 
 ## 2. Structure
 
