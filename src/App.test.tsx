@@ -16,14 +16,23 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 
 afterEach(cleanup)
 
+function openDisplaySettings(): HTMLElement {
+  const trigger = screen.getByRole('button', { name: 'Display settings' })
+  fireEvent.click(trigger)
+  return trigger
+}
+
 describe('VGA 2D vertical slice', () => {
   it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
     render(<App />)
     const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
-    const undo = screen.getByRole('button', { name: 'Undo document change' })
-    const redo = screen.getByRole('button', { name: 'Redo document change' })
+    const panel = screen.getByRole('complementary', { name: 'Expressions' })
+    const historyControls = within(panel).getByRole('group', { name: 'Expression history' })
+    const undo = within(historyControls).getByRole('button', { name: 'Undo document change' })
+    const redo = within(historyControls).getByRole('button', { name: 'Redo document change' })
     expect(undo).toBeDisabled()
     expect(redo).toBeDisabled()
+    expect(screen.getByRole('banner')).not.toContainElement(undo)
 
     fireEvent.change(input, { target: { value: 'V = e1' } })
     expect(undo).toBeEnabled()
@@ -202,6 +211,77 @@ describe('VGA 2D vertical slice', () => {
         name: /Two-dimensional VGA viewport/,
       }),
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
+  })
+
+  it('navigates the persistent viewport without creating mathematical history', () => {
+    const { container } = render(<App />)
+    const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
+    const vector = screen.getByLabelText('Vector 1')
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+
+    expect(vector).toHaveAttribute('x1', '320')
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    expect(vector).toHaveAttribute('x2', '500')
+    expect(screen.getByText('125%')).toBeInTheDocument()
+    expect(undo).toBeDisabled()
+
+    canvas.focus()
+    fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
+    expect(vector).toHaveAttribute('x1', '360')
+    fireEvent.keyDown(canvas, { key: 'Home' })
+    expect(vector).toHaveAttribute('x1', '320')
+    expect(screen.getByText('100%', { selector: 'output' })).toBeInTheDocument()
+
+    openDisplaySettings()
+    const grid = screen.getByRole('switch', { name: 'Grid' })
+    expect(container.querySelectorAll('.grid-line')).toHaveLength(0)
+    fireEvent.click(grid)
+    expect(container.querySelectorAll('.grid-line').length).toBeGreaterThan(0)
+    expect(undo).toBeDisabled()
+  })
+
+  it('controls axes, graduations, and object scale independently', () => {
+    const { container } = render(<App />)
+    expect(container.querySelectorAll('.axis')).toHaveLength(2)
+    expect(container.querySelectorAll('.graduation').length).toBeGreaterThan(0)
+    openDisplaySettings()
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Axes and labels' }))
+    expect(container.querySelectorAll('.axis')).toHaveLength(0)
+    expect(container.querySelectorAll('.graduation').length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Graduations' }))
+    expect(container.querySelectorAll('.graduation')).toHaveLength(0)
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Object scale' }), {
+      target: { value: '1.5' },
+    })
+    expect(screen.getByLabelText('Vector 1')).toHaveAttribute('stroke-width', '6')
+    expect(screen.getByText('1.50×')).toBeInTheDocument()
+  })
+
+  it('opens display settings, restores focus on close, and records no history', () => {
+    render(<App />)
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    expect(screen.queryByRole('switch', { name: 'Grid' })).not.toBeInTheDocument()
+
+    const trigger = openDisplaySettings()
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('switch', { name: 'Grid' })).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Grid' }))
+    expect(undo).toBeDisabled()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('switch', { name: 'Grid' })).not.toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).toHaveFocus()
+
+    openDisplaySettings()
+    const outsideControl = screen.getByRole('button', { name: 'Add expression' })
+    fireEvent.pointerDown(outsideControl)
+    expect(screen.queryByRole('switch', { name: 'Grid' })).not.toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('shows a textual, source-associated diagnostic and removes stale output', () => {
@@ -493,6 +573,7 @@ describe('VGA 2D vertical slice', () => {
 
   it('offers system, light, and dark application themes', () => {
     render(<App />)
+    openDisplaySettings()
     const theme = screen.getByRole('combobox', { name: 'Theme' })
 
     fireEvent.change(theme, { target: { value: 'dark' } })
@@ -683,6 +764,34 @@ describe('VGA 2D vertical slice', () => {
     ).toHaveStyle({ width: '356px' })
   })
 
+  it('squares the canvas by widening the expression panel past the drag cap', () => {
+    render(<App />)
+    const separator = screen.getByRole('separator', {
+      name: 'Resize expression panel',
+    })
+    const workspace = screen.getByRole('main')
+    vi.spyOn(workspace, 'getBoundingClientRect').mockReturnValue({
+      width: 2000,
+      height: 1200,
+      top: 0,
+      left: 0,
+      right: 2000,
+      bottom: 1200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Make canvas square' }))
+
+    // 2000 workspace − 6 separator − 1200 tall canvas leaves a square canvas,
+    // which needs more panel width than the former fixed 720 pixel cap allowed.
+    expect(separator).toHaveAttribute('aria-valuenow', '794')
+    expect(
+      screen.getByRole('complementary', { name: 'Expressions' }),
+    ).toHaveStyle({ width: '794px' })
+  })
+
   it('opens the VGA algebra information and restores focus on Escape', () => {
     render(<App />)
 
@@ -694,23 +803,15 @@ describe('VGA 2D vertical slice', () => {
     })
     expect(dialog).toHaveTextContent('Basis & metric')
     expect(dialog).toHaveTextContent('Cayley table')
-    expect(dialog).toHaveTextContent('A.involution')
+    expect(dialog).toHaveTextContent('Geometric interpretation')
+    expect(dialog).toHaveTextContent('Sub-algebras')
+    expect(dialog).not.toHaveTextContent('Available operations')
+    expect(dialog).not.toHaveTextContent('A.involution')
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
-  })
-
-  it('marks the operator as code and its description as prose', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
-
-    const row = screen.getByRole('rowheader', { name: 'A * B' }).closest('tr')
-
-    expect(row?.querySelector('th code')).toHaveTextContent('A * B')
-    expect(row?.querySelector('td')).toHaveTextContent('geometric product')
-    expect(row?.querySelector('td code')).toBeNull()
   })
 
   it('names every default object color in text, not only as a swatch', () => {

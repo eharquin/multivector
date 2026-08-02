@@ -31,6 +31,7 @@
 
 .app-title:focus-visible,
 .add-expression:focus-visible,
+.history-command:focus-visible,
 .delete-expression:focus-visible,
 .algebra-badge:focus-visible,
 .expression-reference-button:focus-visible,
@@ -39,7 +40,9 @@
 .visibility-toggle:focus-visible,
 .appearance-swatch:focus-visible,
 .normalize-toggle:focus-visible,
-.theme-control select:focus-visible,
+.viewport-command:focus-visible,
+.display-settings-button:focus-visible,
+.settings-select:focus-visible,
 .appearance-header button:focus-visible,
 .appearance-colors button:focus-visible {
   outline: 2px solid var(--accent);
@@ -72,27 +75,6 @@
   margin-left: auto;
   color: var(--muted);
 }
-
-.theme-control {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font: 0.68rem var(--font-mono);
-  text-transform: uppercase;
-}
-
-.theme-control select {
-  padding: 4px 7px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  font: inherit;
-}
-
-.theme-control + .app-status { margin-left: 0; }
 
 .document-file-input {
   position: fixed;
@@ -152,7 +134,41 @@
   align-items: center;
   min-height: 40px;
   padding: 6px 8px;
+  gap: 4px;
   border-bottom: 1px solid var(--border-subtle);
+}
+
+.expression-history-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-command {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.history-command:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.history-command:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .eyebrow {
@@ -681,6 +697,157 @@ h2 {
   opacity: 0.85;
 }
 
+.display-settings {
+  position: relative;
+  display: inline-block;
+}
+
+.display-settings-button {
+  min-width: 26px;
+  min-height: 26px;
+  padding: 4px 8px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.display-settings-button:hover,
+.display-settings-button.is-open {
+  color: var(--accent);
+  background: var(--surface-hover);
+  border-color: var(--accent-border);
+}
+
+/* Anchored to the header trigger, which never sits near a viewport edge. */
+.display-settings-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 15;
+  min-width: 252px;
+  max-width: calc(100vw - 16px);
+  overflow: hidden;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow-modal);
+}
+
+.settings-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-row-label {
+  flex: 1;
+  color: var(--text);
+}
+
+.settings-select {
+  padding: 4px 7px;
+  color: var(--text);
+  background: var(--background);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-select:hover {
+  border-color: var(--accent-border);
+}
+
+/* The 32x18 track is decorative; the transparent input carries the 24px
+   minimum hit area required by the interaction constants. */
+.settings-switch {
+  position: relative;
+  width: 34px;
+  height: 24px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.settings-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.settings-switch-track {
+  width: 32px;
+  height: 18px;
+  position: relative;
+  background: var(--border-strong);
+  border-radius: 9px;
+  transition: background 120ms ease;
+}
+
+.settings-switch input:checked + .settings-switch-track {
+  background: var(--accent);
+}
+
+.settings-switch input:focus-visible + .settings-switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* The thumb travels, so the state survives greyscale (A11Y-002). */
+.settings-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(30 36 51 / 35%);
+  transition: left 120ms ease;
+}
+
+.settings-switch input:checked + .settings-switch-track .settings-switch-thumb {
+  left: 16px;
+}
+
+.settings-row-slider .settings-row-label {
+  flex: 0 0 auto;
+}
+
+.settings-row-slider input[type='range'] {
+  flex: 1;
+  min-width: 72px;
+  min-height: 24px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-slider-value {
+  min-width: 5ch;
+  color: var(--muted);
+  font: 600 0.72rem var(--font-mono);
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-switch-track,
+  .settings-switch-thumb,
+  .viewport-toolbar,
+  .viewport-command {
+    transition: none;
+  }
+}
+
 .appearance-popover {
   position: fixed;
   z-index: 15;
@@ -723,14 +890,17 @@ h2 {
   color: var(--error);
 }
 
-.appearance-section {
+.appearance-section,
+.settings-section {
   padding: 10px 13px 12px;
   border-bottom: 1px solid var(--border);
 }
 
-.appearance-section:last-child { border-bottom: 0; }
+.appearance-section:last-child,
+.settings-section:last-child { border-bottom: 0; }
 
-.appearance-section h3 {
+.appearance-section h3,
+.settings-section h3 {
   margin: 0 0 8px;
   color: var(--muted);
   font-family: var(--font-mono);
@@ -767,7 +937,8 @@ h2 {
 }
 
 .appearance-toggle-row,
-.appearance-label-row {
+.appearance-label-row,
+.settings-row {
   min-height: 32px;
   display: flex;
   align-items: center;
@@ -839,9 +1010,67 @@ code {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ghost chrome over the canvas: recessive while reading the figure, fully
+   opaque once the pointer or keyboard reaches it. */
+.viewport-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+.canvas-frame:hover .viewport-toolbar,
+.viewport-toolbar:focus-within {
+  opacity: 1;
+}
+
+.viewport-command {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.viewport-command:hover {
+  color: var(--accent);
+  background: var(--surface-active);
+}
+
+.viewport-command svg line,
+.viewport-command svg circle,
+.viewport-command svg rect {
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.viewport-zoom {
+  min-width: 4ch;
+  padding-right: 3px;
+  font: 600 0.72rem var(--font-mono);
+  color: var(--muted);
+  text-align: right;
 }
 
 .canvas-frame {
+  flex: 1;
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -849,19 +1078,70 @@ code {
   place-items: center;
   overflow: hidden;
   background:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
     var(--canvas);
-  background-position: center;
-  background-size: 36px 36px;
   border: 0;
   border-radius: 0;
 }
 
 .canvas {
-  width: min(100%, 900px);
+  width: 100%;
   height: 100%;
-  max-height: 680px;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.canvas:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--accent-border);
+}
+
+.grid-line {
+  stroke: var(--grid);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.grid-line,
+.axis,
+.origin,
+.graduation,
+.graduation-label,
+.axis-name,
+.object-label {
+  pointer-events: none;
+}
+
+.grid-line.is-major {
+  stroke-width: 1;
+}
+
+.graduation {
+  stroke: var(--axis-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.graduation-label,
+.axis-name {
+  fill: var(--axis-strong);
+  font: 600 10px var(--font-mono);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--canvas);
+  stroke-width: 3px;
+}
+
+.graduation-label.is-y {
+  text-anchor: end;
+}
+
+.axis-name {
+  font-size: 12px;
+  font-style: italic;
 }
 
 .axis {
