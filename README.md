@@ -96,8 +96,12 @@ view-only changes remain outside mathematical undo history.
 `Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
 element's index, semantic type, canonical value, and inherited position.
 
-Scalar controls, direct manipulation, animation, and additional algebras remain
-planned work.
+Directly declared numeric scalars can expose a compact slider backed by
+expression-valued minimum, maximum, and step sources. Slider changes rewrite
+the authoritative scalar literal and participate in document undo and redo;
+invalid or out-of-range configurations leave the source unchanged.
+
+Direct manipulation, animation, and additional algebras remain planned work.
 
 The current public application delivers the accepted VGA 2D Foundation
 workflow. Broader geometry and interaction capabilities remain incremental.

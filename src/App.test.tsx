@@ -316,6 +316,65 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('1.50×')).toBeInTheDocument()
   })
 
+  it('configures a direct scalar slider that rewrites source and supports undo', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'a = ((2))' } })
+    const trigger = screen.getByRole('button', {
+      name: 'Configure scalar control for a',
+    })
+
+    fireEvent.click(trigger)
+    expect(screen.getByRole('dialog', { name: 'Control — a' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Number' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Slider' }))
+      .toHaveAttribute('aria-pressed', 'true')
+    const slider = screen.getByRole('slider', { name: 'Value for a' })
+    expect(slider).toBeEnabled()
+
+    fireEvent.pointerDown(slider, { pointerId: 1 })
+    fireEvent.change(slider, { target: { value: '3' } })
+    fireEvent.change(slider, { target: { value: '3.5' } })
+    fireEvent.pointerUp(slider, { pointerId: 1 })
+    expect(source).toHaveValue('a = ((3.5))')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(source).toHaveValue('a = ((2))')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Number' }))
+    expect(screen.queryByRole('slider', { name: 'Value for a' }))
+      .not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Minimum source' }))
+      .toHaveValue('-10')
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Control — a' }))
+      .not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+  })
+
+  it('preserves unsupported or out-of-range scalar source without clamping', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'a = 20' } })
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Configure scalar control for a',
+    }))
+
+    expect(screen.getByRole('slider', { name: 'Value for a' })).toBeDisabled()
+    expect(screen.getByText('Value is outside the configured interval.'))
+      .toBeInTheDocument()
+    expect(source).toHaveValue('a = 20')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Minimum source' }), {
+      target: { value: 'e1' },
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A control bound must evaluate to a pure scalar.',
+    )
+    expect(source).toHaveValue('a = 20')
+  })
+
   it('opens display settings, restores focus on close, and records no history', () => {
     render(<App />)
     const undo = screen.getByRole('button', { name: 'Undo document change' })

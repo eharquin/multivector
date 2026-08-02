@@ -17,6 +17,7 @@ import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import { AppearancePopover } from './components/AppearancePopover'
 import { ClearExpressionsButton } from './components/ClearExpressionsButton'
+import { ScalarControlPopover } from './components/ScalarControlPopover'
 import {
   DisplaySettingsMenu,
   type DisplaySettings,
@@ -62,6 +63,8 @@ import {
   type ThemeMode,
 } from './document/canonicalDocument'
 import { browserDocumentStorage } from './document/documentStorage'
+import { evaluateScalarControl } from './application/evaluateScalarControl'
+import { directScalarEdit } from './language/directScalarEdit'
 import './App.css'
 
 const engine = createVga2Engine()
@@ -140,6 +143,7 @@ function App() {
     null,
   )
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const scalarControlAnchorRef = useRef<HTMLButtonElement | null>(null)
   const viewportSvgRef = useRef<SVGSVGElement>(null)
   const canvasFrameRef = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<HTMLElement>(null)
@@ -160,6 +164,7 @@ function App() {
     height: defaultViewport.height,
   })
   const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
+  const [scalarControlItemId, setScalarControlItemId] = useState<string | null>(null)
   const [expandedListIds, setExpandedListIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
@@ -174,6 +179,10 @@ function App() {
   const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
   const closeAppearance = useCallback(() => {
     setAppearanceItemId(null)
+    dispatchHistory({ type: 'boundary' })
+  }, [])
+  const closeScalarControl = useCallback(() => {
+    setScalarControlItemId(null)
     dispatchHistory({ type: 'boundary' })
   }, [])
   const rememberEditorFocus = (element: HTMLInputElement) => {
@@ -348,6 +357,16 @@ function App() {
   const evaluatedItems = useMemo(
     () => evaluateDocument(expressionDoc, engine),
     [expressionDoc],
+  )
+  const scalarControlEvaluations = useMemo(
+    () => new Map(evaluatedItems.flatMap((evaluated) => evaluated.item.control
+      ? [[evaluated.item.id, evaluateScalarControl(
+          evaluated.item.control,
+          evaluatedItems,
+          engine,
+        )] as const]
+      : [])),
+    [evaluatedItems],
   )
   const resolvedStyles = useMemo(
     () => Object.fromEntries(evaluatedItems.map(({ item, evaluation }) => {
@@ -623,6 +642,7 @@ function App() {
       dispatchHistory({ type: 'replace', document: imported.document })
       setTheme(imported.theme)
       setAppearanceItemId(null)
+      setScalarControlItemId(null)
       setExpandedListIds(new Set())
       viewportCreatedItemIds.current.clear()
       nextId.current = imported.document.items.length + 1
@@ -681,6 +701,7 @@ function App() {
 
   const clearAllExpressions = () => {
     setAppearanceItemId(null)
+    setScalarControlItemId(null)
     setExpandedListIds(new Set())
     executeCommand({ kind: 'clear-items' })
     requestAnimationFrame(() => addButtonRef.current?.focus())
@@ -862,6 +883,11 @@ function App() {
               )
               const objectName = displayLabel ?? kind
               const valid = evaluation?.status === 'valid'
+              const scalar = valid && evaluation.valueType === 'single' &&
+                evaluation.entity.kind === 'scalar'
+              const scalarEdit = scalar ? directScalarEdit(item.source) : null
+              const controlEvaluation = scalarControlEvaluations.get(item.id) ?? null
+              const scalarControlAvailable = scalar || item.control !== undefined
               const empty = item.source.trim() === ''
               const listExpanded = expandedListIds.has(item.id)
               const listDetailsId = `list-details-${item.id}`
@@ -957,6 +983,29 @@ function App() {
                             })}
                           >norm</button>
                         )}
+                        {scalarControlAvailable && (
+                          <button
+                            ref={scalarControlItemId === item.id
+                              ? scalarControlAnchorRef
+                              : undefined}
+                            type="button"
+                            className="scalar-control-button"
+                            aria-label={`Configure scalar control for ${declaredName(item.source) ?? `expression ${position}`}`}
+                            aria-haspopup="dialog"
+                            aria-expanded={scalarControlItemId === item.id}
+                            onClick={(event) => {
+                              scalarControlAnchorRef.current = event.currentTarget
+                              if (!item.control) executeCommand({
+                                kind: 'update-control', itemId: item.id,
+                                control: {
+                                  mode: 'slider', minimumSource: '-10',
+                                  maximumSource: '10', stepSource: '0.1', animation: null,
+                                },
+                              })
+                              setScalarControlItemId((current) => current === item.id ? null : item.id)
+                            }}
+                          ><span aria-hidden="true">⚙</span></button>
+                        )}
                       </div>
 
                       {evaluation || positionEvaluation ? (
@@ -1025,6 +1074,57 @@ function App() {
                           )}
                         </div>
                       ) : null}
+
+                      {scalar && item.control && controlEvaluation && (
+                        <div className="scalar-slider-row">
+                          {item.control.mode === 'slider' ? <>
+                            <span>{controlEvaluation.minimum ?? '—'}</span>
+                            <input
+                              type="range"
+                              aria-label={`Value for ${declaredName(item.source) ?? `Scalar ${position}`}`}
+                              min={controlEvaluation.minimum ?? 0}
+                              max={controlEvaluation.maximum ?? 1}
+                              step={controlEvaluation.step ?? 1}
+                              value={scalarEdit?.value ?? 0}
+                              disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
+                                scalarEdit.value < controlEvaluation.minimum! ||
+                                scalarEdit.value > controlEvaluation.maximum!}
+                              style={{ accentColor: color }}
+                              onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
+                              onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
+                              onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
+                              onBlur={() => dispatchHistory({ type: 'boundary' })}
+                              onChange={(event) => executeCommand({
+                                kind: 'set-scalar-value', itemId: item.id,
+                                value: Number(event.target.value),
+                              }, `scalar-control:${item.id}`)}
+                            />
+                            <span>{controlEvaluation.maximum ?? '—'}</span>
+                          </> : <span className="scalar-number-mode">Number control</span>}
+                          {!scalarEdit && <small>Direct control requires a declared numeric literal.</small>}
+                          {scalarEdit && controlEvaluation.status === 'valid' &&
+                            (scalarEdit.value < controlEvaluation.minimum! ||
+                              scalarEdit.value > controlEvaluation.maximum!) &&
+                            <small role="status">Value is outside the configured interval.</small>}
+                        </div>
+                      )}
+
+                      {scalarControlItemId === item.id && item.control && controlEvaluation && (
+                        <ScalarControlPopover
+                          name={declaredName(item.source) ?? `Scalar ${position}`}
+                          control={item.control}
+                          evaluation={controlEvaluation}
+                          anchorRef={scalarControlAnchorRef}
+                          onChange={(control) => executeCommand({
+                            kind: 'update-control', itemId: item.id, control,
+                          })}
+                          onRemove={() => {
+                            executeCommand({ kind: 'update-control', itemId: item.id })
+                            closeScalarControl()
+                          }}
+                          onClose={closeScalarControl}
+                        />
+                      )}
 
                       {evaluation?.status === 'valid' &&
                         evaluation.valueType === 'list' &&
