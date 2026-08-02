@@ -3,7 +3,10 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     title: 'Values and names',
     entries: [
       ['12, 3.5, 1e-3', 'finite scalar literals'],
-      ['e1, e2, e12, e21', 'VGA(2) basis-blade notation'],
+      [
+        'e1, e2, e12',
+        'canonical VGA(2) basis-blade notation; valid index permutations are also accepted with the sign induced by reordering',
+      ],
       ['ps', 'canonical pseudoscalar e12'],
       ['V = (2, 1)', 'named vector declaration using concise tuple syntax'],
       ['vector(2, 1)', 'explicit vector constructor'],

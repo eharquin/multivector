@@ -83,6 +83,13 @@ Documents are saved locally after valid edits. The header provides explicit
 canonical JSON import and export; imports are validated before replacing the
 open document, and failed writes retain the last saved revision.
 
+The two-dimensional viewport supports cursor-centered wheel zoom, pointer pan,
+keyboard pan and zoom, and reset to the origin. Controls in the canvas corner
+zoom, reset the view, and widen the expression panel until the canvas is square.
+The header's display settings menu gives the adaptive grid, axes and labels,
+graduations, object size, and application theme independent persistent controls;
+view-only changes remain outside mathematical undo history.
+
 `Enter` adds an expression below the active expression or position field;
 `Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
 element's index, semantic type, canonical value, and inherited position.

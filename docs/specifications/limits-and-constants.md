@@ -91,6 +91,14 @@ textual inspection and export.
 
 ## 6. Interaction constants
 
+The two-dimensional viewport uses 72 reference pixels per mathematical unit
+after reset. Interactive zoom is clamped from 8 through 512 reference pixels
+per unit. Its adaptive grid targets 72 reference pixels between major lines,
+selects the next spacing from the 1–2–5 × 10^n progression, subdivides major
+steps into four or five intervals, and generates no more than 256 lines per
+axis. Wheel zoom uses a continuous exponential scale and preserves the
+mathematical coordinate under the pointer.
+
 Document history retains at most 100 complete pre-command document snapshots.
 When the limit is exceeded, the oldest snapshot is discarded first. Undo and
 redo stacks are transient application state and are never serialized.

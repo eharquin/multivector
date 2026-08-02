@@ -94,11 +94,6 @@ export function AlgebraInfoDialog({
       </section>
 
       <section className="info-section">
-        <h3>Available operations</h3>
-        <DefinitionTable rows={VGA_2_INFO.operations} />
-      </section>
-
-      <section className="info-section">
         <h3>Sub-algebras</h3>
         <DefinitionTable rows={VGA_2_INFO.subalgebras} codeTerms={false} />
       </section>

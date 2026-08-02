@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
+  type WheelEvent,
 } from 'react'
 import { createVga2Engine } from './algebra/vgaEngine'
 import { evaluateDocument } from './application/evaluateDocument'
@@ -15,6 +16,10 @@ import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import { AppearancePopover } from './components/AppearancePopover'
 import { ClearExpressionsButton } from './components/ClearExpressionsButton'
+import {
+  DisplaySettingsMenu,
+  type DisplaySettings,
+} from './components/DisplaySettingsMenu'
 import { resolveItemAppearance } from './components/appearancePalette'
 import {
   describeVga2Entity,
@@ -31,7 +36,15 @@ import {
   createDocumentHistory,
   documentHistoryReducer,
 } from './document/documentHistory'
-import { toScreen, type Viewport2d } from './visualization/viewport'
+import {
+  adaptiveGrid,
+  clampZoom,
+  DEFAULT_PIXELS_PER_UNIT,
+  panByScreen,
+  toScreen,
+  zoomAt,
+  type Viewport2d,
+} from './visualization/viewport'
 import { limitRenderedListElements } from './visualization/primitives'
 import {
   DocumentFormatError,
@@ -47,7 +60,8 @@ import './App.css'
 
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
-const MAX_PANEL_WIDTH = 720
+/** Keeps the `.panel-resize` separator reachable at any panel width. */
+const PANEL_RESIZE_WIDTH = 6
 type EditorFocus = Readonly<{
   id: string
   start: number
@@ -119,7 +133,25 @@ function App() {
     null,
   )
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const viewportSvgRef = useRef<SVGSVGElement>(null)
+  const canvasFrameRef = useRef<HTMLDivElement>(null)
+  const workspaceRef = useRef<HTMLElement>(null)
+  const viewportPan = useRef<Readonly<{
+    pointerId: number
+    lastX: number
+    lastY: number
+    start: Viewport2d
+  }> | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
+  const [workspaceWidth, setWorkspaceWidth] = useState(0)
+  const maximumPanelWidth = Math.max(
+    MIN_PANEL_WIDTH,
+    (workspaceWidth || window.innerWidth) - PANEL_RESIZE_WIDTH,
+  )
+  const [viewportSize, setViewportSize] = useState({
+    width: defaultViewport.width,
+    height: defaultViewport.height,
+  })
   const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
   const [expandedListIds, setExpandedListIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -151,14 +183,133 @@ function App() {
 
   const viewport: Viewport2d = expressionDoc.view.viewport.kind === 'two-dimensional'
     ? {
-        ...defaultViewport,
+        ...viewportSize,
         centerX: expressionDoc.view.viewport.centerX,
         centerY: expressionDoc.view.viewport.centerY,
-        pixelsPerUnit: expressionDoc.view.viewport.zoom,
+        pixelsPerUnit: clampZoom(expressionDoc.view.viewport.zoom),
       }
-    : defaultViewport
+    : { ...defaultViewport, ...viewportSize }
   const visualizerActive = expressionDoc.view.visualizerId === 'org.multivector.vga-2d' &&
     expressionDoc.view.viewport.kind === 'two-dimensional'
+  const grid = adaptiveGrid(viewport)
+  const updateView = useCallback((view: typeof expressionDoc.view) => {
+    dispatchHistory({ type: 'update-view', view })
+  }, [])
+  const updateDisplay = useCallback((change: Partial<DisplaySettings>) => {
+    updateView({
+      ...expressionDoc.view,
+      display: { ...expressionDoc.view.display, ...change },
+    })
+  }, [expressionDoc.view, updateView])
+  const updateViewport = useCallback((next: Viewport2d) => {
+    updateView({
+      ...expressionDoc.view,
+      viewport: {
+        kind: 'two-dimensional',
+        centerX: next.centerX,
+        centerY: next.centerY,
+        zoom: next.pixelsPerUnit,
+      },
+    })
+  }, [expressionDoc.view, updateView])
+  const screenPoint = (clientX: number, clientY: number) => {
+    const rectangle = viewportSvgRef.current?.getBoundingClientRect()
+    if (!rectangle || rectangle.width <= 0 || rectangle.height <= 0)
+      return { x: viewport.width / 2, y: viewport.height / 2 }
+    return {
+      x: (clientX - rectangle.left) * viewport.width / rectangle.width,
+      y: (clientY - rectangle.top) * viewport.height / rectangle.height,
+    }
+  }
+  const zoomViewport = (factor: number, anchor = { x: viewport.width / 2, y: viewport.height / 2 }) =>
+    updateViewport(zoomAt(viewport, anchor, viewport.pixelsPerUnit * factor))
+  const resetViewport = () => updateViewport({
+    ...viewport, centerX: 0, centerY: 0, pixelsPerUnit: DEFAULT_PIXELS_PER_UNIT,
+  })
+  const handleViewportWheel = (event: WheelEvent<SVGSVGElement>) => {
+    event.preventDefault()
+    zoomViewport(Math.exp(-event.deltaY * 0.0015), screenPoint(event.clientX, event.clientY))
+  }
+  const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (event.button !== 0 || event.target !== event.currentTarget) return
+    event.currentTarget.focus({ preventScroll: true })
+    viewportPan.current = {
+      pointerId: event.pointerId,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      start: viewport,
+    }
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.preventDefault()
+  }
+  const moveViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const pan = viewportPan.current
+    if (!pan || pan.pointerId !== event.pointerId) return
+    const rectangle = event.currentTarget.getBoundingClientRect()
+    const scaleX = rectangle.width > 0 ? viewport.width / rectangle.width : 1
+    const scaleY = rectangle.height > 0 ? viewport.height / rectangle.height : 1
+    updateViewport(panByScreen(viewport, {
+      x: (event.clientX - pan.lastX) * scaleX,
+      y: (event.clientY - pan.lastY) * scaleY,
+    }))
+    viewportPan.current = { ...pan, lastX: event.clientX, lastY: event.clientY }
+  }
+  const endViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (viewportPan.current?.pointerId === event.pointerId) viewportPan.current = null
+  }
+  const cancelViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const pan = viewportPan.current
+    if (!pan || pan.pointerId !== event.pointerId) return
+    viewportPan.current = null
+    updateViewport(pan.start)
+  }
+  const loseViewportCapture = () => {
+    const pan = viewportPan.current
+    if (!pan) return
+    viewportPan.current = null
+    updateViewport(pan.start)
+  }
+  const navigateViewportWithKeyboard = (event: KeyboardEvent<SVGSVGElement>) => {
+    const amount = event.shiftKey ? 120 : 40
+    let next: Viewport2d | null = null
+    if (event.key === 'ArrowLeft') next = panByScreen(viewport, { x: amount, y: 0 })
+    else if (event.key === 'ArrowRight') next = panByScreen(viewport, { x: -amount, y: 0 })
+    else if (event.key === 'ArrowUp') next = panByScreen(viewport, { x: 0, y: amount })
+    else if (event.key === 'ArrowDown') next = panByScreen(viewport, { x: 0, y: -amount })
+    else if (event.key === '+' || event.key === '=') next = zoomAt(viewport, { x: viewport.width / 2, y: viewport.height / 2 }, viewport.pixelsPerUnit * 1.25)
+    else if (event.key === '-') next = zoomAt(viewport, { x: viewport.width / 2, y: viewport.height / 2 }, viewport.pixelsPerUnit / 1.25)
+    else if (event.key === '0' || event.key === 'Home') {
+      event.preventDefault()
+      resetViewport()
+      return
+    } else return
+    event.preventDefault()
+    updateViewport(next)
+  }
+
+  useEffect(() => {
+    const element = workspaceRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) =>
+      setWorkspaceWidth(Math.max(0, Math.round(entry.contentRect.width))),
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const element = canvasFrameRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => {
+      const width = Math.max(1, Math.round(entry.contentRect.width))
+      const height = Math.max(1, Math.round(entry.contentRect.height))
+      setViewportSize((current) => current.width === width && current.height === height
+        ? current
+        : { width, height })
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [visualizerActive])
 
   const evaluatedItems = useMemo(
     () => evaluateDocument(expressionDoc, engine),
@@ -327,11 +478,11 @@ function App() {
     const resize = (clientX: number) => {
       const drag = resizeDrag.current
       if (!drag) return
-      const availableWidth = Math.max(
+      const maximum = Math.max(
         MIN_PANEL_WIDTH,
-        window.innerWidth - 280,
+        (workspaceRef.current?.getBoundingClientRect().width ??
+          window.innerWidth) - PANEL_RESIZE_WIDTH,
       )
-      const maximum = Math.min(MAX_PANEL_WIDTH, availableWidth)
       setPanelWidth(
         Math.max(
           MIN_PANEL_WIDTH,
@@ -365,19 +516,29 @@ function App() {
   }
 
   const resizePanelWithKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    const maximum = Math.min(
-      MAX_PANEL_WIDTH,
-      Math.max(MIN_PANEL_WIDTH, window.innerWidth - 280),
-    )
     let next = panelWidth
     if (event.key === 'ArrowLeft') next -= 16
     else if (event.key === 'ArrowRight') next += 16
     else if (event.key === 'Home') next = MIN_PANEL_WIDTH
-    else if (event.key === 'End') next = maximum
+    else if (event.key === 'End') next = maximumPanelWidth
     else return
 
     event.preventDefault()
-    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(maximum, next)))
+    setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(maximumPanelWidth, next)))
+  }
+
+  /**
+   * Widens the expression panel until the remaining canvas is as wide as it is
+   * tall. The panel cap does not apply: squaring needs the exact width the
+   * workspace geometry demands.
+   */
+  const squareCanvas = () => {
+    const workspace = workspaceRef.current?.getBoundingClientRect()
+    if (!workspace || workspace.width <= 0) return
+    const available = workspace.width - PANEL_RESIZE_WIDTH
+    setPanelWidth(
+      Math.max(MIN_PANEL_WIDTH, Math.min(available, available - workspace.height)),
+    )
   }
 
   const insertExpression = (
@@ -547,33 +708,7 @@ function App() {
         >
           VGA · 2D
         </button>
-        <label className="theme-control">
-          <span>Theme</span>
-          <select value={theme} onChange={(event) => setTheme(event.target.value as ThemeMode)}>
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
         <span className="app-status">Research preview</span>
-        <button
-          type="button"
-          className="document-command"
-          disabled={history.past.length === 0}
-          aria-label="Undo document change"
-          onClick={() => dispatchHistoryWithFocus('undo')}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="document-command"
-          disabled={history.future.length === 0}
-          aria-label="Redo document change"
-          onClick={() => dispatchHistoryWithFocus('redo')}
-        >
-          Redo
-        </button>
         <input
           ref={importInputRef}
           className="document-file-input"
@@ -588,6 +723,12 @@ function App() {
         <button type="button" className="document-command" onClick={exportDocument}>
           Export
         </button>
+        <DisplaySettingsMenu
+          display={expressionDoc.view.display}
+          theme={theme}
+          onDisplayChange={updateDisplay}
+          onThemeChange={setTheme}
+        />
       </header>
 
       {documentDiagnostic && (
@@ -596,7 +737,7 @@ function App() {
         </div>
       )}
 
-      <main className="workspace">
+      <main className="workspace" ref={workspaceRef}>
         <aside
           className="expression-panel"
           aria-label="Expressions"
@@ -616,6 +757,28 @@ function App() {
               <span aria-hidden="true">+</span>
               <span>Add expression</span>
             </button>
+            <div className="expression-history-controls" role="group" aria-label="Expression history">
+              <button
+                type="button"
+                className="history-command"
+                disabled={history.past.length === 0}
+                aria-label="Undo document change"
+                title="Undo (Ctrl/Cmd+Z)"
+                onClick={() => dispatchHistoryWithFocus('undo')}
+              >
+                <span aria-hidden="true">↶</span>
+              </button>
+              <button
+                type="button"
+                className="history-command"
+                disabled={history.future.length === 0}
+                aria-label="Redo document change"
+                title="Redo (Ctrl/Cmd+Shift+Z)"
+                onClick={() => dispatchHistoryWithFocus('redo')}
+              >
+                <span aria-hidden="true">↷</span>
+              </button>
+            </div>
           </div>
 
           <div className="expression-list">
@@ -952,7 +1115,7 @@ function App() {
           aria-label="Resize expression panel"
           aria-orientation="vertical"
           aria-valuemin={MIN_PANEL_WIDTH}
-          aria-valuemax={MAX_PANEL_WIDTH}
+          aria-valuemax={maximumPanelWidth}
           aria-valuenow={panelWidth}
           tabIndex={0}
           onPointerDown={beginPanelResize}
@@ -960,12 +1123,73 @@ function App() {
         />
 
         {visualizerActive && <section className="visualizer" aria-label="VGA 2D viewport">
-          <div className="canvas-frame">
+          <div ref={canvasFrameRef} className="canvas-frame">
+            <div
+              className="viewport-toolbar"
+              role="toolbar"
+              aria-label="Viewport controls"
+            >
+              <button
+                type="button"
+                className="viewport-command"
+                onClick={() => zoomViewport(1.25)}
+                aria-label="Zoom in"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <line x1="8" y1="3" x2="8" y2="13" strokeLinecap="round" />
+                  <line x1="3" y1="8" x2="13" y2="8" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="viewport-command"
+                onClick={() => zoomViewport(0.8)}
+                aria-label="Zoom out"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <line x1="3" y1="8" x2="13" y2="8" strokeLinecap="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="viewport-command"
+                onClick={resetViewport}
+                aria-label="Reset view"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <line x1="8" y1="1.5" x2="8" y2="14.5" strokeLinecap="round" />
+                  <line x1="1.5" y1="8" x2="14.5" y2="8" strokeLinecap="round" />
+                  <circle cx="8" cy="8" r="3.2" fill="none" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="viewport-command"
+                onClick={squareCanvas}
+                aria-label="Make canvas square"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="2.5" y="2.5" width="11" height="11" fill="none" />
+                </svg>
+              </button>
+              <output className="viewport-zoom" aria-live="polite">
+                {Math.round(viewport.pixelsPerUnit / DEFAULT_PIXELS_PER_UNIT * 100)}%
+              </output>
+            </div>
             <svg
+              ref={viewportSvgRef}
               className="canvas"
               viewBox={`0 0 ${viewport.width} ${viewport.height}`}
               role="img"
               aria-labelledby="canvas-title canvas-description"
+              tabIndex={0}
+              onWheel={handleViewportWheel}
+              onPointerDown={beginViewportPan}
+              onPointerMove={moveViewportPan}
+              onPointerUp={endViewportPan}
+              onPointerCancel={cancelViewportPan}
+              onLostPointerCapture={loseViewportCapture}
+              onKeyDown={navigateViewportWithKeyboard}
             >
               <title id="canvas-title">Two-dimensional VGA viewport</title>
               <desc id="canvas-description">{canvasDescription}</desc>
@@ -994,26 +1218,43 @@ function App() {
                 </marker>
               </defs>
 
-              <line
-                className="axis"
-                x1="0"
-                y1={origin.y}
-                x2={viewport.width}
-                y2={origin.y}
-              />
-              <line
-                className="axis"
-                x1={origin.x}
-                y1="0"
-                x2={origin.x}
-                y2={viewport.height}
-              />
-              <circle
-                className="origin"
-                cx={origin.x}
-                cy={origin.y}
-                r="3"
-              />
+              {expressionDoc.view.display.gridVisible && <g aria-hidden="true">
+                {grid.vertical.map((line) => <line
+                  key={`grid-x-${line.coordinate}`}
+                  className={line.major ? 'grid-line is-major' : 'grid-line'}
+                  x1={line.screen} y1="0" x2={line.screen} y2={viewport.height}
+                />)}
+                {grid.horizontal.map((line) => <line
+                  key={`grid-y-${line.coordinate}`}
+                  className={line.major ? 'grid-line is-major' : 'grid-line'}
+                  x1="0" y1={line.screen} x2={viewport.width} y2={line.screen}
+                />)}
+              </g>}
+
+              {expressionDoc.view.display.axisLabelsVisible && <g aria-hidden="true">
+                <line className="axis" x1="0" y1={origin.y} x2={viewport.width} y2={origin.y} />
+                <line className="axis" x1={origin.x} y1="0" x2={origin.x} y2={viewport.height} />
+                <circle className="origin" cx={origin.x} cy={origin.y} r={3 * expressionDoc.view.display.objectScale} />
+                <text className="axis-name" x={viewport.width - 14} y={Math.max(16, Math.min(viewport.height - 8, origin.y - 8))}>x</text>
+                <text className="axis-name" x={Math.max(8, Math.min(viewport.width - 18, origin.x + 8))} y="16">y</text>
+              </g>}
+
+              {expressionDoc.view.display.graduationsVisible && <g aria-hidden="true">
+                {grid.vertical.filter((line) => line.major && line.coordinate !== 0).map((line) => {
+                  const axisY = Math.max(16, Math.min(viewport.height - 18, origin.y))
+                  return <g key={`graduation-x-${line.coordinate}`}>
+                    <line className="graduation" x1={line.screen} y1={axisY - 4} x2={line.screen} y2={axisY + 4} />
+                    <text className="graduation-label" x={line.screen} y={axisY + 16}>{line.label}</text>
+                  </g>
+                })}
+                {grid.horizontal.filter((line) => line.major && line.coordinate !== 0).map((line) => {
+                  const axisX = Math.max(28, Math.min(viewport.width - 28, origin.x))
+                  return <g key={`graduation-y-${line.coordinate}`}>
+                    <line className="graduation" x1={axisX - 4} y1={line.screen} x2={axisX + 4} y2={line.screen} />
+                    <text className="graduation-label is-y" x={axisX - 8} y={line.screen + 4}>{line.label}</text>
+                  </g>
+                })}
+              </g>}
 
               {renderedVectors.map(({ id, primitive, start, end, color, label }) => (
                 <g key={id} style={{ color }}>
@@ -1024,6 +1265,7 @@ function App() {
                     x2={end.x}
                     y2={end.y}
                     markerEnd="url(#arrowhead)"
+                    strokeWidth={4 * expressionDoc.view.display.objectScale}
                     aria-label={primitive.accessibleName}
                   />
                   {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
@@ -1035,6 +1277,7 @@ function App() {
                     className="bivector"
                     d={path}
                     markerEnd="url(#area-arrowhead)"
+                    strokeWidth={3 * expressionDoc.view.display.objectScale}
                     aria-label={primitive.accessibleDescription}
                   />
                   {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}

@@ -108,4 +108,23 @@ describe('document history', () => {
     }
     expect(history.past).toHaveLength(MAX_HISTORY_ENTRIES)
   })
+
+  it('persists view-only changes without creating mathematical history', () => {
+    let history = createDocumentHistory(expressionDocument([{ id: 'item', source: '1' }]))
+    history = documentHistoryReducer(history, {
+      type: 'execute', command: { kind: 'update-source', itemId: 'item', source: '2' },
+    })
+    const view = {
+      ...history.present.view,
+      viewport: { kind: 'two-dimensional' as const, centerX: 3, centerY: -4, zoom: 90 },
+      display: { ...history.present.view.display, gridVisible: true },
+    }
+    history = documentHistoryReducer(history, { type: 'update-view', view })
+    expect(history.past).toHaveLength(1)
+    expect(history.present.view).toBe(view)
+
+    history = documentHistoryReducer(history, { type: 'undo' })
+    expect(source(history)).toBe('1')
+    expect(history.present.view).toBe(view)
+  })
 })

@@ -22,6 +22,7 @@ export type HistoryAction =
   | Readonly<{ type: 'commit-transaction' }>
   | Readonly<{ type: 'cancel-transaction' }>
   | Readonly<{ type: 'replace'; document: ExpressionDocument }>
+  | Readonly<{ type: 'update-view'; view: ExpressionDocument['view'] }>
 
 export function createDocumentHistory(document: ExpressionDocument): DocumentHistory {
   return { past: [], present: document, future: [], transaction: null, coalescing: null, lastResult: null }
@@ -32,6 +33,20 @@ function bounded(entries: readonly ExpressionDocument[]): readonly ExpressionDoc
 }
 
 export function documentHistoryReducer(state: DocumentHistory, action: HistoryAction): DocumentHistory {
+  if (action.type === 'update-view') {
+    const withView = (document: ExpressionDocument): ExpressionDocument =>
+      ({ ...document, view: action.view })
+    return {
+      ...state,
+      past: state.past.map(withView),
+      present: withView(state.present),
+      future: state.future.map(withView),
+      transaction: state.transaction
+        ? { before: withView(state.transaction.before) }
+        : null,
+      coalescing: null,
+    }
+  }
   if (action.type === 'boundary') return { ...state, coalescing: null }
   if (action.type === 'replace') return createDocumentHistory(action.document)
   if (action.type === 'begin-transaction')
