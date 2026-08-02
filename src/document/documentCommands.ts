@@ -5,6 +5,7 @@ import {
   type ExpressionDocument,
   type ExpressionItem,
 } from './expressionDocument'
+import { directScalarEdit, formatScalarSource } from '../language/directScalarEdit'
 
 export type DocumentCommand =
   | Readonly<{ kind: 'insert-item'; item: ExpressionItem; anchorId?: string; placement?: 'before' | 'after' }>
@@ -15,6 +16,7 @@ export type DocumentCommand =
   | Readonly<{ kind: 'update-normalization'; itemId: string; normalization?: 'natural' }>
   | Readonly<{ kind: 'update-appearance'; itemId: string; appearance: ExpressionAppearance }>
   | Readonly<{ kind: 'update-control'; itemId: string; control?: ExpressionControl }>
+  | Readonly<{ kind: 'set-scalar-value'; itemId: string; value: number }>
   | Readonly<{ kind: 'update-algebra'; algebra: ExpressionDocument['algebra']; interpretation: ExpressionDocument['interpretation'] }>
   | Readonly<{
       kind: 'rewrite-source-literal'
@@ -93,6 +95,27 @@ export function executeDocumentCommand(
     return { status: 'unsupported', document, reason: 'Annotations do not own position source.' }
   if ((command.kind === 'update-normalization' || command.kind === 'update-control') && item.kind === 'annotation')
     return { status: 'unsupported', document, reason: 'Annotations do not own algebraic controls.' }
+
+  if (command.kind === 'set-scalar-value') {
+    if (!Number.isFinite(command.value))
+      return invalid(document, 'A controlled scalar value must be finite.')
+    const edit = directScalarEdit(item.source)
+    if (!edit) return {
+      status: 'unsupported', document,
+      reason: 'Only a directly declared numeric scalar literal can be controlled.',
+    }
+    const replacement = formatScalarSource(command.value)
+    return {
+      status: 'applied',
+      document: {
+        ...document,
+        items: document.items.map((candidate, candidateIndex) =>
+          candidateIndex === index
+            ? { ...item, source: item.source.slice(0, edit.span.start) + replacement + item.source.slice(edit.span.end) }
+            : candidate),
+      },
+    }
+  }
 
   if (command.kind === 'rewrite-source-literal') {
     if (item.kind === 'annotation')

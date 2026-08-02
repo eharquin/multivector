@@ -49,8 +49,8 @@ regenerates the document and every item identity while preserving ordered
 canonical content. Appearance, natural
 normalization, source, position source, document identity, metadata, and theme
 round-trip through that boundary. Numeric-control records are validated and
-preserved through the nullable `control` field, but their interactive runtime
-behavior is not implemented yet. Annotation source is preserved as
+preserved through the nullable `control` field and drive scalar controls without
+serializing evaluated bounds or transient slider state. Annotation source is preserved as
 non-executable content and never enters parsing or evaluation. Both closed
 viewport variants restore deterministically: `none` disables the visualizer,
 while the supported two-dimensional record restores center and zoom. An

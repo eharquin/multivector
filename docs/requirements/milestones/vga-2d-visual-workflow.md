@@ -69,9 +69,9 @@ A user shall be able to:
   accessible number and slider modes. Bounds are independent finite scalar
   dependency nodes; invalid and out-of-range states never silently clamp or
   replace source.
-- **M2D-003 — Selection and creation:** Pointer and keyboard paths select
-  renderer-independent entities and create collision-free vector declarations
-  at equivalent mathematical coordinates, independent of viewport layout.
+- **M2D-003 — Viewport creation:** Double-clicking empty viewport space creates
+  collision-free vector declarations at mathematical coordinates independent
+  of viewport layout. Rendered objects are not directly selectable by click.
 - **M2D-004 — Positioned-vector manipulation:** Eligible tip edits change vector
   value with position fixed; eligible tail edits change position with value
   fixed. Unsupported forms retain source and expose an actionable reason.

@@ -53,6 +53,19 @@ describe('semantic document commands', () => {
     }))
   })
 
+  it('sets a direct scalar through a language-owned semantic command', () => {
+    const document = expressionDocument([
+      { id: 'scalar', source: 'a = ((-2))' },
+      { id: 'computed', source: 'b = a + 1' },
+    ])
+    expect(executeDocumentCommand(document, {
+      kind: 'set-scalar-value', itemId: 'scalar', value: 3.5,
+    }).document.items[0].source).toBe('a = ((3.5))')
+    expect(executeDocumentCommand(document, {
+      kind: 'set-scalar-value', itemId: 'computed', value: 4,
+    })).toEqual(expect.objectContaining({ status: 'unsupported', document }))
+  })
+
   it('clears item-keyed appearance atomically and keeps document identity', () => {
     const document = expressionDocument(
       [{ id: 'value', source: 'A = 1' }],
