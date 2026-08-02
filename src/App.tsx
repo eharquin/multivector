@@ -17,7 +17,6 @@ import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import { AppearancePopover } from './components/AppearancePopover'
 import { ClearExpressionsButton } from './components/ClearExpressionsButton'
-import { ScalarControlPopover } from './components/ScalarControlPopover'
 import {
   DisplaySettingsMenu,
   type DisplaySettings,
@@ -31,6 +30,7 @@ import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
   vga2FoundationExampleDocument,
+  type ExpressionControl,
   type ExpressionItem,
 } from './document/expressionDocument'
 import { type DocumentCommand } from './document/documentCommands'
@@ -65,6 +65,11 @@ import {
 import { browserDocumentStorage } from './document/documentStorage'
 import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
+import {
+  scalarPlaybackFrame,
+  scalarPlaybackOffset,
+  type PlaybackParameters,
+} from './application/scalarPlayback'
 import './App.css'
 
 const engine = createVga2Engine()
@@ -77,6 +82,12 @@ type EditorFocus = Readonly<{
   end: number
   direction: 'forward' | 'backward' | 'none'
 }>
+type ActiveScalarPlayback = Readonly<{
+  itemId: string
+  startedAt: number
+  offsetMilliseconds: number
+  parameters: PlaybackParameters
+}>
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -88,6 +99,18 @@ const defaultViewport: Viewport2d = {
   centerX: 0,
   centerY: 0,
   pixelsPerUnit: 72,
+}
+const DEFAULT_SCALAR_ANIMATION = {
+  mode: 'ping-pong' as const,
+  direction: 'forward' as const,
+  durationSeconds: 2,
+}
+const DEFAULT_SCALAR_CONTROL: ExpressionControl = {
+  mode: 'slider',
+  minimumSource: '-10',
+  maximumSource: '10',
+  stepSource: '0.1',
+  animation: DEFAULT_SCALAR_ANIMATION,
 }
 
 function App() {
@@ -135,6 +158,11 @@ function App() {
   const pendingHistoryFocus = useRef(lastEditorFocus.current)
   const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
   const viewportCreatedItemIds = useRef(new Set<string>())
+  const pausedPlayback = useRef<Readonly<{
+    itemId: string
+    offsetMilliseconds: number
+    parameters: PlaybackParameters
+  }> | null>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -143,7 +171,6 @@ function App() {
     null,
   )
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
-  const scalarControlAnchorRef = useRef<HTMLButtonElement | null>(null)
   const viewportSvgRef = useRef<SVGSVGElement>(null)
   const canvasFrameRef = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<HTMLElement>(null)
@@ -164,7 +191,6 @@ function App() {
     height: defaultViewport.height,
   })
   const [appearanceItemId, setAppearanceItemId] = useState<string | null>(null)
-  const [scalarControlItemId, setScalarControlItemId] = useState<string | null>(null)
   const [expandedListIds, setExpandedListIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
@@ -173,16 +199,17 @@ function App() {
     initial.diagnostic,
   )
   const [viewportAnnouncement, setViewportAnnouncement] = useState('')
+  const [activePlayback, setActivePlayback] = useState<ActiveScalarPlayback | null>(null)
+  const [playbackAnnouncement, setPlaybackAnnouncement] = useState('')
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+  )
   const [infoDialog, setInfoDialog] = useState<
     'algebra' | 'expressions' | null
   >(null)
   const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
   const closeAppearance = useCallback(() => {
     setAppearanceItemId(null)
-    dispatchHistory({ type: 'boundary' })
-  }, [])
-  const closeScalarControl = useCallback(() => {
-    setScalarControlItemId(null)
     dispatchHistory({ type: 'boundary' })
   }, [])
   const rememberEditorFocus = (element: HTMLInputElement) => {
@@ -248,6 +275,7 @@ function App() {
     zoomViewport(Math.exp(-event.deltaY * 0.0015), screenPoint(event.clientX, event.clientY))
   }
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    setAppearanceItemId(null)
     if (event.button !== 0 || event.target !== event.currentTarget) return
     event.currentTarget.focus({ preventScroll: true })
     viewportPan.current = {
@@ -331,6 +359,14 @@ function App() {
   }
 
   useEffect(() => {
+    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (!query) return
+    const change = () => setReducedMotion(query.matches)
+    query.addEventListener?.('change', change)
+    return () => query.removeEventListener?.('change', change)
+  }, [])
+
+  useEffect(() => {
     const element = workspaceRef.current
     if (!element || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(([entry]) =>
@@ -368,6 +404,86 @@ function App() {
       : [])),
     [evaluatedItems],
   )
+
+  const stopPlayback = useCallback((cancel = false) => {
+    if (!activePlayback) return
+    pausedPlayback.current = cancel ? null : {
+      itemId: activePlayback.itemId,
+      offsetMilliseconds:
+        performance.now() - activePlayback.startedAt + activePlayback.offsetMilliseconds,
+      parameters: activePlayback.parameters,
+    }
+    dispatchHistory({ type: cancel ? 'cancel-transaction' : 'commit-transaction' })
+    setPlaybackAnnouncement(cancel ? 'Scalar animation cancelled.' : 'Scalar animation paused.')
+    setActivePlayback(null)
+  }, [activePlayback])
+
+  const startPlayback = (
+    item: ExpressionItem,
+    parameters: PlaybackParameters,
+    currentValue: number,
+  ) => {
+    if (activePlayback) dispatchHistory({ type: 'commit-transaction' })
+    dispatchHistory({ type: 'boundary' })
+    dispatchHistory({ type: 'begin-transaction' })
+    const currentOffset = scalarPlaybackOffset(parameters, currentValue)
+    const duration = parameters.animation.durationSeconds * 1000
+    const resumable = pausedPlayback.current?.itemId === item.id
+      ? pausedPlayback.current
+      : null
+    pausedPlayback.current = null
+    setActivePlayback({
+      itemId: item.id,
+      startedAt: performance.now(),
+      offsetMilliseconds: resumable?.offsetMilliseconds ?? (
+        parameters.animation.mode === 'once' && currentOffset >= duration
+          ? 0
+          : currentOffset
+      ),
+      parameters,
+    })
+    setPlaybackAnnouncement(
+      `${declaredName(item.source) ?? 'Scalar'} animation started.${
+        reducedMotion ? ' Reduced motion preference is active.' : ''
+      }`,
+    )
+  }
+
+  useEffect(() => {
+    if (!activePlayback) return
+    let frame = 0
+    const tick = (now: number) => {
+      const playback = scalarPlaybackFrame(
+        activePlayback.parameters,
+        now - activePlayback.startedAt + activePlayback.offsetMilliseconds,
+      )
+      executeCommand({
+        kind: 'set-scalar-value', itemId: activePlayback.itemId,
+        value: playback.value,
+      })
+      if (playback.completed) {
+        pausedPlayback.current = null
+        dispatchHistory({ type: 'commit-transaction' })
+        setPlaybackAnnouncement('Scalar animation completed.')
+        setActivePlayback(null)
+        return
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [activePlayback, executeCommand])
+
+  useEffect(() => {
+    if (!activePlayback) return
+    const cancel = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      stopPlayback(true)
+    }
+    window.addEventListener('keydown', cancel)
+    return () => window.removeEventListener('keydown', cancel)
+  }, [activePlayback, stopPlayback])
   const resolvedStyles = useMemo(
     () => Object.fromEntries(evaluatedItems.map(({ item, evaluation }) => {
       const kind = evaluation?.status === 'valid'
@@ -630,6 +746,7 @@ function App() {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
+    if (activePlayback) stopPlayback()
     try {
       const parsed = parseCanonicalDocumentBytes(new Uint8Array(await file.arrayBuffer()))
       const collision = parsed.id === expressionDoc.id
@@ -642,7 +759,6 @@ function App() {
       dispatchHistory({ type: 'replace', document: imported.document })
       setTheme(imported.theme)
       setAppearanceItemId(null)
-      setScalarControlItemId(null)
       setExpandedListIds(new Set())
       viewportCreatedItemIds.current.clear()
       nextId.current = imported.document.items.length + 1
@@ -681,6 +797,7 @@ function App() {
   }
 
   const removeExpression = (id: string) => {
+    if (activePlayback?.itemId === id) stopPlayback()
     const index = expressionDoc.items.findIndex((item) => item.id === id)
     const neighbor =
       expressionDoc.items[index - 1] ??
@@ -700,8 +817,8 @@ function App() {
   }
 
   const clearAllExpressions = () => {
+    if (activePlayback) stopPlayback()
     setAppearanceItemId(null)
-    setScalarControlItemId(null)
     setExpandedListIds(new Set())
     executeCommand({ kind: 'clear-items' })
     requestAnimationFrame(() => addButtonRef.current?.focus())
@@ -886,8 +1003,25 @@ function App() {
               const scalar = valid && evaluation.valueType === 'single' &&
                 evaluation.entity.kind === 'scalar'
               const scalarEdit = scalar ? directScalarEdit(item.source) : null
-              const controlEvaluation = scalarControlEvaluations.get(item.id) ?? null
-              const scalarControlAvailable = scalar || item.control !== undefined
+              const effectiveControl = item.control ?? (scalarEdit
+                ? DEFAULT_SCALAR_CONTROL
+                : undefined)
+              const controlEvaluation = effectiveControl
+                ? scalarControlEvaluations.get(item.id) ?? evaluateScalarControl(
+                    effectiveControl, evaluatedItems, engine,
+                  )
+                : null
+              const scalarControlAvailable = effectiveControl !== undefined
+              const playbackParameters = effectiveControl?.mode === 'slider' &&
+                controlEvaluation?.status === 'valid'
+                ? {
+                    minimum: controlEvaluation.minimum!,
+                    maximum: controlEvaluation.maximum!,
+                    step: controlEvaluation.step!,
+                    animation: effectiveControl.animation ?? DEFAULT_SCALAR_ANIMATION,
+                  }
+                : null
+              const isPlaying = activePlayback?.itemId === item.id
               const empty = item.source.trim() === ''
               const listExpanded = expandedListIds.has(item.id)
               const listDetailsId = `list-details-${item.id}`
@@ -903,7 +1037,17 @@ function App() {
                 >
                   <div className="expression-input-row">
                     <div className="expression-actions">
-                      {drawable && valid && (
+                      {scalar && effectiveControl?.mode === 'slider' ? (
+                        <button
+                          type="button"
+                          className={`scalar-play-button${isPlaying ? ' is-playing' : ''}`}
+                          aria-label={isPlaying ? 'Pause scalar animation' : 'Play scalar animation'}
+                          disabled={!scalarEdit || !playbackParameters}
+                          onClick={() => isPlaying
+                            ? stopPlayback()
+                            : startPlayback(item, playbackParameters!, scalarEdit!.value)}
+                        ><span aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span></button>
+                      ) : drawable && valid && (
                           <button
                             type="button"
                             className="visibility-toggle"
@@ -917,14 +1061,14 @@ function App() {
                             <span aria-hidden="true">{visible ? '◉' : '⊘'}</span>
                           </button>
                       )}
-                      {valid && !drawable && (
+                      {valid && !drawable && !scalar && (
                         <span className="expression-action-spacer" aria-hidden="true" />
                       )}
                       {valid ? (
                           <button
                             type="button"
                             className="appearance-swatch"
-                            aria-label={`Edit appearance for ${objectName}`}
+                            aria-label={`Open ${kind} menu for ${objectName}`}
                             aria-haspopup="dialog"
                             aria-expanded={appearanceItemId === item.id}
                             onClick={(event) => {
@@ -957,10 +1101,14 @@ function App() {
                           className="expression-source"
                           aria-label={`${annotation ? 'Annotation' : 'Expression'} ${position}`}
                           value={item.source}
-                          onChange={(event) => executeCommand({
-                            kind: 'update-source', itemId: item.id,
-                            source: event.target.value,
-                          }, `source:${item.id}`)}
+                          onChange={(event) => {
+                            if (isPlaying) stopPlayback()
+                            pausedPlayback.current = null
+                            executeCommand({
+                              kind: 'update-source', itemId: item.id,
+                              source: event.target.value,
+                            }, `source:${item.id}`)
+                          }}
                           onBlur={() => dispatchHistory({ type: 'boundary' })}
                           onFocus={(event) => rememberEditorFocus(event.currentTarget)}
                           onSelect={(event) => rememberEditorFocus(event.currentTarget)}
@@ -982,29 +1130,6 @@ function App() {
                               normalization: item.normalization === 'natural' ? undefined : 'natural',
                             })}
                           >norm</button>
-                        )}
-                        {scalarControlAvailable && (
-                          <button
-                            ref={scalarControlItemId === item.id
-                              ? scalarControlAnchorRef
-                              : undefined}
-                            type="button"
-                            className="scalar-control-button"
-                            aria-label={`Configure scalar control for ${declaredName(item.source) ?? `expression ${position}`}`}
-                            aria-haspopup="dialog"
-                            aria-expanded={scalarControlItemId === item.id}
-                            onClick={(event) => {
-                              scalarControlAnchorRef.current = event.currentTarget
-                              if (!item.control) executeCommand({
-                                kind: 'update-control', itemId: item.id,
-                                control: {
-                                  mode: 'slider', minimumSource: '-10',
-                                  maximumSource: '10', stepSource: '0.1', animation: null,
-                                },
-                              })
-                              setScalarControlItemId((current) => current === item.id ? null : item.id)
-                            }}
-                          ><span aria-hidden="true">⚙</span></button>
                         )}
                       </div>
 
@@ -1075,32 +1200,33 @@ function App() {
                         </div>
                       ) : null}
 
-                      {scalar && item.control && controlEvaluation && (
+                      {scalar && effectiveControl?.mode === 'slider' && controlEvaluation && (
                         <div className="scalar-slider-row">
-                          {item.control.mode === 'slider' ? <>
-                            <span>{controlEvaluation.minimum ?? '—'}</span>
-                            <input
-                              type="range"
-                              aria-label={`Value for ${declaredName(item.source) ?? `Scalar ${position}`}`}
-                              min={controlEvaluation.minimum ?? 0}
-                              max={controlEvaluation.maximum ?? 1}
-                              step={controlEvaluation.step ?? 1}
-                              value={scalarEdit?.value ?? 0}
-                              disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
-                                scalarEdit.value < controlEvaluation.minimum! ||
-                                scalarEdit.value > controlEvaluation.maximum!}
-                              style={{ accentColor: color }}
-                              onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
-                              onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
-                              onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
-                              onBlur={() => dispatchHistory({ type: 'boundary' })}
-                              onChange={(event) => executeCommand({
+                          <span>{controlEvaluation.minimum ?? '—'}</span>
+                          <input
+                            type="range"
+                            aria-label={`Value for ${declaredName(item.source) ?? `Scalar ${position}`}`}
+                            min={controlEvaluation.minimum ?? 0}
+                            max={controlEvaluation.maximum ?? 1}
+                            step={controlEvaluation.step ?? 1}
+                            value={scalarEdit?.value ?? 0}
+                            disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
+                              scalarEdit.value < controlEvaluation.minimum! ||
+                              scalarEdit.value > controlEvaluation.maximum!}
+                            style={{ accentColor: color }}
+                            onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
+                            onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
+                            onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
+                            onBlur={() => dispatchHistory({ type: 'boundary' })}
+                            onChange={(event) => {
+                              pausedPlayback.current = null
+                              executeCommand({
                                 kind: 'set-scalar-value', itemId: item.id,
                                 value: Number(event.target.value),
-                              }, `scalar-control:${item.id}`)}
-                            />
-                            <span>{controlEvaluation.maximum ?? '—'}</span>
-                          </> : <span className="scalar-number-mode">Number control</span>}
+                              }, `scalar-control:${item.id}`)
+                            }}
+                          />
+                          <span>{controlEvaluation.maximum ?? '—'}</span>
                           {!scalarEdit && <small>Direct control requires a declared numeric literal.</small>}
                           {scalarEdit && controlEvaluation.status === 'valid' &&
                             (scalarEdit.value < controlEvaluation.minimum! ||
@@ -1109,21 +1235,47 @@ function App() {
                         </div>
                       )}
 
-                      {scalarControlItemId === item.id && item.control && controlEvaluation && (
-                        <ScalarControlPopover
-                          name={declaredName(item.source) ?? `Scalar ${position}`}
-                          control={item.control}
-                          evaluation={controlEvaluation}
-                          anchorRef={scalarControlAnchorRef}
-                          onChange={(control) => executeCommand({
-                            kind: 'update-control', itemId: item.id, control,
-                          })}
-                          onRemove={() => {
-                            executeCommand({ kind: 'update-control', itemId: item.id })
-                            closeScalarControl()
-                          }}
-                          onClose={closeScalarControl}
-                        />
+                      {scalar && effectiveControl?.mode === 'slider' && controlEvaluation && (
+                        <>
+                          <div className="scalar-interval-row">
+                            <span className="scalar-interval-label">interval</span>
+                            {([
+                              ['minimumSource', 'Minimum source'],
+                              ['maximumSource', 'Maximum source'],
+                              ['stepSource', 'Step source'],
+                            ] as const).map(([property, label]) => (
+                              <input
+                                key={property}
+                                value={effectiveControl[property]}
+                                aria-label={label}
+                                aria-invalid={controlEvaluation.fields[
+                                  property === 'minimumSource' ? 'minimum' :
+                                    property === 'maximumSource' ? 'maximum' : 'step'
+                                ].status === 'invalid'}
+                                onBlur={() => dispatchHistory({ type: 'boundary' })}
+                                onChange={(event) => {
+                                  if (isPlaying) stopPlayback()
+                                  pausedPlayback.current = null
+                                  executeCommand({
+                                    kind: 'update-control', itemId: item.id,
+                                    control: { ...effectiveControl, [property]: event.target.value },
+                                  }, `control-${property}:${item.id}`)
+                                }}
+                              />
+                            ))}
+                          </div>
+                          {controlEvaluation.status === 'invalid' && (
+                            <div className="scalar-interval-diagnostic" role="alert">
+                              {Object.values(controlEvaluation.fields).find(
+                                (field) => field.status === 'invalid',
+                              )?.status === 'invalid'
+                                ? Object.values(controlEvaluation.fields).find(
+                                    (field) => field.status === 'invalid',
+                                  )!.diagnostic.message
+                                : controlEvaluation.diagnostic}
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {evaluation?.status === 'valid' &&
@@ -1212,6 +1364,8 @@ function App() {
                       labelVisible={labelVisible}
                       label={label}
                       colorOnly={!drawable}
+                      control={scalarControlAvailable ? effectiveControl : undefined}
+                      reducedMotion={reducedMotion}
                       anchorRef={appearanceAnchorRef}
                       onStyleChange={(style) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { style },
@@ -1225,6 +1379,11 @@ function App() {
                       onLabelChange={(nextLabel) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { label: nextLabel },
                       }, `appearance-label:${item.id}`)}
+                      onControlChange={(control) => {
+                        if (isPlaying) stopPlayback()
+                        pausedPlayback.current = null
+                        executeCommand({ kind: 'update-control', itemId: item.id, control })
+                      }}
                       onClose={closeAppearance}
                     />
                   )}
@@ -1438,6 +1597,9 @@ function App() {
           onClose={closeInfoDialog}
         />
       )}
+      <output className="visually-hidden" aria-live="polite">
+        {playbackAnnouncement}
+      </output>
       {infoDialog === 'expressions' && (
         <ExpressionReferenceDialog
           returnFocusRef={expressionReferenceButtonRef}

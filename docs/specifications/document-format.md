@@ -50,7 +50,9 @@ canonical content. Appearance, natural
 normalization, source, position source, document identity, metadata, and theme
 round-trip through that boundary. Numeric-control records are validated and
 preserved through the nullable `control` field and drive scalar controls without
-serializing evaluated bounds or transient slider state. Annotation source is preserved as
+serializing evaluated bounds, transient slider state, or active playback state.
+Animation mode, direction, and duration are persisted configuration; elapsed
+time and playback status are derived application state. Annotation source is preserved as
 non-executable content and never enters parsing or evaluation. Both closed
 viewport variants restore deterministically: `none` disables the visualizer,
 while the supported two-dimensional record restores center and zoom. An
