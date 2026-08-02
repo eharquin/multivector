@@ -39,6 +39,7 @@ import {
   DocumentFormatError,
   fromCanonicalDocument,
   parseCanonicalDocumentBytes,
+  resolveCanonicalImport,
   serializeCanonicalDocument,
   toCanonicalDocument,
   type ThemeMode,
@@ -54,7 +55,7 @@ function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
 }
 
-const viewport: Viewport2d = {
+const defaultViewport: Viewport2d = {
   width: 640,
   height: 480,
   centerX: 0,
@@ -78,7 +79,9 @@ function App() {
     if (import.meta.env.MODE === 'test') return fallback
     try {
       const stored = persistence.load()
-      return stored === null ? fallback : { ...fromCanonicalDocument(stored), diagnostic: null }
+      if (stored === null) return fallback
+      const restored = fromCanonicalDocument(stored)
+      return { ...restored, diagnostic: restored.recoveryDiagnostic }
     } catch (error) {
       return {
         ...fallback,
@@ -115,6 +118,17 @@ function App() {
   const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
   const closeAppearance = useCallback(() => setAppearanceItemId(null), [])
 
+  const viewport: Viewport2d = expressionDoc.view.viewport.kind === 'two-dimensional'
+    ? {
+        ...defaultViewport,
+        centerX: expressionDoc.view.viewport.centerX,
+        centerY: expressionDoc.view.viewport.centerY,
+        pixelsPerUnit: expressionDoc.view.viewport.zoom,
+      }
+    : defaultViewport
+  const visualizerActive = expressionDoc.view.visualizerId === 'org.multivector.vga-2d' &&
+    expressionDoc.view.viewport.kind === 'two-dimensional'
+
   const evaluatedItems = useMemo(
     () => evaluateDocument(expressionDoc, engine),
     [expressionDoc],
@@ -139,7 +153,7 @@ function App() {
     if (import.meta.env.MODE === 'test') return
     try {
       persistence.save(toCanonicalDocument(expressionDoc, theme, resolvedStyles))
-      setDocumentDiagnostic(null)
+      setDocumentDiagnostic((current) => current?.startsWith('DOCUMENT_VIEW_UNSUPPORTED') ? current : null)
     } catch {
       setDocumentDiagnostic('STORE_WRITE_FAILED: Changes remain open, but the last saved revision was retained.')
     }
@@ -312,15 +326,20 @@ function App() {
     event.target.value = ''
     if (!file) return
     try {
+      const parsed = parseCanonicalDocumentBytes(new Uint8Array(await file.arrayBuffer()))
+      const collision = parsed.id === expressionDoc.id
+      const choice = collision && !window.confirm(
+        'A document with this identity is already open. Choose OK to replace it, or Cancel to duplicate the import with fresh identities.',
+      ) ? 'duplicate' : 'replace'
       const imported = fromCanonicalDocument(
-        parseCanonicalDocumentBytes(new Uint8Array(await file.arrayBuffer())),
+        resolveCanonicalImport(expressionDoc.id, parsed, choice),
       )
       setExpressionDoc(imported.document)
       setTheme(imported.theme)
       setAppearanceItemId(null)
       setExpandedListIds(new Set())
       nextId.current = imported.document.items.length + 1
-      setDocumentDiagnostic(null)
+      setDocumentDiagnostic(imported.recoveryDiagnostic)
     } catch (error) {
       setDocumentDiagnostic(
         error instanceof DocumentFormatError
@@ -502,6 +521,7 @@ function App() {
               evaluation,
               positionEvaluation,
             }, index) => {
+              const annotation = item.kind === 'annotation'
               const feedbackId = `expression-feedback-${item.id}`
               const inputId = `expression-source-${item.id}`
               const invalid = evaluation?.status === 'invalid'
@@ -599,7 +619,7 @@ function App() {
                           }}
                           id={inputId}
                           className="expression-source"
-                          aria-label={`Expression ${position}`}
+                          aria-label={`${annotation ? 'Annotation' : 'Expression'} ${position}`}
                           value={item.source}
                           onChange={(event) =>
                             setExpressionDoc((current) =>
@@ -830,7 +850,7 @@ function App() {
           onKeyDown={resizePanelWithKeyboard}
         />
 
-        <section className="visualizer" aria-label="VGA 2D viewport">
+        {visualizerActive && <section className="visualizer" aria-label="VGA 2D viewport">
           <div className="canvas-frame">
             <svg
               className="canvas"
@@ -913,7 +933,7 @@ function App() {
               ))}
             </svg>
           </div>
-        </section>
+        </section>}
       </main>
       {infoDialog === 'algebra' && (
         <AlgebraInfoDialog

@@ -11,6 +11,7 @@ export const MAX_MIGRATION_STEPS = 32
 export type ThemeMode = 'system' | 'light' | 'dark'
 type Appearance = Readonly<{ visible: boolean; labelVisible: boolean; label: string; style: string }>
 type Item = Readonly<{ id: string; kind: 'expression' | 'annotation'; source: string; positionSource: string | null; normalization: 'natural' | null; control: ExpressionControl | null }>
+export type CanonicalViewport = Readonly<{ kind: 'none' }> | Readonly<{ kind: 'two-dimensional'; centerX: number; centerY: number; zoom: number }>
 
 export type CanonicalDocument = Readonly<{
   id: string
@@ -24,7 +25,7 @@ export type CanonicalDocument = Readonly<{
   view: Readonly<{
     visualizerId: string | null
     positionEnabled: boolean
-    viewport: Readonly<{ kind: 'two-dimensional'; centerX: number; centerY: number; zoom: number }>
+    viewport: CanonicalViewport
     display: Readonly<{ decimalPlaces: number; axisLabelsVisible: boolean; graduationsVisible: boolean; gridVisible: boolean; objectScale: number; theme: ThemeMode }>
   }>
 }>
@@ -238,8 +239,24 @@ export function validateCanonicalDocument(value: unknown): CanonicalDocument {
   if (Object.keys(appearance).length !== items.length) fail('DOCUMENT_SCHEMA', 'Every item requires one appearance record.')
   const interpretation = root.interpretation === null ? null : record(root.interpretation, 'interpretation', ['interpretationId', 'interpretationVersion'])
   const view = record(root.view, 'view', ['visualizerId', 'positionEnabled', 'viewport', 'display'])
-  const viewport = record(view.viewport, 'view.viewport', ['kind', 'centerX', 'centerY', 'zoom'])
-  if (viewport.kind !== 'two-dimensional') fail('DOCUMENT_SCHEMA', 'Only the two-dimensional viewport is supported.')
+  if (view.viewport === null || typeof view.viewport !== 'object' || Array.isArray(view.viewport))
+    fail('DOCUMENT_VIEWPORT', 'view.viewport must be a closed viewport object.')
+  const viewportKind = (view.viewport as Record<string, unknown>).kind
+  let viewport: CanonicalViewport
+  if (viewportKind === 'none') {
+    record(view.viewport, 'view.viewport', ['kind'])
+    viewport = { kind: 'none' }
+  } else if (viewportKind === 'two-dimensional') {
+    const value = record(view.viewport, 'view.viewport', ['kind', 'centerX', 'centerY', 'zoom'])
+    viewport = {
+      kind: 'two-dimensional',
+      centerX: finite(value.centerX, 'view.viewport.centerX'),
+      centerY: finite(value.centerY, 'view.viewport.centerY'),
+      zoom: finite(value.zoom, 'view.viewport.zoom', true),
+    }
+  } else {
+    fail('DOCUMENT_VIEWPORT', 'view.viewport.kind must be “none” or “two-dimensional”.')
+  }
   const display = record(view.display, 'view.display', ['decimalPlaces', 'axisLabelsVisible', 'graduationsVisible', 'gridVisible', 'objectScale', 'theme'])
   const decimalPlaces = finite(display.decimalPlaces, 'view.display.decimalPlaces')
   if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 15)
@@ -256,7 +273,7 @@ export function validateCanonicalDocument(value: unknown): CanonicalDocument {
     view: {
       visualizerId: view.visualizerId === null ? null : text(view.visualizerId, 'view.visualizerId', true),
       positionEnabled: truth(view.positionEnabled, 'view.positionEnabled'),
-      viewport: { kind: 'two-dimensional', centerX: finite(viewport.centerX, 'view.viewport.centerX'), centerY: finite(viewport.centerY, 'view.viewport.centerY'), zoom: finite(viewport.zoom, 'view.viewport.zoom', true) },
+      viewport,
       display: { decimalPlaces, axisLabelsVisible: truth(display.axisLabelsVisible, 'view.display.axisLabelsVisible'), graduationsVisible: truth(display.graduationsVisible, 'view.display.graduationsVisible'), gridVisible: truth(display.gridVisible, 'view.display.gridVisible'), objectScale: finite(display.objectScale, 'view.display.objectScale', true), theme: display.theme as ThemeMode },
     },
   }
@@ -314,7 +331,13 @@ export function toCanonicalDocument(
   })
 }
 
-export function fromCanonicalDocument(document: CanonicalDocument): { document: ExpressionDocument; theme: ThemeMode } {
+export type RestoredCanonicalDocument = Readonly<{
+  document: ExpressionDocument
+  theme: ThemeMode
+  recoveryDiagnostic: string | null
+}>
+
+export function fromCanonicalDocument(document: CanonicalDocument): RestoredCanonicalDocument {
   const items: ExpressionItem[] = document.items.map((item) => ({
     id: item.id, ...(item.kind === 'annotation' ? { kind: item.kind } : {}), source: item.source,
     ...(item.positionSource === null ? {} : { positionSource: item.positionSource }),
@@ -335,5 +358,45 @@ export function fromCanonicalDocument(document: CanonicalDocument): { document: 
       appearance: document.appearance,
     },
     theme,
+    recoveryDiagnostic: document.view.viewport.kind === 'none' && document.view.visualizerId === null
+      ? null
+      : document.view.viewport.kind === 'two-dimensional' &&
+          document.view.visualizerId === 'org.multivector.vga-2d'
+        ? null
+        : 'DOCUMENT_VIEW_UNSUPPORTED: The document was preserved, but its visualizer and viewport combination cannot be displayed by this runtime.',
   }
+}
+
+export type ImportCollisionChoice = 'replace' | 'duplicate'
+
+/** Resolves STORE-007 without mutating the validated imported revision. */
+export function resolveCanonicalImport(
+  currentDocumentId: string,
+  imported: CanonicalDocument,
+  choice: ImportCollisionChoice,
+  createId: () => string = () => crypto.randomUUID(),
+): CanonicalDocument {
+  if (currentDocumentId !== imported.id || choice === 'replace') return imported
+
+  const reserved = new Set([currentDocumentId, imported.id, ...imported.items.map((item) => item.id)])
+  const freshId = (): string => {
+    for (let attempt = 0; attempt < 1_000; attempt += 1) {
+      const id = createId()
+      if (id.length > 0 && !reserved.has(id)) {
+        reserved.add(id)
+        return id
+      }
+    }
+    fail('DOCUMENT_ID_GENERATION', 'Fresh identities could not be generated for the duplicated document.')
+  }
+  const documentId = freshId()
+  const itemIds = new Map(imported.items.map((item) => [item.id, freshId()]))
+  return validateCanonicalDocument({
+    ...imported,
+    id: documentId,
+    items: imported.items.map((item) => ({ ...item, id: itemIds.get(item.id)! })),
+    appearance: Object.fromEntries(Object.entries(imported.appearance).map(
+      ([id, appearance]) => [itemIds.get(id)!, appearance],
+    )),
+  })
 }

@@ -20,6 +20,38 @@ function evaluateItems(items: readonly ExpressionItem[]) {
 }
 
 describe('document dependency evaluation', () => {
+  it('preserves annotations without parsing or evaluating their source', () => {
+    const [annotation, expression] = evaluateItems([
+      { id: 'note', kind: 'annotation', source: 'This is prose, not an expression!' },
+      { id: 'value', source: 'A = e1' },
+    ])
+
+    expect(annotation).toMatchObject({
+      item: { id: 'note', kind: 'annotation' },
+      evaluation: null,
+      positionEvaluation: null,
+    })
+    expect(expression.evaluation).toMatchObject({ status: 'valid', inspection: 'e1' })
+  })
+
+  it('preserves but does not apply positions when document position support is disabled', () => {
+    const document = expressionDocument([
+      { id: 'vector', source: 'V = e1', positionSource: '(4, 5)' },
+    ])
+    const [vector] = evaluateDocument({
+      ...document,
+      view: { ...document.view, positionEnabled: false },
+    }, engine)
+
+    expect(vector.item.positionSource).toBe('(4, 5)')
+    expect(vector.positionEvaluation).toBeNull()
+    expect(vector.evaluation).toMatchObject({
+      status: 'valid',
+      entity: { kind: 'vector-2d' },
+      primitive: { start: { x: 0, y: 0 }, end: { x: 1, y: 0 } },
+    })
+  })
+
   it('applies natural normalization before dependent expressions resolve', () => {
     const [vector, doubled] = evaluateItems([
       { id: 'vector', source: 'V = vector(3, 4)', normalization: 'natural' },

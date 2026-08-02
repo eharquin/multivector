@@ -6,6 +6,7 @@ import {
   parseCanonicalDocumentBytes,
   serializeCanonicalDocument,
   toCanonicalDocument,
+  resolveCanonicalImport,
 } from './canonicalDocument'
 
 function sample() {
@@ -42,6 +43,27 @@ describe('canonical document format', () => {
       items: [{ id: 'v', source: 'V = vector(2, 1)', positionSource: '(1, 1)', normalization: 'natural' }],
       appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4' } },
     }))
+  })
+
+  it('round-trips annotation prose without assigning executable fields', () => {
+    const document = sample()
+    const annotation = {
+      ...document,
+      items: [{
+        id: 'note', kind: 'annotation' as const, source: 'Let V be arbitrary. {not syntax}',
+        positionSource: null, normalization: null, control: null,
+      }],
+      appearance: {
+        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4' },
+      },
+    }
+    const encoded = serializeCanonicalDocument(annotation)
+    const restored = fromCanonicalDocument(parseCanonicalDocument(encoded))
+    expect(restored.document.items).toEqual([{
+      id: 'note', kind: 'annotation', source: 'Let V be arbitrary. {not syntax}',
+    }])
+    expect(serializeCanonicalDocument(toCanonicalDocument(restored.document, restored.theme)))
+      .toBe(encoded)
   })
 
   it('rejects duplicate keys before schema validation', () => {
@@ -105,5 +127,64 @@ describe('canonical document format', () => {
   it('rejects malformed UTF-8 and a byte-order mark at the byte boundary', () => {
     expect(errorCode(() => parseCanonicalDocumentBytes(new Uint8Array([0xc3, 0x28])))).toBe('DOCUMENT_UTF8')
     expect(errorCode(() => parseCanonicalDocumentBytes(new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0x7d])))).toBe('DOCUMENT_BOM')
+  })
+
+  it('accepts and byte-stably round-trips the closed none viewport', () => {
+    const document = sample()
+    const withoutViewport = {
+      ...document,
+      interpretation: null,
+      view: {
+        ...document.view,
+        visualizerId: null,
+        positionEnabled: false,
+        viewport: { kind: 'none' as const },
+      },
+    }
+    const encoded = serializeCanonicalDocument(withoutViewport)
+    expect(serializeCanonicalDocument(parseCanonicalDocument(encoded))).toBe(encoded)
+    expect(fromCanonicalDocument(parseCanonicalDocument(encoded)).document.view.viewport)
+      .toEqual({ kind: 'none' })
+  })
+
+  it('reports malformed and unknown closed viewport variants precisely', () => {
+    const document = sample()
+    expect(errorCode(() => serializeCanonicalDocument({
+      ...document,
+      view: { ...document.view, viewport: { kind: 'three-dimensional' } },
+    } as never))).toBe('DOCUMENT_VIEWPORT')
+    expect(errorCode(() => serializeCanonicalDocument({
+      ...document,
+      view: { ...document.view, viewport: { kind: 'none', zoom: 2 } },
+    } as never))).toBe('DOCUMENT_UNKNOWN_FIELD')
+  })
+
+  it('preserves unsupported view combinations with a recovery diagnostic', () => {
+    const document = sample()
+    const unsupported = {
+      ...document,
+      view: { ...document.view, visualizerId: 'org.example.future-view' },
+    }
+    const restored = fromCanonicalDocument(parseCanonicalDocument(
+      serializeCanonicalDocument(unsupported),
+    ))
+    expect(restored.document.view.visualizerId).toBe('org.example.future-view')
+    expect(restored.recoveryDiagnostic).toMatch(/^DOCUMENT_VIEW_UNSUPPORTED:/)
+  })
+
+  it('duplicates identity collisions with fresh document and item identities', () => {
+    const ids = ['new-document', 'new-item']
+    const original = sample()
+    const duplicated = resolveCanonicalImport('doc-1', original, 'duplicate', () => ids.shift()!)
+    expect(duplicated.id).toBe('new-document')
+    expect(duplicated.items[0]).toEqual(expect.objectContaining({
+      id: 'new-item',
+      source: 'V = vector(2, 1)',
+      positionSource: '(1, 1)',
+      normalization: 'natural',
+    }))
+    expect(duplicated.appearance['new-item']).toEqual(original.appearance.v)
+    expect(duplicated.appearance.v).toBeUndefined()
+    expect(resolveCanonicalImport('doc-1', original, 'replace')).toBe(original)
   })
 })

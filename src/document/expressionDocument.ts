@@ -46,7 +46,7 @@ export type ExpressionDocument = Readonly<{
   view: Readonly<{
     visualizerId: string | null
     positionEnabled: boolean
-    viewport: Readonly<{
+    viewport: Readonly<{ kind: 'none' }> | Readonly<{
       kind: 'two-dimensional'
       centerX: number
       centerY: number
