@@ -95,7 +95,7 @@ export function expressionDocument(
         decimalPlaces: 6,
         axisLabelsVisible: true,
         graduationsVisible: true,
-        gridVisible: false,
+        gridVisible: true,
         objectScale: 1,
       },
     },

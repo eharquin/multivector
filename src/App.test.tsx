@@ -235,9 +235,10 @@ describe('VGA 2D vertical slice', () => {
 
     openDisplaySettings()
     const grid = screen.getByRole('switch', { name: 'Grid' })
-    expect(container.querySelectorAll('.grid-line')).toHaveLength(0)
-    fireEvent.click(grid)
+    expect(grid).toBeChecked()
     expect(container.querySelectorAll('.grid-line').length).toBeGreaterThan(0)
+    fireEvent.click(grid)
+    expect(container.querySelectorAll('.grid-line')).toHaveLength(0)
     expect(undo).toBeDisabled()
   })
 
