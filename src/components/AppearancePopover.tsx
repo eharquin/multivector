@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { RAMP_ORDER, STUDIO_COLORS } from './appearancePalette'
 import { popoverPosition } from './popoverPosition'
+import type { ExpressionControl } from '../document/expressionDocument'
 
 const POPOVER_WIDTH = 272
 const POPOVER_HEIGHT = 300
@@ -13,11 +14,14 @@ type AppearancePopoverProps = Readonly<{
   labelVisible: boolean
   label: string
   colorOnly?: boolean
+  control?: ExpressionControl
+  reducedMotion?: boolean
   anchorRef: RefObject<HTMLButtonElement | null>
   onStyleChange(style: string): void
   onVisibleChange(visible: boolean): void
   onLabelVisibleChange(visible: boolean): void
   onLabelChange(label: string): void
+  onControlChange?(control: ExpressionControl): void
   onClose(): void
 }>
 
@@ -28,15 +32,19 @@ export function AppearancePopover({
   labelVisible,
   label,
   colorOnly = false,
+  control,
+  reducedMotion = false,
   anchorRef,
   onStyleChange,
   onVisibleChange,
   onLabelVisibleChange,
   onLabelChange,
+  onControlChange,
   onClose,
 }: AppearancePopoverProps) {
   const ref = useRef<HTMLDivElement>(null)
   const visibilityRef = useRef<HTMLInputElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
   const placement = popoverPosition(
     anchorRef.current,
     POPOVER_WIDTH,
@@ -45,7 +53,7 @@ export function AppearancePopover({
 
   useEffect(() => {
     const returnFocusTarget = anchorRef.current
-    visibilityRef.current?.focus()
+    ;(visibilityRef.current ?? closeRef.current)?.focus()
     const onPointerDown = (event: MouseEvent) => {
       if (ref.current?.contains(event.target as Node)) return
       if (returnFocusTarget?.contains(event.target as Node)) return
@@ -68,12 +76,12 @@ export function AppearancePopover({
       ref={ref}
       className="appearance-popover"
       role="dialog"
-      aria-label={`Appearance — ${kind}`}
+      aria-label={kind}
       style={{ top: placement.top, left: placement.left, width: POPOVER_WIDTH }}
     >
       <header className="appearance-header">
-        <strong>Appearance — {kind}</strong>
-        <button type="button" onClick={onClose} aria-label="Close appearance">×</button>
+        <strong>{kind}</strong>
+        <button ref={closeRef} type="button" onClick={onClose} aria-label={`Close ${kind} menu`}>×</button>
       </header>
       {!colorOnly && (
         <section className="appearance-section">
@@ -113,6 +121,55 @@ export function AppearancePopover({
           ))}
         </div>
       </section>
+      {control && onControlChange && (
+        <>
+          <section className="appearance-section">
+            <h3>Trigger</h3>
+            <div className="scalar-control-mode-grid">
+              {(['number', 'slider'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={control.mode === mode ? 'active' : ''}
+                  aria-pressed={control.mode === mode}
+                  onClick={() => onControlChange({ ...control, mode })}
+                >{mode === 'number' ? 'Number' : 'Slider'}</button>
+              ))}
+            </div>
+          </section>
+          {control.mode === 'slider' && (
+            <section className="appearance-section">
+              <h3>Animation mode</h3>
+              {reducedMotion && <p className="scalar-reduced-motion-note">
+                Motion starts only with Play.
+              </p>}
+              <div className="scalar-animation-mode-grid">
+                {([
+                  ['once', '⇥', 'Once'],
+                  ['loop', '↻', 'Loop'],
+                  ['ping-pong', '⇄', 'Ping-pong'],
+                ] as const).map(([mode, icon, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={(control.animation?.mode ?? 'ping-pong') === mode ? 'active' : ''}
+                    aria-label={label}
+                    aria-pressed={(control.animation?.mode ?? 'ping-pong') === mode}
+                    onClick={() => onControlChange({
+                      ...control,
+                      animation: {
+                        mode,
+                        direction: control.animation?.direction ?? 'forward',
+                        durationSeconds: control.animation?.durationSeconds ?? 2,
+                      },
+                    })}
+                  ><span aria-hidden="true">{icon}</span></button>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
       {!colorOnly && (
         <section className="appearance-section">
           <h3>Label</h3>

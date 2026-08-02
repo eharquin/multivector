@@ -96,12 +96,21 @@ view-only changes remain outside mathematical undo history.
 `Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
 element's index, semantic type, canonical value, and inherited position.
 
-Directly declared numeric scalars can expose a compact slider backed by
-expression-valued minimum, maximum, and step sources. Slider changes rewrite
-the authoritative scalar literal and participate in document undo and redo;
-invalid or out-of-range configurations leave the source unchanged.
+Directly declared numeric scalars use slider controls by default, backed by
+expression-valued minimum, maximum, and step sources shown below the slider
+while its expression is focused. Slider changes rewrite the authoritative
+scalar literal and participate in document undo and redo; invalid or
+out-of-range configurations leave the source unchanged. Number mode hides both
+the slider and its playback button.
 
-Direct manipulation, animation, and additional algebras remain planned work.
+Slider controls provide deterministic once, loop, or ping-pong playback. Their
+single Play button also pauses and resumes playback; completion and Escape
+cancellation update authoritative source through one transient history
+transaction. Active playback itself is never persisted.
+Reduced-motion preferences prevent automatic motion and remove decorative
+control transitions while leaving explicit playback available.
+
+Direct manipulation and additional algebras remain planned work.
 
 The current public application delivers the accepted VGA 2D Foundation
 workflow. Broader geometry and interaction capabilities remain incremental.

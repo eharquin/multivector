@@ -14,7 +14,10 @@ import {
 } from './components/appearancePalette'
 import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 function openDisplaySettings(): HTMLElement {
   const trigger = screen.getByRole('button', { name: 'Display settings' })
@@ -318,17 +321,25 @@ describe('VGA 2D vertical slice', () => {
 
   it('configures a direct scalar slider that rewrites source and supports undo', () => {
     render(<App />)
-    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    const source = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Expression 1',
+    })
+    source.focus()
     fireEvent.change(source, { target: { value: 'a = ((2))' } })
+    expect(screen.getByRole('slider', { name: 'Value for a' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: 'Minimum source' }))
+      .toHaveValue('-10')
     const trigger = screen.getByRole('button', {
-      name: 'Configure scalar control for a',
+      name: 'Open Scalar menu for a',
     })
 
     fireEvent.click(trigger)
-    expect(screen.getByRole('dialog', { name: 'Control — a' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Number' })).toHaveFocus()
+    expect(screen.getByRole('dialog', { name: 'Scalar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Close Scalar menu' })).toHaveFocus()
     expect(screen.getByRole('button', { name: 'Slider' }))
       .toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('textbox', { name: 'Minimum source' }))
+      .toHaveValue('-10')
     const slider = screen.getByRole('slider', { name: 'Value for a' })
     expect(slider).toBeEnabled()
 
@@ -344,11 +355,13 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Number' }))
     expect(screen.queryByRole('slider', { name: 'Value for a' }))
       .not.toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'Minimum source' }))
-      .toHaveValue('-10')
+    expect(screen.queryByRole('button', { name: 'Play scalar animation' }))
+      .not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Minimum source' }))
+      .not.toBeInTheDocument()
 
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog', { name: 'Control — a' }))
+    expect(screen.queryByRole('dialog', { name: 'Scalar' }))
       .not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
   })
@@ -358,7 +371,7 @@ describe('VGA 2D vertical slice', () => {
     const source = screen.getByRole('textbox', { name: 'Expression 1' })
     fireEvent.change(source, { target: { value: 'a = 20' } })
     fireEvent.click(screen.getByRole('button', {
-      name: 'Configure scalar control for a',
+      name: 'Open Scalar menu for a',
     }))
 
     expect(screen.getByRole('slider', { name: 'Value for a' })).toBeDisabled()
@@ -373,6 +386,39 @@ describe('VGA 2D vertical slice', () => {
       'A control bound must evaluate to a pure scalar.',
     )
     expect(source).toHaveValue('a = 20')
+  })
+
+  it('plays scalar animation as one transaction and cancels through Escape', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const source = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Expression 1',
+    })
+    fireEvent.change(source, { target: { value: 'a = 2' } })
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Open Scalar menu for a',
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Loop' }))
+    expect(screen.getByRole('button', { name: 'Loop' }))
+      .toHaveAttribute('aria-pressed', 'true')
+
+    const play = screen.getByRole('button', { name: 'Play scalar animation' })
+    fireEvent.click(play)
+    act(() => vi.advanceTimersByTime(1000))
+    expect(source).not.toHaveValue('a = 2')
+    expect(screen.getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause scalar animation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(source).toHaveValue('a = 2')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play scalar animation' }))
+    act(() => vi.advanceTimersByTime(500))
+    expect(source).not.toHaveValue('a = 2')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(source).toHaveValue('a = 2')
+    expect(screen.getByText('Scalar animation cancelled.')).toBeInTheDocument()
   })
 
   it('opens display settings, restores focus on close, and records no history', () => {
@@ -479,9 +525,9 @@ describe('VGA 2D vertical slice', () => {
       target: { value: '12' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for Scalar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Scalar menu for Scalar' }))
 
-    expect(screen.getByRole('dialog', { name: 'Appearance — Scalar' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Scalar' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use color green 4' })).toBeInTheDocument()
     expect(screen.queryByText('Visibility')).not.toBeInTheDocument()
     expect(screen.queryByText('Show label')).not.toBeInTheDocument()
@@ -613,8 +659,8 @@ describe('VGA 2D vertical slice', () => {
   it('edits common color and label appearance independently of the value', () => {
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for Vector' }))
-    expect(screen.getByRole('dialog', { name: 'Appearance — Vector' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for Vector' }))
+    expect(screen.getByRole('dialog', { name: 'Vector' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Use color green 4' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Text' }), {
@@ -623,7 +669,8 @@ describe('VGA 2D vertical slice', () => {
 
     expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
     expect(screen.getByText('Velocity', { selector: 'text' })).toBeInTheDocument()
-    expect(screen.getByText('Vector')).toHaveStyle({ color: '#0F9D57' })
+    expect(screen.getByText('Vector', { selector: '.object-kind' }))
+      .toHaveStyle({ color: '#0F9D57' })
   })
 
   it('restores the declared name when the label text is cleared', () => {
@@ -631,7 +678,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
       target: { value: 'V = vector(2, 1)' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for V' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for V' }))
 
     const label = screen.getByRole('textbox', { name: 'Text' })
     fireEvent.change(label, { target: { value: 'Velocity' } })
@@ -648,7 +695,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
       target: { value: 'V = vector(2, 1)' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Edit appearance for V' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for V' }))
     const label = screen.getByRole('textbox', { name: 'Text' })
 
     label.focus()
@@ -660,10 +707,10 @@ describe('VGA 2D vertical slice', () => {
 
   it('returns focus to the swatch when the appearance popover closes', () => {
     render(<App />)
-    const swatch = screen.getByRole('button', { name: 'Edit appearance for Vector' })
+    const swatch = screen.getByRole('button', { name: 'Open Vector menu for Vector' })
 
     fireEvent.click(swatch)
-    fireEvent.click(screen.getByRole('button', { name: 'Close appearance' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close Vector menu' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(swatch).toHaveFocus()
@@ -672,11 +719,11 @@ describe('VGA 2D vertical slice', () => {
   it('closes appearance with Escape and restores focus without a keyboard trap', () => {
     render(<App />)
     const swatch = screen.getByRole('button', {
-      name: 'Edit appearance for Vector',
+      name: 'Open Vector menu for Vector',
     })
 
     fireEvent.click(swatch)
-    expect(screen.getByRole('dialog', { name: 'Appearance — Vector' }))
+    expect(screen.getByRole('dialog', { name: 'Vector' }))
       .toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Visible' })).toHaveFocus()
 
@@ -684,6 +731,18 @@ describe('VGA 2D vertical slice', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(swatch).toHaveFocus()
+  })
+
+  it('closes an expression menu when the canvas is clicked', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for Vector' }))
+    expect(screen.getByRole('dialog', { name: 'Vector' })).toBeInTheDocument()
+
+    fireEvent.pointerDown(viewportCanvas(), {
+      button: 0, pointerId: 1, clientX: 320, clientY: 240,
+    })
+
+    expect(screen.queryByRole('dialog', { name: 'Vector' })).not.toBeInTheDocument()
   })
 
   it('offers system, light, and dark application themes', () => {
