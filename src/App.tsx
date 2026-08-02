@@ -102,6 +102,13 @@ function App() {
   const nextId = useRef(2)
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
   const pendingFocus = useRef<string | null>(null)
+  const lastEditorFocus = useRef<Readonly<{
+    id: string
+    start: number
+    end: number
+    direction: 'forward' | 'backward' | 'none'
+  }> | null>(null)
+  const pendingHistoryFocus = useRef(lastEditorFocus.current)
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -126,6 +133,18 @@ function App() {
   const closeAppearance = useCallback(() => {
     setAppearanceItemId(null)
     dispatchHistory({ type: 'boundary' })
+  }, [])
+  const rememberEditorFocus = (element: HTMLInputElement) => {
+    lastEditorFocus.current = {
+      id: element.id,
+      start: element.selectionStart ?? 0,
+      end: element.selectionEnd ?? element.selectionStart ?? 0,
+      direction: element.selectionDirection ?? 'none',
+    }
+  }
+  const dispatchHistoryWithFocus = useCallback((type: 'undo' | 'redo') => {
+    pendingHistoryFocus.current = lastEditorFocus.current
+    dispatchHistory({ type })
   }, [])
 
   const viewport: Viewport2d = expressionDoc.view.viewport.kind === 'two-dimensional'
@@ -168,11 +187,11 @@ function App() {
         : key === 'y' && !event.shiftKey ? 'redo' : null
       if (!action) return
       event.preventDefault()
-      dispatchHistory({ type: action })
+      dispatchHistoryWithFocus(action)
     }
     window.addEventListener('keydown', handleHistoryShortcut)
     return () => window.removeEventListener('keydown', handleHistoryShortcut)
-  }, [])
+  }, [dispatchHistoryWithFocus])
 
   useEffect(() => {
     const result = history.lastResult
@@ -274,9 +293,24 @@ function App() {
 
   useEffect(() => {
     const id = pendingFocus.current
-    if (!id) return
-    inputRefs.current.get(id)?.focus()
-    pendingFocus.current = null
+    if (id) {
+      inputRefs.current.get(id)?.focus()
+      pendingFocus.current = null
+      return
+    }
+    const selection = pendingHistoryFocus.current
+    if (!selection) return
+    pendingHistoryFocus.current = null
+    const input = document.getElementById(selection.id)
+    if (!(input instanceof HTMLInputElement)) return
+    input.focus()
+    const maximum = input.value.length
+    input.setSelectionRange(
+      Math.min(selection.start, maximum),
+      Math.min(selection.end, maximum),
+      selection.direction,
+    )
+    rememberEditorFocus(input)
   }, [expressionDoc])
 
   useEffect(() => {
@@ -505,7 +539,7 @@ function App() {
           className="document-command"
           disabled={history.past.length === 0}
           aria-label="Undo document change"
-          onClick={() => dispatchHistory({ type: 'undo' })}
+          onClick={() => dispatchHistoryWithFocus('undo')}
         >
           Undo
         </button>
@@ -514,7 +548,7 @@ function App() {
           className="document-command"
           disabled={history.future.length === 0}
           aria-label="Redo document change"
-          onClick={() => dispatchHistory({ type: 'redo' })}
+          onClick={() => dispatchHistoryWithFocus('redo')}
         >
           Redo
         </button>
@@ -676,6 +710,8 @@ function App() {
                             source: event.target.value,
                           }, `source:${item.id}`)}
                           onBlur={() => dispatchHistory({ type: 'boundary' })}
+                          onFocus={(event) => rememberEditorFocus(event.currentTarget)}
+                          onSelect={(event) => rememberEditorFocus(event.currentTarget)}
                           onKeyDown={(event) =>
                             handleItemKeyDown(event, item, index)
                           }
@@ -802,6 +838,7 @@ function App() {
                         <div className="position-input-row">
                           <span className="position-prefix" aria-hidden="true">position</span>
                           <input
+                            id={`position-source-${item.id}`}
                             className="position-source"
                             aria-label={`Position ${position}`}
                             placeholder="(0, 0)"
@@ -812,6 +849,8 @@ function App() {
                               positionSource: event.target.value,
                             }, `position:${item.id}`)}
                             onBlur={() => dispatchHistory({ type: 'boundary' })}
+                            onFocus={(event) => rememberEditorFocus(event.currentTarget)}
+                            onSelect={(event) => rememberEditorFocus(event.currentTarget)}
                             onKeyDown={(event) => {
                               if (event.key !== 'Enter') return
                               event.preventDefault()

@@ -19,7 +19,7 @@ afterEach(cleanup)
 describe('VGA 2D vertical slice', () => {
   it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
     render(<App />)
-    const input = screen.getByRole('textbox', { name: 'Expression 1' })
+    const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
     const undo = screen.getByRole('button', { name: 'Undo document change' })
     const redo = screen.getByRole('button', { name: 'Redo document change' })
     expect(undo).toBeDisabled()
@@ -27,8 +27,14 @@ describe('VGA 2D vertical slice', () => {
 
     fireEvent.change(input, { target: { value: 'V = e1' } })
     expect(undo).toBeEnabled()
+    input.focus()
+    input.setSelectionRange(2, 4, 'forward')
+    fireEvent.select(input)
     fireEvent.click(undo)
     expect(input).toHaveValue('vector(2, 1)')
+    expect(input).toHaveFocus()
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(4)
     expect(redo).toBeEnabled()
 
     fireEvent.keyDown(window, { key: 'y', ctrlKey: true })
