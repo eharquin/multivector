@@ -1,0 +1,64 @@
+name: Feature or design proposal
+description: Propose a focused improvement to MultiVector
+title: "Proposal: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem before prescribing an implementation. Changes to scientific conventions, the language, or the canonical document format require explicit design and compatibility discussion.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: Who needs this, and what cannot be done clearly or safely today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior and how completion could be verified.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Outline a solution if you have one, including meaningful alternatives or tradeoffs.
+
+  - type: textarea
+    id: conventions
+    attributes:
+      label: Scientific conventions and references
+      description: Identify affected basis order, metric, products, duality, interpretation, tolerances, or references. Write "Not applicable" when none are affected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and persistence
+      description: Note effects on source syntax, canonical documents, saved data, accessibility, or existing workflows.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: List examples, tests, documentation, or reference cases that would demonstrate completion.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and documentation for this proposal.
+          required: true
+        - label: I have kept this proposal focused on one concern.
+          required: true
