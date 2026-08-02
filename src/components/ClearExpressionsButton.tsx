@@ -9,8 +9,8 @@ type ClearExpressionsButtonProps = Readonly<{
 }>
 
 /**
- * Clearing every expression cannot be undone until document history exists, so
- * the control requires a sustained hold rather than a single activation. The
+ * Clearing every expression is recoverable through document history. The
+ * control retains a sustained hold to prevent accidental broad edits. The
  * hold is available to pointer and keyboard alike (A11Y-007); the sweeping ring
  * is progress feedback driven by `--hold-duration`, and reduced-motion users get
  * a static armed state instead.

@@ -91,6 +91,10 @@ textual inspection and export.
 
 ## 6. Interaction constants
 
+Document history retains at most 100 complete pre-command document snapshots.
+When the limit is exceeded, the oldest snapshot is discarded first. Undo and
+redo stacks are transient application state and are never serialized.
+
 Repeated keyboard changes to the same property coalesce when successive accepted
 changes are no more than 750 milliseconds apart. The events named by CMD-005 and
 CMD-006 terminate coalescence regardless of elapsed time.

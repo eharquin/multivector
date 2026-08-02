@@ -87,8 +87,8 @@ open document, and failed writes retain the last saved revision.
 `Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
 element's index, semantic type, canonical value, and inherited position.
 
-Semantic history, scalar controls, direct manipulation, animation, and
-additional algebras remain planned work.
+Scalar controls, direct manipulation, animation, and additional algebras remain
+planned work.
 
 The current public application delivers the accepted VGA 2D Foundation
 workflow. Broader geometry and interaction capabilities remain incremental.

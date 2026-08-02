@@ -17,6 +17,28 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 afterEach(cleanup)
 
 describe('VGA 2D vertical slice', () => {
+  it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
+    render(<App />)
+    const input = screen.getByRole('textbox', { name: 'Expression 1' })
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    const redo = screen.getByRole('button', { name: 'Redo document change' })
+    expect(undo).toBeDisabled()
+    expect(redo).toBeDisabled()
+
+    fireEvent.change(input, { target: { value: 'V = e1' } })
+    expect(undo).toBeEnabled()
+    fireEvent.click(undo)
+    expect(input).toHaveValue('vector(2, 1)')
+    expect(redo).toBeEnabled()
+
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true })
+    expect(input).toHaveValue('V = e1')
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(input).toHaveValue('vector(2, 1)')
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
+    expect(input).toHaveValue('V = e1')
+  })
+
   it('authors the documented foundation example with keyboard row insertion', () => {
     render(<App />)
     const enter = (position: number, source: string) => {
