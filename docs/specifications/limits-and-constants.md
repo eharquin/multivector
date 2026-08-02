@@ -99,6 +99,11 @@ steps into four or five intervals, and generates no more than 256 lines per
 axis. Wheel zoom uses a continuous exponential scale and preserves the
 mathematical coordinate under the pointer.
 
+Viewport-created vector coordinates retain approximately one tenth of a
+reference screen pixel at the active zoom. Their decimal precision is
+`ceil(log10(10 × pixelsPerUnit))`, clamped from zero through eight decimal
+places. Trailing zeroes are removed and negative zero is serialized as `0`.
+
 Document history retains at most 100 complete pre-command document snapshots.
 When the limit is exceeded, the oldest snapshot is discarded first. Undo and
 redo stacks are transient application state and are never serialized.
@@ -106,17 +111,6 @@ redo stacks are transient application state and are never serialized.
 Repeated keyboard changes to the same property coalesce when successive accepted
 changes are no more than 750 milliseconds apart. The events named by CMD-005 and
 CMD-006 terminate coalescence regardless of elapsed time.
-
-Two-dimensional keyboard manipulation uses `0.1` mathematical coordinate units
-for the small increment and `1` unit for the large increment. The large
-increment is activated with `Shift`. They apply independently on each active
-coordinate before optional snapping and use the same source-rewrite path as
-pointer manipulation.
-
-Interactive targets shall have a hit area at least 24 by 24 CSS pixels. When
-adjacent targets cannot each reach that size, their combined target plus
-non-overlapping spacing shall allocate at least 24 CSS pixels in each relevant
-axis per target. Visible geometry may be smaller than its hit area.
 
 ## 7. Accessible-name policy
 
@@ -128,8 +122,6 @@ name. A visual entity uses, in order:
 3. for a list element, the owning item name or fallback followed by its
    zero-based element index.
 
-The accessible description conveys selection, visibility, evaluation state,
-manipulation availability, and any refusal or truncation reason. Repeated
-elements shall have distinct names. Decorative primitives and duplicate hit
-areas are hidden from the accessibility tree; the semantic entity owns the
-single interactive role.
+The accessible description conveys visibility, evaluation state, and any
+creation refusal or truncation reason. Repeated elements shall have distinct
+names. Decorative primitives are hidden from the accessibility tree.

@@ -22,6 +22,20 @@ function openDisplaySettings(): HTMLElement {
   return trigger
 }
 
+function viewportCanvas(): SVGSVGElement {
+  return screen.getByRole('img', {
+    name: /Two-dimensional VGA viewport/,
+  }) as unknown as SVGSVGElement
+}
+
+function sizeViewportCanvas(canvas: SVGSVGElement): void {
+  vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, width: 640, height: 480,
+    top: 0, right: 640, bottom: 480, left: 0,
+    toJSON: () => ({}),
+  })
+}
+
 describe('VGA 2D vertical slice', () => {
   it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
     render(<App />)
@@ -240,6 +254,46 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(grid)
     expect(container.querySelectorAll('.grid-line')).toHaveLength(0)
     expect(undo).toBeDisabled()
+  })
+
+  it('creates a collision-free vector from empty viewport coordinates as one history entry', () => {
+    render(<App />)
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'V1 = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    fireEvent.doubleClick(canvas, { clientX: 410, clientY: 150 })
+
+    const created = screen.getByRole('textbox', { name: 'Expression 2' })
+    expect(created).toHaveValue('V2 = vector(1, 1)')
+    expect(created).toHaveFocus()
+    expect(screen.getByText('V2 created at 1, 1.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(screen.queryByRole('textbox', { name: 'Expression 2' }))
+      .not.toBeInTheDocument()
+    expect(canvas).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo document change' }))
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Expression 2' }))
+      .toHaveValue('V2 = vector(1, 1)')
+  })
+
+  it('does not create or select when an existing rendered object is double-clicked', () => {
+    render(<App />)
+    const vector = screen.getByLabelText('Vector 1')
+
+    fireEvent.doubleClick(vector, { clientX: 400, clientY: 200 })
+
+    expect(screen.queryByRole('textbox', { name: 'Expression 2' }))
+      .not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Undo document change' }))
+      .toBeDisabled()
+    expect(vector).not.toHaveAttribute('role', 'button')
+    expect(vector).not.toHaveAttribute('aria-selected')
   })
 
   it('controls axes, graduations, and object scale independently', () => {
