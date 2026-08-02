@@ -109,6 +109,7 @@ function App() {
     direction: 'forward' | 'backward' | 'none'
   }> | null>(null)
   const pendingHistoryFocus = useRef(lastEditorFocus.current)
+  const removedEditorFallbacks = useRef(new Map<string, string>())
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -301,7 +302,11 @@ function App() {
     const selection = pendingHistoryFocus.current
     if (!selection) return
     pendingHistoryFocus.current = null
-    const input = document.getElementById(selection.id)
+    let input = document.getElementById(selection.id)
+    if (!(input instanceof HTMLInputElement)) {
+      const fallbackId = removedEditorFallbacks.current.get(selection.id)
+      input = fallbackId ? document.getElementById(fallbackId) : null
+    }
     if (!(input instanceof HTMLInputElement)) return
     input.focus()
     const maximum = input.value.length
@@ -378,6 +383,13 @@ function App() {
     let id = `item-${nextId.current++}`
     while (expressionDoc.items.some((item) => item.id === id)) {
       id = `item-${nextId.current++}`
+    }
+    const fallbackItemId = anchorId ?? expressionDoc.items.at(-1)?.id
+    if (fallbackItemId) {
+      removedEditorFallbacks.current.set(
+        `expression-source-${id}`,
+        `expression-source-${fallbackItemId}`,
+      )
     }
     pendingFocus.current = id
     executeCommand({

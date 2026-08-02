@@ -45,6 +45,20 @@ describe('VGA 2D vertical slice', () => {
     expect(input).toHaveValue('V = e1')
   })
 
+  it('returns focus to the originating expression when undo removes an inserted row', () => {
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    first.focus()
+    first.setSelectionRange(3, 3)
+    fireEvent.keyDown(first, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+
+    expect(screen.queryByRole('textbox', { name: 'Expression 2' })).not.toBeInTheDocument()
+    expect(first).toHaveFocus()
+  })
+
   it('authors the documented foundation example with keyboard row insertion', () => {
     render(<App />)
     const enter = (position: number, source: string) => {
