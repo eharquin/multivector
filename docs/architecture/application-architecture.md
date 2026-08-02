@@ -171,12 +171,22 @@ identifiers, while the interface resolver uses `blue-4` only as a defensive
 fallback for unvalidated in-memory state. Non-spatial values use the resolved
 color in the expression panel without gaining visibility or label controls.
 
-Document update operations also include an atomic clear transition that removes
-all expression items and their item-keyed appearance records while retaining the
-document object and its identity. Because history is not implemented in the
-current slice, the interface exposes that transition only after a one-second
-sustained pointer or keyboard activation, closes transient appearance UI, and
-returns focus to the add-expression control.
+Semantic document commands own insertion, deletion, source, position,
+normalization, control, appearance, and atomic clear transitions. They resolve
+items by stable identity and return applied, invalid, or unsupported results
+without consulting evaluated values or renderer primitives. A bounded
+application reducer stores complete document snapshots for undo and redo;
+transient focus, selection, dialog, and popover state remains outside history.
+Text edits coalesce only for one uninterrupted item/property key within the
+normative 750 millisecond window. Explicit transaction boundaries let future
+pointer, slider, and playback gestures commit once or cancel back to their exact
+pre-gesture snapshot. Import replaces the active document and resets its
+session-only history.
+
+The atomic clear command removes all expression items and their item-keyed
+appearance records while retaining the document object and its identity. The
+interface closes transient appearance UI and returns focus to the add-expression
+control; the transition is recoverable through document undo.
 
 The common evaluator owns a multivector-or-flat-list value union above the
 algebra engine. List literals and ranges create stable element records;

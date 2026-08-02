@@ -17,6 +17,68 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 afterEach(cleanup)
 
 describe('VGA 2D vertical slice', () => {
+  it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
+    render(<App />)
+    const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    const redo = screen.getByRole('button', { name: 'Redo document change' })
+    expect(undo).toBeDisabled()
+    expect(redo).toBeDisabled()
+
+    fireEvent.change(input, { target: { value: 'V = e1' } })
+    expect(undo).toBeEnabled()
+    input.focus()
+    input.setSelectionRange(2, 4, 'forward')
+    fireEvent.select(input)
+    fireEvent.click(undo)
+    expect(input).toHaveValue('vector(2, 1)')
+    expect(input).toHaveFocus()
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(4)
+    expect(redo).toBeEnabled()
+
+    fireEvent.keyDown(window, { key: 'y', ctrlKey: true })
+    expect(input).toHaveValue('V = e1')
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(input).toHaveValue('vector(2, 1)')
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
+    expect(input).toHaveValue('V = e1')
+  })
+
+  it('returns focus to the originating expression when undo removes an inserted row', () => {
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    first.focus()
+    first.setSelectionRange(3, 3)
+    fireEvent.select(first)
+    fireEvent.keyDown(first, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+
+    expect(screen.queryByRole('textbox', { name: 'Expression 2' })).not.toBeInTheDocument()
+    expect(first).toHaveFocus()
+    expect(first.selectionStart).toBe(3)
+    expect(first.selectionEnd).toBe(3)
+  })
+
+  it('returns to the end of the originating position editor after insertion undo', () => {
+    render(<App />)
+    const position = screen.getByRole<HTMLInputElement>('textbox', { name: 'Position 1' })
+    fireEvent.change(position, { target: { value: '(1,0)' } })
+    position.focus()
+    position.setSelectionRange(position.value.length, position.value.length)
+    fireEvent.select(position)
+    fireEvent.keyDown(position, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+
+    expect(position).toHaveFocus()
+    expect(position.selectionStart).toBe(position.value.length)
+    expect(position.selectionEnd).toBe(position.value.length)
+  })
+
   it('authors the documented foundation example with keyboard row insertion', () => {
     render(<App />)
     const enter = (position: number, source: string) => {

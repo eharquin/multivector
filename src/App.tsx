@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   type ChangeEvent,
@@ -20,19 +21,16 @@ import {
   supportsVga2Position,
 } from './geometry/vga2Interpretation'
 import {
-  addExpression,
-  addExpressionBefore,
-  clearExpressions,
-  deleteExpression,
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
-  updateExpression,
-  updateExpressionAppearance,
-  updateExpressionPosition,
-  updateExpressionNormalization,
   vga2FoundationExampleDocument,
   type ExpressionItem,
 } from './document/expressionDocument'
+import { type DocumentCommand } from './document/documentCommands'
+import {
+  createDocumentHistory,
+  documentHistoryReducer,
+} from './document/documentHistory'
 import { toScreen, type Viewport2d } from './visualization/viewport'
 import { limitRenderedListElements } from './visualization/primitives'
 import {
@@ -50,6 +48,12 @@ import './App.css'
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
 const MAX_PANEL_WIDTH = 720
+type EditorFocus = Readonly<{
+  id: string
+  start: number
+  end: number
+  direction: 'forward' | 'backward' | 'none'
+}>
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -91,10 +95,22 @@ function App() {
       }
     }
   })
-  const [expressionDoc, setExpressionDoc] = useState(initial.document)
+  const [history, dispatchHistory] = useReducer(
+    documentHistoryReducer,
+    initial.document,
+    createDocumentHistory,
+  )
+  const expressionDoc = history.present
+  const executeCommand = useCallback((
+    command: DocumentCommand,
+    coalesceKey?: string,
+  ) => dispatchHistory({ type: 'execute', command, coalesceKey }), [])
   const nextId = useRef(2)
   const inputRefs = useRef(new Map<string, HTMLInputElement>())
   const pendingFocus = useRef<string | null>(null)
+  const lastEditorFocus = useRef<EditorFocus | null>(null)
+  const pendingHistoryFocus = useRef(lastEditorFocus.current)
+  const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -116,7 +132,22 @@ function App() {
     'algebra' | 'expressions' | null
   >(null)
   const closeInfoDialog = useCallback(() => setInfoDialog(null), [])
-  const closeAppearance = useCallback(() => setAppearanceItemId(null), [])
+  const closeAppearance = useCallback(() => {
+    setAppearanceItemId(null)
+    dispatchHistory({ type: 'boundary' })
+  }, [])
+  const rememberEditorFocus = (element: HTMLInputElement) => {
+    lastEditorFocus.current = {
+      id: element.id,
+      start: element.selectionStart ?? 0,
+      end: element.selectionEnd ?? element.selectionStart ?? 0,
+      direction: element.selectionDirection ?? 'none',
+    }
+  }
+  const dispatchHistoryWithFocus = useCallback((type: 'undo' | 'redo') => {
+    pendingHistoryFocus.current = lastEditorFocus.current
+    dispatchHistory({ type })
+  }, [])
 
   const viewport: Viewport2d = expressionDoc.view.viewport.kind === 'two-dimensional'
     ? {
@@ -148,6 +179,28 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
   }, [theme])
+
+  useEffect(() => {
+    const handleHistoryShortcut = (event: globalThis.KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return
+      const key = event.key.toLowerCase()
+      const action = key === 'z'
+        ? event.shiftKey ? 'redo' : 'undo'
+        : key === 'y' && !event.shiftKey ? 'redo' : null
+      if (!action) return
+      event.preventDefault()
+      dispatchHistoryWithFocus(action)
+    }
+    window.addEventListener('keydown', handleHistoryShortcut)
+    return () => window.removeEventListener('keydown', handleHistoryShortcut)
+  }, [dispatchHistoryWithFocus])
+
+  useEffect(() => {
+    const result = history.lastResult
+    if (result && result.status !== 'applied') {
+      setDocumentDiagnostic(`COMMAND_${result.status.toUpperCase()}: ${result.reason}`)
+    }
+  }, [history.lastResult])
 
   useEffect(() => {
     if (import.meta.env.MODE === 'test') return
@@ -242,9 +295,32 @@ function App() {
 
   useEffect(() => {
     const id = pendingFocus.current
-    if (!id) return
-    inputRefs.current.get(id)?.focus()
-    pendingFocus.current = null
+    if (id) {
+      inputRefs.current.get(id)?.focus()
+      pendingFocus.current = null
+      return
+    }
+    const selection = pendingHistoryFocus.current
+    if (!selection) return
+    pendingHistoryFocus.current = null
+    let restoredSelection = selection
+    let input = document.getElementById(restoredSelection.id)
+    if (!(input instanceof HTMLInputElement)) {
+      const fallback = removedEditorFallbacks.current.get(selection.id)
+      if (fallback) {
+        restoredSelection = fallback
+        input = document.getElementById(fallback.id)
+      }
+    }
+    if (!(input instanceof HTMLInputElement)) return
+    input.focus()
+    const maximum = input.value.length
+    input.setSelectionRange(
+      Math.min(restoredSelection.start, maximum),
+      Math.min(restoredSelection.end, maximum),
+      restoredSelection.direction,
+    )
+    rememberEditorFocus(input)
   }, [expressionDoc])
 
   useEffect(() => {
@@ -313,12 +389,22 @@ function App() {
     while (expressionDoc.items.some((item) => item.id === id)) {
       id = `item-${nextId.current++}`
     }
+    const originatingEditor = lastEditorFocus.current
+    const fallbackItemId = anchorId ?? expressionDoc.items.at(-1)?.id
+    if (originatingEditor) {
+      removedEditorFallbacks.current.set(`expression-source-${id}`, originatingEditor)
+    } else if (fallbackItemId) {
+      removedEditorFallbacks.current.set(`expression-source-${id}`, {
+        id: `expression-source-${fallbackItemId}`,
+        start: 0,
+        end: 0,
+        direction: 'none',
+      })
+    }
     pendingFocus.current = id
-    setExpressionDoc((current) =>
-      anchorId && placement === 'before'
-        ? addExpressionBefore(current, { id, source: '' }, anchorId)
-        : addExpression(current, { id, source: '' }, anchorId),
-    )
+    executeCommand({
+      kind: 'insert-item', item: { id, source: '' }, anchorId, placement,
+    })
   }
 
   const importDocument = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -334,7 +420,7 @@ function App() {
       const imported = fromCanonicalDocument(
         resolveCanonicalImport(expressionDoc.id, parsed, choice),
       )
-      setExpressionDoc(imported.document)
+      dispatchHistory({ type: 'replace', document: imported.document })
       setTheme(imported.theme)
       setAppearanceItemId(null)
       setExpandedListIds(new Set())
@@ -386,7 +472,7 @@ function App() {
       next.delete(id)
       return next
     })
-    setExpressionDoc((current) => deleteExpression(current, id))
+    executeCommand({ kind: 'delete-item', itemId: id })
     if (!neighbor) {
       requestAnimationFrame(() => addButtonRef.current?.focus())
     }
@@ -395,7 +481,7 @@ function App() {
   const clearAllExpressions = () => {
     setAppearanceItemId(null)
     setExpandedListIds(new Set())
-    setExpressionDoc(clearExpressions)
+    executeCommand({ kind: 'clear-items' })
     requestAnimationFrame(() => addButtonRef.current?.focus())
   }
 
@@ -470,6 +556,24 @@ function App() {
           </select>
         </label>
         <span className="app-status">Research preview</span>
+        <button
+          type="button"
+          className="document-command"
+          disabled={history.past.length === 0}
+          aria-label="Undo document change"
+          onClick={() => dispatchHistoryWithFocus('undo')}
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          className="document-command"
+          disabled={history.future.length === 0}
+          aria-label="Redo document change"
+          onClick={() => dispatchHistoryWithFocus('redo')}
+        >
+          Redo
+        </button>
         <input
           ref={importInputRef}
           className="document-file-input"
@@ -575,8 +679,10 @@ function App() {
                             className="visibility-toggle"
                             aria-label={`${visible ? 'Hide' : 'Show'} ${objectName}`}
                             aria-pressed={visible}
-                            onClick={() => setExpressionDoc((current) =>
-                              updateExpressionAppearance(current, item.id, { visible: !visible }))}
+                            onClick={() => executeCommand({
+                              kind: 'update-appearance', itemId: item.id,
+                              appearance: { visible: !visible },
+                            })}
                           >
                             <span aria-hidden="true">{visible ? '◉' : '⊘'}</span>
                           </button>
@@ -621,11 +727,13 @@ function App() {
                           className="expression-source"
                           aria-label={`${annotation ? 'Annotation' : 'Expression'} ${position}`}
                           value={item.source}
-                          onChange={(event) =>
-                            setExpressionDoc((current) =>
-                              updateExpression(current, item.id, event.target.value),
-                            )
-                          }
+                          onChange={(event) => executeCommand({
+                            kind: 'update-source', itemId: item.id,
+                            source: event.target.value,
+                          }, `source:${item.id}`)}
+                          onBlur={() => dispatchHistory({ type: 'boundary' })}
+                          onFocus={(event) => rememberEditorFocus(event.currentTarget)}
+                          onSelect={(event) => rememberEditorFocus(event.currentTarget)}
                           onKeyDown={(event) =>
                             handleItemKeyDown(event, item, index)
                           }
@@ -639,12 +747,10 @@ function App() {
                             type="button"
                             className={`normalize-toggle${item.normalization ? ' active' : ''}`}
                             aria-pressed={item.normalization === 'natural'}
-                            onClick={() => setExpressionDoc((current) =>
-                              updateExpressionNormalization(
-                                current,
-                                item.id,
-                                item.normalization === 'natural' ? undefined : 'natural',
-                              ))}
+                            onClick={() => executeCommand({
+                              kind: 'update-normalization', itemId: item.id,
+                              normalization: item.normalization === 'natural' ? undefined : 'natural',
+                            })}
                           >norm</button>
                         )}
                       </div>
@@ -754,20 +860,19 @@ function App() {
                         <div className="position-input-row">
                           <span className="position-prefix" aria-hidden="true">position</span>
                           <input
+                            id={`position-source-${item.id}`}
                             className="position-source"
                             aria-label={`Position ${position}`}
                             placeholder="(0, 0)"
                             value={item.positionSource ?? ''}
                             size={Math.max(1, (item.positionSource || '(0, 0)').length)}
-                            onChange={(event) =>
-                              setExpressionDoc((current) =>
-                                updateExpressionPosition(
-                                  current,
-                                  item.id,
-                                  event.target.value,
-                                ),
-                              )
-                            }
+                            onChange={(event) => executeCommand({
+                              kind: 'update-position', itemId: item.id,
+                              positionSource: event.target.value,
+                            }, `position:${item.id}`)}
+                            onBlur={() => dispatchHistory({ type: 'boundary' })}
+                            onFocus={(event) => rememberEditorFocus(event.currentTarget)}
+                            onSelect={(event) => rememberEditorFocus(event.currentTarget)}
                             onKeyDown={(event) => {
                               if (event.key !== 'Enter') return
                               event.preventDefault()
@@ -804,14 +909,18 @@ function App() {
                       label={label}
                       colorOnly={!drawable}
                       anchorRef={appearanceAnchorRef}
-                      onStyleChange={(style) => setExpressionDoc((current) =>
-                        updateExpressionAppearance(current, item.id, { style }))}
-                      onVisibleChange={(nextVisible) => setExpressionDoc((current) =>
-                        updateExpressionAppearance(current, item.id, { visible: nextVisible }))}
-                      onLabelVisibleChange={(nextVisible) => setExpressionDoc((current) =>
-                        updateExpressionAppearance(current, item.id, { labelVisible: nextVisible }))}
-                      onLabelChange={(nextLabel) => setExpressionDoc((current) =>
-                        updateExpressionAppearance(current, item.id, { label: nextLabel }))}
+                      onStyleChange={(style) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { style },
+                      })}
+                      onVisibleChange={(nextVisible) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { visible: nextVisible },
+                      })}
+                      onLabelVisibleChange={(nextVisible) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { labelVisible: nextVisible },
+                      })}
+                      onLabelChange={(nextLabel) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { label: nextLabel },
+                      }, `appearance-label:${item.id}`)}
                       onClose={closeAppearance}
                     />
                   )}
