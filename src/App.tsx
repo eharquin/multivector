@@ -232,6 +232,7 @@ function App() {
   }
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (event.button !== 0 || event.target !== event.currentTarget) return
+    event.currentTarget.focus({ preventScroll: true })
     viewportPan.current = {
       pointerId: event.pointerId,
       lastX: event.clientX,

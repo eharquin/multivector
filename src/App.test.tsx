@@ -225,7 +225,8 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('125%')).toBeInTheDocument()
     expect(undo).toBeDisabled()
 
-    canvas.focus()
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 1, clientX: 320, clientY: 240 })
+    expect(canvas).toHaveFocus()
     fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
     expect(vector).toHaveAttribute('x1', '360')
     fireEvent.keyDown(canvas, { key: 'Home' })
