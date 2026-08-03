@@ -1245,11 +1245,17 @@ code {
   right: 8px;
   z-index: 9;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 4px;
   opacity: 0.55;
   transition: opacity 120ms ease;
+}
+
+.viewport-navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .canvas-frame:hover .viewport-toolbar,
@@ -1276,9 +1282,26 @@ code {
   background: var(--surface-active);
 }
 
+.viewport-command:disabled {
+  color: var(--muted);
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.viewport-command:disabled:hover {
+  color: var(--muted);
+  background: transparent;
+}
+
 .viewport-command svg line,
 .viewport-command svg circle,
 .viewport-command svg rect {
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.viewport-command svg path {
   stroke: currentColor;
   stroke-width: 1.5;
 }
@@ -1316,6 +1339,11 @@ code {
 
 .canvas:active {
   cursor: grabbing;
+}
+
+.canvas.is-viewport-locked,
+.canvas.is-viewport-locked:active {
+  cursor: default;
 }
 
 .grid-line {

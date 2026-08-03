@@ -16,6 +16,7 @@ import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
 
 afterEach(() => {
   cleanup()
+  window.localStorage.clear()
   vi.useRealTimers()
 })
 
@@ -260,6 +261,62 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(grid)
     expect(container.querySelectorAll('.grid-line')).toHaveLength(0)
     expect(undo).toBeDisabled()
+  })
+
+  it('locks mouse and keyboard navigation, then restores it after unlocking', () => {
+    render(<App />)
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const vector = screen.getByLabelText('Vector 1')
+    const lock = screen.getByRole('button', { name: 'Lock viewport' })
+
+    fireEvent.click(lock)
+    expect(screen.getByRole('button', { name: 'Unlock viewport' }))
+      .toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Viewport locked.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Zoom in' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Zoom out' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset view' })).toBeDisabled()
+
+    fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 })
+    fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 4, clientX: 320, clientY: 240 })
+    fireEvent.pointerMove(canvas, { pointerId: 4, clientX: 400, clientY: 240 })
+    fireEvent.pointerUp(canvas, { pointerId: 4 })
+    expect(vector).toHaveAttribute('x1', '320')
+    expect(screen.getByText('100%', { selector: 'output' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock viewport' }))
+    expect(screen.getByText('Viewport unlocked.')).toBeInTheDocument()
+    fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
+    expect(vector).toHaveAttribute('x1', '360')
+  })
+
+  it('keeps direct object manipulation available while the viewport is locked', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
+
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+    fireEvent.pointerDown(head, { button: 0, pointerId: 12 })
+    fireEvent.pointerMove(canvas, { pointerId: 12, clientX: 536, clientY: 96 })
+    fireEvent.pointerUp(canvas, { pointerId: 12 })
+
+    expect(source).toHaveValue('V = vector(3, 2)')
+  })
+
+  it('restores the viewport lock locally without adding it to document history', () => {
+    const first = render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
+    expect(screen.getByRole('button', { name: 'Undo document change' })).toBeDisabled()
+    first.unmount()
+
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Unlock viewport' }))
+      .toHaveAttribute('aria-pressed', 'true')
   })
 
   it('creates a collision-free vector from empty viewport coordinates as one history entry', () => {
