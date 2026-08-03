@@ -110,7 +110,13 @@ transaction. Active playback itself is never persisted.
 Reduced-motion preferences prevent automatic motion and remove decorative
 control transitions while leaving explicit playback available.
 
-Direct manipulation and additional algebras remain planned work.
+Eligible positioned vectors and bivectors expose Studio-compatible base points:
+dragging a base changes only its position, while dragging an editable vector
+head rewrites its direct components. Pointer gestures preview dependent results
+inside one undo transaction and can be cancelled with Escape; the same handles
+support keyboard arrow movement. Compound or ambiguous sources remain locked
+without making rendered object bodies directly selectable. Additional algebras
+remain planned work.
 
 The current public application delivers the accepted VGA 2D Foundation
 workflow. Broader geometry and interaction capabilities remain incremental.

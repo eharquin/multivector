@@ -238,7 +238,10 @@ describe('VGA 2D vertical slice', () => {
 
     expect(vector).toHaveAttribute('x1', '320')
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
-    expect(vector).toHaveAttribute('x2', '500')
+    expect(Number(vector.getAttribute('x2'))).toBeGreaterThan(480)
+    expect(Number(vector.getAttribute('x2'))).toBeLessThan(500)
+    expect(container.querySelector('.vector-arrowhead'))
+      .toHaveAttribute('points', expect.stringMatching(/^500,/))
     expect(screen.getByText('125%')).toBeInTheDocument()
     expect(undo).toBeDisabled()
 
@@ -299,11 +302,131 @@ describe('VGA 2D vertical slice', () => {
     expect(vector).not.toHaveAttribute('aria-selected')
   })
 
+  it('moves a direct vector head as one undoable source edit', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+
+    fireEvent.pointerDown(head, { button: 0, pointerId: 7 })
+    fireEvent.pointerMove(canvas, { pointerId: 7, clientX: 536, clientY: 96 })
+    fireEvent.pointerUp(canvas, { pointerId: 7 })
+
+    expect(source).toHaveValue('V = vector(3, 2)')
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(source).toHaveValue('V = vector(2, 1)')
+  })
+
+  it('renders the vector arrowhead with Studio screen-space geometry', () => {
+    const { container } = render(<App />)
+    const vector = screen.getByLabelText('Vector 1')
+    const arrowhead = container.querySelector('.vector-arrowhead')
+
+    expect(vector).not.toHaveAttribute('marker-end')
+    expect(arrowhead).toHaveAttribute('points', expect.stringMatching(/^464,168 /))
+    expect(arrowhead?.getAttribute('points')?.trim().split(/\s+/)).toHaveLength(3)
+  })
+
+  it('shows a head dot only for a draggable vector head', () => {
+    const { container } = render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    expect(container.querySelector('.vector-head-point')).toBeInTheDocument()
+
+    fireEvent.change(source, { target: { value: 'V = vector(1 + 1, 1)' } })
+    expect(container.querySelector('.vector-head-point')).not.toBeInTheDocument()
+  })
+
+  it('cancels vector manipulation through Escape without adding history', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+
+    fireEvent.pointerDown(head, { button: 0, pointerId: 9 })
+    fireEvent.pointerMove(canvas, { pointerId: 9, clientX: 536, clientY: 96 })
+    expect(source).toHaveValue('V = vector(3, 2)')
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(source).toHaveValue('V = vector(2, 1)')
+    expect(screen.getByText('Object manipulation cancelled.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(source).toHaveValue('vector(2, 1)')
+  })
+
+  it('moves a vector head through an eligible direct scalar reference', () => {
+    render(<App />)
+    const scalar = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(scalar, { target: { value: 's = 2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const vector = screen.getByRole('textbox', { name: 'Expression 2' })
+    fireEvent.change(vector, { target: { value: 'V1 = vector(s, 1)' } })
+    const head = screen.getByRole('button', { name: 'Move head of V1' })
+
+    fireEvent.keyDown(head, { key: 'ArrowRight' })
+
+    expect(scalar).toHaveValue('s = 2.1')
+    expect(vector).toHaveValue('V1 = vector(s, 1)')
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(scalar).toHaveValue('s = 2')
+  })
+
+  it('moves vector and bivector bases without changing their values', () => {
+    render(<App />)
+    const vectorSource = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(vectorSource, { target: { value: 'V = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    const vectorBase = screen.getByRole('button', { name: 'Move base of V' })
+    fireEvent.pointerDown(vectorBase, { button: 0, pointerId: 8 })
+    fireEvent.pointerMove(canvas, { pointerId: 8, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 8 })
+    expect(vectorSource).toHaveValue('V = vector(2, 1)')
+    expect(screen.getByRole('textbox', { name: 'Position 1' }))
+      .toHaveValue('(1, 1)')
+
+    fireEvent.change(vectorSource, { target: { value: 'B = 2e12' } })
+    const bivectorBase = screen.getByRole('button', { name: 'Move base of B' })
+    fireEvent.keyDown(bivectorBase, { key: 'ArrowRight' })
+    expect(screen.getByRole('textbox', { name: 'Position 1' }))
+      .toHaveValue('(1.1, 1)')
+    expect(vectorSource).toHaveValue('B = 2e12')
+  })
+
+  it('keeps locked bases as solid points and gives list copies no handles', () => {
+    const { container } = render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(1 + 1, 2)' } })
+    fireEvent.change(position, { target: { value: '(1 / 2, 0)' } })
+
+    expect(screen.queryByRole('button', { name: 'Move head of V' }))
+      .not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Move base of V' }))
+      .not.toBeInTheDocument()
+    expect(container.querySelector('.manipulation-base-point')).toBeInTheDocument()
+    expect(container.querySelector('.manipulation-base-contour.is-movable'))
+      .not.toBeInTheDocument()
+
+    fireEvent.change(source, {
+      target: { value: 'L = [vector(1, 0), vector(0, 1)]' },
+    })
+    expect(container.querySelector('.manipulation-base-point')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Move (?:head|base)/ }))
+      .not.toBeInTheDocument()
+  })
+
   it('controls axes, graduations, and object scale independently', () => {
     const { container } = render(<App />)
     expect(container.querySelectorAll('.axis')).toHaveLength(2)
     expect(container.querySelectorAll('.graduation').length).toBeGreaterThan(0)
     openDisplaySettings()
+    expect(screen.getByText('1.00×')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('switch', { name: 'Axes and labels' }))
     expect(container.querySelectorAll('.axis')).toHaveLength(0)
@@ -315,7 +438,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.change(screen.getByRole('slider', { name: 'Object scale' }), {
       target: { value: '1.5' },
     })
-    expect(screen.getByLabelText('Vector 1')).toHaveAttribute('stroke-width', '6')
+    expect(screen.getByLabelText('Vector 1')).toHaveAttribute('stroke-width', '9')
     expect(screen.getByText('1.50×')).toBeInTheDocument()
   })
 
@@ -663,6 +786,7 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByRole('dialog', { name: 'Vector' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Use color green 4' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Show label' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Text' }), {
       target: { value: 'Velocity' },
     })
@@ -679,6 +803,7 @@ describe('VGA 2D vertical slice', () => {
       target: { value: 'V = vector(2, 1)' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for V' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Show label' }))
 
     const label = screen.getByRole('textbox', { name: 'Text' })
     fireEvent.change(label, { target: { value: 'Velocity' } })
@@ -696,6 +821,7 @@ describe('VGA 2D vertical slice', () => {
       target: { value: 'V = vector(2, 1)' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Open Vector menu for V' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Show label' }))
     const label = screen.getByRole('textbox', { name: 'Text' })
 
     label.focus()

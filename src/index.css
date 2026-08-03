@@ -31,6 +31,7 @@
   --axis-strong: #737d90;
   --vector: #087bbd;
   --object-stroke: rgb(30 36 51 / 18%);
+  --point-ring-hover: rgb(30 36 51 / 30%);
   --error: #a03232;
   --error-soft: #fff7f7;
   --error-border: #da9b9b;
@@ -83,6 +84,7 @@ body {
   --axis-strong: #9aa4b7;
   --vector: #65b9ea;
   --object-stroke: rgb(225 228 234 / 20%);
+  --point-ring-hover: rgb(225 228 234 / 40%);
   --error: #ffb4b4;
   --error-soft: #402b32;
   --error-border: #8f5961;
@@ -120,6 +122,7 @@ body {
     --axis-strong: #9aa4b7;
     --vector: #65b9ea;
     --object-stroke: rgb(225 228 234 / 20%);
+    --point-ring-hover: rgb(225 228 234 / 40%);
     --error: #ffb4b4;
     --error-soft: #402b32;
     --error-border: #8f5961;

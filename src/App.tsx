@@ -42,6 +42,7 @@ import {
   adaptiveGrid,
   clampZoom,
   DEFAULT_PIXELS_PER_UNIT,
+  formatGridNumber,
   panByScreen,
   toMathematical,
   toScreen,
@@ -66,6 +67,11 @@ import { browserDocumentStorage } from './document/documentStorage'
 import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
 import {
+  directDeclaredVectorComponents,
+  directPositionComponents,
+  rewriteLiteralComponents,
+} from './language/directVectorEdit'
+import {
   scalarPlaybackFrame,
   scalarPlaybackOffset,
   type PlaybackParameters,
@@ -88,6 +94,7 @@ type ActiveScalarPlayback = Readonly<{
   offsetMilliseconds: number
   parameters: PlaybackParameters
 }>
+type ManipulationKind = 'base' | 'head'
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -180,6 +187,12 @@ function App() {
     lastY: number
     start: Viewport2d
   }> | null>(null)
+  const manipulationDrag = useRef<Readonly<{
+    itemId: string
+    kind: ManipulationKind
+    pointerId: number
+  }> | null>(null)
+  const [hoveredManipulation, setHoveredManipulation] = useState<string | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
   const [workspaceWidth, setWorkspaceWidth] = useState(0)
   const maximumPanelWidth = Math.max(
@@ -287,7 +300,137 @@ function App() {
     event.currentTarget.setPointerCapture?.(event.pointerId)
     event.preventDefault()
   }
+  const updateManipulatedItem = (
+    itemId: string,
+    kind: ManipulationKind,
+    point: Readonly<{ x: number; y: number }>,
+  ) => {
+    const item = expressionDoc.items.find((candidate) => candidate.id === itemId)
+    const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
+    if (!item || !rendered) return
+    const roundingStep = 1 / viewport.pixelsPerUnit
+    const target = {
+      x: Number(formatGridNumber(point.x, roundingStep)),
+      y: Number(formatGridNumber(point.y, roundingStep)),
+    }
+    if (kind === 'head' && rendered.primitive.kind === 'oriented-segment') {
+      const components = directDeclaredVectorComponents(item.source)
+      if (!components) return
+      const values = [
+        Number(formatGridNumber(target.x - rendered.primitive.start.x, roundingStep)),
+        Number(formatGridNumber(target.y - rendered.primitive.start.y, roundingStep)),
+      ] as const
+      const rewritten = rewriteLiteralComponents(
+        item.source, components, values[0], values[1],
+      )
+      if (rewritten !== item.source) executeCommand({
+        kind: 'update-source', itemId, source: rewritten,
+      })
+      components.forEach((component, index) => {
+        if (component.kind !== 'reference') return
+        const target = expressionDoc.items.find((candidate) =>
+          declaredName(candidate.source) === component.name &&
+          directScalarEdit(candidate.source) !== null)
+        if (target) executeCommand({
+          kind: 'set-scalar-value', itemId: target.id,
+          value: values[index] * component.sign,
+        })
+      })
+      return
+    }
+    if (!item.positionSource) {
+      executeCommand({
+        kind: 'update-position', itemId,
+        positionSource: `(${formatGridNumber(target.x, roundingStep)}, ${
+          formatGridNumber(target.y, roundingStep)})`,
+      })
+      return
+    }
+    const components = directPositionComponents(item.positionSource)
+    if (!components) return
+    const rewritten = rewriteLiteralComponents(
+      item.positionSource, components, target.x, target.y,
+    )
+    if (rewritten !== item.positionSource) executeCommand({
+      kind: 'update-position', itemId, positionSource: rewritten,
+    })
+    components.forEach((component, index) => {
+      if (component.kind !== 'reference') return
+      const targetItem = expressionDoc.items.find((candidate) =>
+        declaredName(candidate.source) === component.name &&
+        directScalarEdit(candidate.source) !== null)
+      if (targetItem) executeCommand({
+        kind: 'set-scalar-value', itemId: targetItem.id,
+        value: (index === 0 ? target.x : target.y) * component.sign,
+      })
+    })
+  }
+  const beginManipulation = (
+    event: ReactPointerEvent<SVGCircleElement>,
+    itemId: string,
+    kind: ManipulationKind,
+  ) => {
+    if (event.button !== 0) return
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
+    dispatchHistory({ type: 'boundary' })
+    dispatchHistory({ type: 'begin-transaction' })
+    setViewportAnnouncement(`${kind === 'head' ? 'Vector head' : 'Object base'} drag started.`)
+  }
+  const componentsMovable = (
+    components: ReturnType<typeof directDeclaredVectorComponents>,
+  ): boolean => {
+    if (!components) return false
+    const references = components.filter((component) => component.kind === 'reference')
+    if (new Set(references.map((component) => component.name)).size !== references.length)
+      return false
+    return references.every((component) => expressionDoc.items.filter((candidate) =>
+      declaredName(candidate.source) === component.name &&
+      directScalarEdit(candidate.source) !== null).length === 1)
+  }
+  const vectorHeadMovable = (item: ExpressionItem): boolean =>
+    componentsMovable(directDeclaredVectorComponents(item.source))
+  const objectBaseMovable = (item: ExpressionItem): boolean =>
+    !item.positionSource || componentsMovable(directPositionComponents(item.positionSource))
+  const manipulateWithKeyboard = (
+    event: KeyboardEvent<SVGCircleElement>,
+    itemId: string,
+    kind: ManipulationKind,
+    current: Readonly<{ x: number; y: number }>,
+  ) => {
+    const step = event.shiftKey ? 1 : 0.1
+    const delta = event.key === 'ArrowLeft' ? { x: -step, y: 0 }
+      : event.key === 'ArrowRight' ? { x: step, y: 0 }
+        : event.key === 'ArrowUp' ? { x: 0, y: step }
+          : event.key === 'ArrowDown' ? { x: 0, y: -step }
+            : null
+    if (!delta) return
+    event.preventDefault()
+    event.stopPropagation()
+    dispatchHistory({ type: 'boundary' })
+    dispatchHistory({ type: 'begin-transaction' })
+    updateManipulatedItem(itemId, kind, {
+      x: current.x + delta.x,
+      y: current.y + delta.y,
+    })
+    dispatchHistory({ type: 'commit-transaction' })
+    setViewportAnnouncement(
+      `${kind === 'head' ? 'Vector head' : 'Object base'} moved to ${
+        formatGridNumber(current.x + delta.x, step)}, ${
+        formatGridNumber(current.y + delta.y, step)}.`,
+    )
+  }
   const moveViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const manipulation = manipulationDrag.current
+    if (manipulation?.pointerId === event.pointerId) {
+      updateManipulatedItem(
+        manipulation.itemId,
+        manipulation.kind,
+        toMathematical(viewport, screenPoint(event.clientX, event.clientY)),
+      )
+      return
+    }
     const pan = viewportPan.current
     if (!pan || pan.pointerId !== event.pointerId) return
     const rectangle = event.currentTarget.getBoundingClientRect()
@@ -300,15 +443,33 @@ function App() {
     viewportPan.current = { ...pan, lastX: event.clientX, lastY: event.clientY }
   }
   const endViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (manipulationDrag.current?.pointerId === event.pointerId) {
+      manipulationDrag.current = null
+      dispatchHistory({ type: 'commit-transaction' })
+      setViewportAnnouncement('Object manipulation committed.')
+      return
+    }
     if (viewportPan.current?.pointerId === event.pointerId) viewportPan.current = null
   }
   const cancelViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (manipulationDrag.current?.pointerId === event.pointerId) {
+      manipulationDrag.current = null
+      dispatchHistory({ type: 'cancel-transaction' })
+      setViewportAnnouncement('Object manipulation cancelled.')
+      return
+    }
     const pan = viewportPan.current
     if (!pan || pan.pointerId !== event.pointerId) return
     viewportPan.current = null
     updateViewport(pan.start)
   }
   const loseViewportCapture = () => {
+    if (manipulationDrag.current) {
+      manipulationDrag.current = null
+      dispatchHistory({ type: 'cancel-transaction' })
+      setViewportAnnouncement('Object manipulation cancelled.')
+      return
+    }
     const pan = viewportPan.current
     if (!pan) return
     viewportPan.current = null
@@ -484,6 +645,17 @@ function App() {
     window.addEventListener('keydown', cancel)
     return () => window.removeEventListener('keydown', cancel)
   }, [activePlayback, stopPlayback])
+  useEffect(() => {
+    const cancel = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || !manipulationDrag.current) return
+      event.preventDefault()
+      manipulationDrag.current = null
+      dispatchHistory({ type: 'cancel-transaction' })
+      setViewportAnnouncement('Object manipulation cancelled.')
+    }
+    window.addEventListener('keydown', cancel)
+    return () => window.removeEventListener('keydown', cancel)
+  }, [])
   const resolvedStyles = useMemo(
     () => Object.fromEntries(evaluatedItems.map(({ item, evaluation }) => {
       const kind = evaluation?.status === 'valid'
@@ -533,6 +705,10 @@ function App() {
   }, [expressionDoc, persistence, resolvedStyles, theme])
 
   const origin = toScreen(viewport, { x: 0, y: 0 })
+  // The Studio-sized glyphs are the 1× baseline exposed to users. The
+  // historical renderer used 1.5 as that baseline, so keep the visual size
+  // while restoring a meaningful multiplicative setting.
+  const objectRenderScale = expressionDoc.view.display.objectScale * 1.5
   const renderedPrimitives = evaluatedItems.flatMap((evaluated) => {
     if (evaluated.evaluation?.status !== 'valid') return []
     const kind = evaluated.evaluation.valueType === 'list'
@@ -575,13 +751,40 @@ function App() {
   }, 0)
   const renderedVectors = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
     if (primitive.kind !== 'oriented-segment') return []
+    const start = toScreen(viewport, primitive.start)
+    const end = toScreen(viewport, primitive.end)
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    const length = Math.hypot(dx, dy)
+    const angle = Math.atan2(dy, dx)
+    const headLength = Math.min(
+      14 * objectRenderScale,
+      length * 0.35,
+    )
+    const headAngle = Math.PI / 6
+    const arrowVisible = length > 8
+    const shaftInset = arrowVisible ? headLength * Math.cos(headAngle) : 0
+    const shaftEnd = length > 0
+      ? {
+          x: end.x - shaftInset * dx / length,
+          y: end.y - shaftInset * dy / length,
+        }
+      : end
     return [{
         id,
         primitive,
         color,
         label,
-        start: toScreen(viewport, primitive.start),
-        end: toScreen(viewport, primitive.end),
+        start,
+        end,
+        shaftEnd,
+        arrowPoints: arrowVisible ? [
+          `${end.x},${end.y}`,
+          `${end.x - headLength * Math.cos(angle - headAngle)},${
+            end.y - headLength * Math.sin(angle - headAngle)}`,
+          `${end.x - headLength * Math.cos(angle + headAngle)},${
+            end.y - headLength * Math.sin(angle + headAngle)}`,
+        ].join(' ') : null,
       }]
   })
   const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
@@ -1496,17 +1699,6 @@ function App() {
               <desc id="canvas-description">{canvasDescription}</desc>
               <defs>
                 <marker
-                  id="arrowhead"
-                  markerWidth="8"
-                  markerHeight="8"
-                  refX="7"
-                  refY="4"
-                  orient="auto"
-                  markerUnits="strokeWidth"
-                >
-                  <path d="M 0 0 L 8 4 L 0 8 z" />
-                </marker>
-                <marker
                   id="area-arrowhead"
                   markerWidth="7"
                   markerHeight="7"
@@ -1535,7 +1727,7 @@ function App() {
               {expressionDoc.view.display.axisLabelsVisible && <g aria-hidden="true">
                 <line className="axis" x1="0" y1={origin.y} x2={viewport.width} y2={origin.y} />
                 <line className="axis" x1={origin.x} y1="0" x2={origin.x} y2={viewport.height} />
-                <circle className="origin" cx={origin.x} cy={origin.y} r={3 * expressionDoc.view.display.objectScale} />
+                <circle className="origin" cx={origin.x} cy={origin.y} r={3 * objectRenderScale} />
                 <text className="axis-name" x={viewport.width - 14} y={Math.max(16, Math.min(viewport.height - 8, origin.y - 8))}>x</text>
                 <text className="axis-name" x={Math.max(8, Math.min(viewport.width - 18, origin.x + 8))} y="16">y</text>
               </g>}
@@ -1557,33 +1749,132 @@ function App() {
                 })}
               </g>}
 
-              {renderedVectors.map(({ id, primitive, start, end, color, label }) => (
-                <g key={id} style={{ color }}>
+              {renderedVectors.map(({
+                id, primitive, start, end, shaftEnd, arrowPoints, color, label,
+              }) => {
+                const item = expressionDoc.items.find((candidate) => candidate.id === id)
+                const baseMovable = !!item && objectBaseMovable(item)
+                const headMovable = !!item && vectorHeadMovable(item)
+                const headAndBaseCoincide = Math.hypot(
+                  end.x - start.x, end.y - start.y,
+                ) < 1
+                const baseKey = `${id}:base`
+                const headKey = `${id}:head`
+                return <g key={id} style={{ color }}>
                   <line
-                    className="vector"
+                    className={`vector${hoveredManipulation === headKey ? ' is-head-hovered' : ''}`}
                     x1={start.x}
                     y1={start.y}
-                    x2={end.x}
-                    y2={end.y}
-                    markerEnd="url(#arrowhead)"
-                    strokeWidth={4 * expressionDoc.view.display.objectScale}
+                    x2={shaftEnd.x}
+                    y2={shaftEnd.y}
+                    strokeWidth={4 * objectRenderScale}
                     aria-label={primitive.accessibleName}
                   />
+                  {arrowPoints && <polygon
+                    className="vector-arrowhead"
+                    points={arrowPoints}
+                    aria-hidden="true"
+                  />}
+                  {headMovable && <>
+                    <circle
+                      className="vector-head-point"
+                      cx={end.x} cy={end.y}
+                      r={1.25 * objectRenderScale}
+                      aria-hidden="true"
+                    />
+                    {arrowPoints && hoveredManipulation === headKey && <circle
+                      className="vector-head-indicator"
+                      cx={end.x} cy={end.y} r={5 * objectRenderScale}
+                      aria-hidden="true"
+                    />}
+                    <circle
+                      className="manipulation-hit-target vector-head-target"
+                      cx={end.x} cy={end.y} r="12"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Move head of ${primitive.accessibleName}`}
+                      onPointerEnter={() => setHoveredManipulation(headKey)}
+                      onPointerLeave={() => setHoveredManipulation((current) => current === headKey ? null : current)}
+                      onFocus={() => setHoveredManipulation(headKey)}
+                      onBlur={() => setHoveredManipulation((current) => current === headKey ? null : current)}
+                      onPointerDown={(event) => beginManipulation(event, id, 'head')}
+                      onKeyDown={(event) => manipulateWithKeyboard(
+                        event, id, 'head', primitive.end,
+                      )}
+                    />
+                  </>}
+                  {item && <><circle
+                    className={`manipulation-base-contour${baseMovable ? ' is-movable' : ''}`}
+                    cx={start.x} cy={start.y} r={10 * objectRenderScale}
+                    style={{
+                      strokeWidth: Math.max(
+                        0, 24 - 20 * objectRenderScale,
+                      ),
+                      pointerEvents: headMovable && headAndBaseCoincide ? 'none' : undefined,
+                    }}
+                    tabIndex={baseMovable ? 0 : undefined}
+                    role={baseMovable ? 'button' : undefined}
+                    aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
+                    onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
+                    onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onFocus={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
+                    onBlur={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
+                    onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
+                      event, id, 'base', primitive.start,
+                    ) : undefined}
+                  />
+                  <circle
+                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
+                    cx={start.x} cy={start.y} r={4.5 * objectRenderScale}
+                    aria-hidden="true"
+                  /></>}
                   {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
                 </g>
-              ))}
-              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint }) => (
-                <g key={id} style={{ color }}>
+              })}
+              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint }) => {
+                const item = expressionDoc.items.find((candidate) => candidate.id === id)
+                const baseMovable = !!item && objectBaseMovable(item)
+                const base = primitive.shape.kind === 'loop'
+                  ? toScreen(viewport, primitive.shape.center)
+                  : toScreen(viewport, primitive.shape.vertices[0])
+                const baseKey = `${id}:base`
+                return <g key={id} style={{ color }}>
                   <path
                     className="bivector"
                     d={path}
                     markerEnd="url(#area-arrowhead)"
-                    strokeWidth={3 * expressionDoc.view.display.objectScale}
+                    strokeWidth={3 * objectRenderScale}
                     aria-label={primitive.accessibleDescription}
                   />
+                  {item && <><circle
+                    className={`manipulation-base-contour${baseMovable ? ' is-movable' : ''}`}
+                    cx={base.x} cy={base.y} r={10 * objectRenderScale}
+                    style={{ strokeWidth: Math.max(
+                      0, 24 - 20 * objectRenderScale,
+                    ) }}
+                    tabIndex={baseMovable ? 0 : undefined}
+                    role={baseMovable ? 'button' : undefined}
+                    aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
+                    onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
+                    onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onFocus={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
+                    onBlur={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
+                    onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
+                      event, id, 'base', primitive.shape.kind === 'loop'
+                        ? primitive.shape.center
+                        : primitive.shape.vertices[0],
+                    ) : undefined}
+                  />
+                  <circle
+                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
+                    cx={base.x} cy={base.y} r={4.5 * objectRenderScale}
+                    aria-hidden="true"
+                  /></>}
                   {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
                 </g>
-              ))}
+              })}
             </svg>
             <output className="visually-hidden" aria-live="polite">
               {viewportAnnouncement}

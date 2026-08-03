@@ -112,26 +112,35 @@ export function expressionDocument(
 export function vga2FoundationExampleDocument(): ExpressionDocument {
   return expressionDocument(
     [
-      { id: 'item-1', source: 's = 2' },
+      {
+        id: 'item-1',
+        source: 'V1 = vector(0.66, 3.042)',
+      },
       {
         id: 'item-2',
-        source: 'V1 = vector(s, 1)',
-        positionSource: '(1, 1)',
+        source: 'a = 0',
+        control: {
+          mode: 'slider',
+          minimumSource: '0',
+          maximumSource: 'tau',
+          stepSource: '0.01',
+          animation: {
+            mode: 'loop',
+            direction: 'forward',
+            durationSeconds: 2,
+          },
+        },
       },
-      {
-        id: 'item-3',
-        source: 'V2 = vector(1, -1)',
-        positionSource: '(0.1, 0.1)',
-      },
-      { id: 'item-4', source: 'L = [V1, V2]' },
-      { id: 'item-5', source: 'H = V1.head' },
+      { id: 'item-3', source: 'R = exp(0.5*a*e12)' },
+      { id: 'item-4', source: 'V2 = R>>>V1' },
+      { id: 'item-5', source: 'B = V1 ^ V2' },
     ],
     {},
     {
       id: 'vga2-foundation-example',
-      title: 'VGA 2D Foundation Example',
+      title: 'VGA 2D Rotation Example',
       description:
-        'Two independently positioned vectors, their list, and a derived head.',
+        'A vector, a looping angle, its rotor, the rotated vector, and their bivector.',
     },
   )
 }
