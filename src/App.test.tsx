@@ -897,6 +897,42 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('2e1 + e2', { selector: 'output' })).toBeInTheDocument()
   })
 
+  it('offers normalization for rotors and mixed multivectors but not scalars', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+
+    fireEvent.change(expression, { target: { value: 'R = 2 + e12' } })
+    const rotorNormalize = screen.getByRole('button', { name: 'norm' })
+    fireEvent.click(rotorNormalize)
+    expect(rotorNormalize).toHaveAttribute('aria-pressed', 'true')
+    expect(expression).toHaveValue('R = 2 + e12')
+
+    fireEvent.change(expression, { target: { value: 'M = 1 + e1' } })
+    const mixedNormalize = screen.getByRole('button', { name: 'norm' })
+    expect(mixedNormalize).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Normalization unavailable')).toBeInTheDocument()
+    expect(screen.getByText(/zero natural norm/)).toBeInTheDocument()
+
+    fireEvent.change(expression, { target: { value: 's = 2' } })
+    expect(screen.queryByRole('button', { name: 'norm' })).not.toBeInTheDocument()
+  })
+
+  it('marks unit-norm multivectors independently of the normalization toggle', () => {
+    render(<App />)
+    const expression = screen.getByRole('textbox', { name: 'Expression 1' })
+    const normalize = screen.getByRole('button', { name: 'norm' })
+
+    expect(normalize).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByText('Unit norm')).not.toBeInTheDocument()
+
+    fireEvent.change(expression, { target: { value: 'V = e1' } })
+    expect(screen.getByText('Unit norm')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'norm' })).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.change(expression, { target: { value: 'V = 2*e1' } })
+    expect(screen.queryByText('Unit norm')).not.toBeInTheDocument()
+  })
+
   it('shows a position diagnostic while retaining the vector output', () => {
     render(<App />)
 

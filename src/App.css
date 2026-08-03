@@ -536,8 +536,14 @@ h2 {
   flex: 1;
 }
 
-.normalize-toggle {
+.normalize-control {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.normalize-toggle {
   min-height: 18px;
   padding: 2px 7px;
   color: var(--muted);
@@ -558,6 +564,19 @@ h2 {
   color: var(--surface);
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.unit-norm-indicator {
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.unit-norm-indicator.is-unit {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .expression-source:focus-visible {

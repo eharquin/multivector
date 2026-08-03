@@ -91,7 +91,20 @@ interpretation.
   VGA values, are not part of the initial VGA milestones and require their own
   approved requirements.
 
-## 5. Positioned vectors
+## 5. Natural normalization
+
+- **VGA-NORM-001:** Every evaluated non-scalar multivector shall expose the
+  natural-normalization control independently of position or visualization
+  support. Pure scalars and annotations shall not expose it.
+- **VGA-NORM-002:** Natural normalization shall use the versioned VGA norm and
+  shall run before dependent expressions resolve without rewriting source.
+- **VGA-NORM-003:** A finite, strictly positive norm shall produce a unit-norm
+  value. A zero-norm value shall remain unchanged and expose a textual
+  normalization-unavailable state; it shall not be divided by an epsilon.
+- **VGA-NORM-004:** The normalization request shall remain document-owned,
+  persistent, and independently undoable through `Item.normalization`.
+
+## 6. Positioned vectors
 
 This section owns VGA-specific position meaning. The common storage,
 enablement, dependency, and propagation rules are owned by APP-005, APP-007, and

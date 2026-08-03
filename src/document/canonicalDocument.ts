@@ -315,7 +315,7 @@ export function toCanonicalDocument(
 ): CanonicalDocument {
   const appearance = Object.fromEntries(document.items.map((item) => {
     const stored = document.appearance[item.id]
-    return [item.id, { visible: stored?.visible ?? true, labelVisible: stored?.labelVisible ?? true, label: stored?.label ?? '', style: stored?.style ?? resolvedStyles[item.id] ?? defaultStyleForKind('Object') }]
+    return [item.id, { visible: stored?.visible ?? true, labelVisible: stored?.labelVisible ?? false, label: stored?.label ?? '', style: stored?.style ?? resolvedStyles[item.id] ?? defaultStyleForKind('Object') }]
   }))
   return validateCanonicalDocument({
     id: document.id, formatVersion: 1, languageVersion: document.languageVersion,
