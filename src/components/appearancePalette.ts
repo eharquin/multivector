@@ -97,7 +97,7 @@ export function resolveItemAppearance(
     visible: appearance?.visible ?? true,
     styleId,
     color: studioColor(styleId),
-    labelVisible: appearance?.labelVisible ?? true,
+    labelVisible: appearance?.labelVisible ?? false,
     label,
     displayLabel: label || declaredName,
   }

@@ -1365,6 +1365,58 @@ code {
   vector-effect: non-scaling-stroke;
 }
 
+.vector.is-head-hovered {
+  stroke-width: 5;
+}
+
+.vector-arrowhead {
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.vector-head-point {
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.manipulation-hit-target {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.vector-head-indicator {
+  fill: none;
+  stroke: var(--point-ring-hover);
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.manipulation-base-contour {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: none;
+}
+
+.manipulation-base-contour.is-movable {
+  fill: currentColor;
+  fill-opacity: 0.2;
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+.manipulation-base-point {
+  fill: currentColor;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 350ms ease;
+}
+
+.manipulation-base-point.is-hovered {
+  transform: scale(2.2222);
+}
+
 .bivector {
   fill: color-mix(in srgb, currentColor 18%, transparent);
   stroke: currentColor;
@@ -1375,6 +1427,12 @@ code {
 
 marker path {
   fill: context-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manipulation-base-point {
+    transition: none;
+  }
 }
 
 .object-label {

@@ -50,7 +50,9 @@ describe('default object styles', () => {
 
 describe('resolveItemAppearance', () => {
   it('draws the declared name when no label text is stored', () => {
-    expect(resolveItemAppearance(undefined, 'Vector', 'V').displayLabel).toBe('V')
+    const resolved = resolveItemAppearance(undefined, 'Vector', 'V')
+    expect(resolved.displayLabel).toBe('V')
+    expect(resolved.labelVisible).toBe(false)
   })
 
   it('keeps stored label text authoritative for editing and drawing', () => {
