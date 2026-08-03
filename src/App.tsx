@@ -68,6 +68,7 @@ import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
 import {
   directDeclaredVectorComponents,
+  directPositionAnchorReference,
   directPositionComponents,
   rewriteLiteralComponents,
 } from './language/directVectorEdit'
@@ -263,6 +264,7 @@ function App() {
     kind: ManipulationKind
     pointerId: number
   }> | null>(null)
+  const anchorValidityCache = useRef(new Map<string, boolean>())
   const [hoveredManipulation, setHoveredManipulation] = useState<string | null>(null)
   const [panelWidth, setPanelWidth] = useState(340)
   const [workspaceWidth, setWorkspaceWidth] = useState(0)
@@ -283,6 +285,13 @@ function App() {
     initial.diagnostic,
   )
   const [viewportAnnouncement, setViewportAnnouncement] = useState('')
+  const [anchorPreview, setAnchorPreview] = useState<Readonly<{
+    draggedId: string
+    targetId: string
+    targetName: string
+    property: 'position' | 'head'
+    point: Readonly<{ x: number; y: number }>
+  }> | null>(null)
   const [viewportLocked, setViewportLocked] = useState(restoredViewportLock)
   const [activePlayback, setActivePlayback] = useState<ActiveScalarPlayback | null>(null)
   const [playbackAnnouncement, setPlaybackAnnouncement] = useState('')
@@ -420,7 +429,14 @@ function App() {
       return
     }
     const components = directPositionComponents(item.positionSource)
-    if (!components) return
+    if (!components) {
+      executeCommand({
+        kind: 'update-position', itemId,
+        positionSource: `(${formatGridNumber(target.x, roundingStep)}, ${
+          formatGridNumber(target.y, roundingStep)})`,
+      })
+      return
+    }
     const rewritten = rewriteLiteralComponents(
       item.positionSource, components, target.x, target.y,
     )
@@ -447,6 +463,7 @@ function App() {
     event.stopPropagation()
     event.currentTarget.setPointerCapture?.(event.pointerId)
     manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
+    anchorValidityCache.current.clear()
     dispatchHistory({ type: 'boundary' })
     dispatchHistory({ type: 'begin-transaction' })
     setViewportAnnouncement(`${kind === 'head' ? 'Vector head' : 'Object base'} drag started.`)
@@ -465,13 +482,76 @@ function App() {
   const vectorHeadMovable = (item: ExpressionItem): boolean =>
     componentsMovable(directDeclaredVectorComponents(item.source))
   const objectBaseMovable = (item: ExpressionItem): boolean =>
-    !item.positionSource || componentsMovable(directPositionComponents(item.positionSource))
+    !item.positionSource ||
+    directPositionAnchorReference(item.positionSource) !== null ||
+    componentsMovable(directPositionComponents(item.positionSource))
   const manipulateWithKeyboard = (
     event: KeyboardEvent<SVGCircleElement>,
     itemId: string,
     kind: ManipulationKind,
     current: Readonly<{ x: number; y: number }>,
   ) => {
+    if (kind === 'base' && event.key === 'Enter') {
+      event.preventDefault()
+      event.stopPropagation()
+      const item = expressionDoc.items.find((candidate) => candidate.id === itemId)
+      if (!item) return
+      const currentReference = item.positionSource
+        ? directPositionAnchorReference(item.positionSource)
+        : null
+      const candidates = renderedPrimitives.flatMap((rendered) => {
+        if (rendered.id.includes(':') || rendered.id === itemId) return []
+        const target = expressionDoc.items.find((candidate) => candidate.id === rendered.id)
+        const name = target ? declaredName(target.source) : null
+        if (!name) return []
+        const properties = rendered.primitive.kind === 'oriented-segment'
+          ? ['position', 'head'] as const
+          : ['position'] as const
+        return properties.map((property) => ({ name, property }))
+      })
+      const currentIndex = candidates.findIndex((candidate) =>
+        candidate.name === currentReference?.name &&
+        candidate.property === currentReference.property)
+      const ordered = candidates.length === 0 ? [] : candidates.map((_, offset) =>
+        candidates[(currentIndex + 1 + offset) % candidates.length])
+      const next = ordered.find((candidate) => {
+        const positionSource = `${candidate.name}.${candidate.property}`
+        const proposed = {
+          ...expressionDoc,
+          items: expressionDoc.items.map((entry) => entry.id === itemId
+            ? { ...entry, positionSource }
+            : entry),
+        }
+        return evaluateDocument(proposed, engine).find(
+          (result) => result.item.id === itemId,
+        )?.positionEvaluation?.status === 'valid'
+      })
+      if (!next) {
+        setViewportAnnouncement('No valid anchor target is available.')
+        return
+      }
+      dispatchHistory({ type: 'boundary' })
+      dispatchHistory({ type: 'begin-transaction' })
+      executeCommand({
+        kind: 'update-position', itemId,
+        positionSource: `${next.name}.${next.property}`,
+      })
+      dispatchHistory({ type: 'commit-transaction' })
+      setViewportAnnouncement(`Object base linked to ${next.name} ${next.property}.`)
+      return
+    }
+    if (kind === 'base' && (event.key === 'Delete' || event.key === 'Backspace')) {
+      const item = expressionDoc.items.find((candidate) => candidate.id === itemId)
+      if (!item?.positionSource || !directPositionAnchorReference(item.positionSource)) return
+      event.preventDefault()
+      event.stopPropagation()
+      dispatchHistory({ type: 'boundary' })
+      dispatchHistory({ type: 'begin-transaction' })
+      updateManipulatedItem(itemId, kind, current)
+      dispatchHistory({ type: 'commit-transaction' })
+      setViewportAnnouncement('Object base unlinked and kept at its resolved position.')
+      return
+    }
     const step = event.shiftKey ? 1 : 0.1
     const delta = event.key === 'ArrowLeft' ? { x: -step, y: 0 }
       : event.key === 'ArrowRight' ? { x: step, y: 0 }
@@ -497,10 +577,86 @@ function App() {
   const moveViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const manipulation = manipulationDrag.current
     if (manipulation?.pointerId === event.pointerId) {
+      const pointer = screenPoint(event.clientX, event.clientY)
+      if (manipulation.kind === 'base') {
+        const rectangle = event.currentTarget.getBoundingClientRect()
+        const cssScaleX = rectangle.width > 0 ? rectangle.width / viewport.width : 1
+        const cssScaleY = rectangle.height > 0 ? rectangle.height / viewport.height : 1
+        const candidates = renderedPrimitives.flatMap((rendered) => {
+          if (rendered.id.includes(':') || rendered.id === manipulation.itemId) return []
+          const primitive = rendered.primitive
+          const targetItem = expressionDoc.items.find((item) => item.id === rendered.id)
+          const targetName = targetItem ? declaredName(targetItem.source) : null
+          if (!targetName) return []
+          const anchors = primitive.kind === 'oriented-segment'
+            ? [
+                { property: 'position' as const, mathematical: primitive.start },
+                { property: 'head' as const, mathematical: primitive.end },
+              ]
+            : [{
+                property: 'position' as const,
+                mathematical: primitive.shape.kind === 'loop'
+                  ? primitive.shape.center
+                  : primitive.shape.vertices[0],
+              }]
+          return anchors.map(({ property, mathematical }, order) => {
+            const point = toScreen(viewport, mathematical)
+            return {
+              draggedId: manipulation.itemId,
+              targetId: rendered.id,
+              targetName,
+              property,
+              point,
+              mathematical,
+              order,
+              distance: Math.hypot(
+                (pointer.x - point.x) * cssScaleX,
+                (pointer.y - point.y) * cssScaleY,
+              ),
+            }
+          })
+        }).filter((candidate) => candidate.distance <= 22)
+          .filter((candidate) => {
+            const key = `${manipulation.itemId}:${candidate.targetId}:${candidate.property}`
+            const cached = anchorValidityCache.current.get(key)
+            if (cached !== undefined) return cached
+            const positionSource = `${candidate.targetName}.${candidate.property}`
+            const proposed = {
+              ...expressionDoc,
+              items: expressionDoc.items.map((item) => item.id === manipulation.itemId
+                ? { ...item, positionSource }
+                : item),
+            }
+            const valid = evaluateDocument(proposed, engine).find(
+              (result) => result.item.id === manipulation.itemId,
+            )?.positionEvaluation?.status === 'valid'
+            anchorValidityCache.current.set(key, valid)
+            return valid
+          })
+          .sort((left, right) => left.distance - right.distance ||
+            left.targetId.localeCompare(right.targetId) || left.order - right.order)
+        const retained = anchorPreview?.draggedId === manipulation.itemId
+          ? candidates.find((candidate) =>
+              candidate.targetId === anchorPreview.targetId &&
+              candidate.property === anchorPreview.property &&
+              candidate.distance <= 22)
+          : null
+        const candidate = retained ?? (
+          candidates[0]?.distance <= 16 ? candidates[0] : null
+        )
+        setAnchorPreview(candidate)
+        updateManipulatedItem(
+          manipulation.itemId,
+          manipulation.kind,
+          candidate?.mathematical ?? toMathematical(viewport, pointer),
+        )
+        return
+      }
+      setAnchorPreview(null)
       updateManipulatedItem(
         manipulation.itemId,
         manipulation.kind,
-        toMathematical(viewport, screenPoint(event.clientX, event.clientY)),
+        toMathematical(viewport, pointer),
       )
       return
     }
@@ -516,10 +672,44 @@ function App() {
     viewportPan.current = { ...pan, lastX: event.clientX, lastY: event.clientY }
   }
   const endViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (manipulationDrag.current?.pointerId === event.pointerId) {
+    const manipulation = manipulationDrag.current
+    if (manipulation?.pointerId === event.pointerId) {
+      const preview = anchorPreview?.draggedId === manipulation.itemId
+        ? anchorPreview
+        : null
+      if (preview) {
+        const positionSource = `${preview.targetName}.${preview.property}`
+        const candidateDocument = {
+          ...expressionDoc,
+          items: expressionDoc.items.map((item) => item.id === manipulation.itemId
+            ? { ...item, positionSource }
+            : item),
+        }
+        const candidate = evaluateDocument(candidateDocument, engine).find(
+          (result) => result.item.id === manipulation.itemId,
+        )
+        if (candidate?.positionEvaluation?.status === 'valid') {
+          executeCommand({
+            kind: 'update-position', itemId: manipulation.itemId, positionSource,
+          })
+          setViewportAnnouncement(
+            `Object base linked to ${preview.targetName} ${preview.property}.`,
+          )
+        } else {
+          setViewportAnnouncement('Anchor link refused because it would be invalid.')
+          manipulationDrag.current = null
+          anchorValidityCache.current.clear()
+          setAnchorPreview(null)
+          dispatchHistory({ type: 'cancel-transaction' })
+          return
+        }
+      } else {
+        setViewportAnnouncement('Object manipulation committed.')
+      }
       manipulationDrag.current = null
+      anchorValidityCache.current.clear()
+      setAnchorPreview(null)
       dispatchHistory({ type: 'commit-transaction' })
-      setViewportAnnouncement('Object manipulation committed.')
       return
     }
     if (viewportPan.current?.pointerId === event.pointerId) viewportPan.current = null
@@ -527,6 +717,8 @@ function App() {
   const cancelViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (manipulationDrag.current?.pointerId === event.pointerId) {
       manipulationDrag.current = null
+      anchorValidityCache.current.clear()
+      setAnchorPreview(null)
       dispatchHistory({ type: 'cancel-transaction' })
       setViewportAnnouncement('Object manipulation cancelled.')
       return
@@ -539,6 +731,8 @@ function App() {
   const loseViewportCapture = () => {
     if (manipulationDrag.current) {
       manipulationDrag.current = null
+      anchorValidityCache.current.clear()
+      setAnchorPreview(null)
       dispatchHistory({ type: 'cancel-transaction' })
       setViewportAnnouncement('Object manipulation cancelled.')
       return
@@ -737,6 +931,8 @@ function App() {
       if (event.key !== 'Escape' || !manipulationDrag.current) return
       event.preventDefault()
       manipulationDrag.current = null
+      anchorValidityCache.current.clear()
+      setAnchorPreview(null)
       dispatchHistory({ type: 'cancel-transaction' })
       setViewportAnnouncement('Object manipulation cancelled.')
     }
@@ -1980,6 +2176,7 @@ function App() {
                     }}
                     tabIndex={baseMovable ? 0 : undefined}
                     role={baseMovable ? 'button' : undefined}
+                    aria-keyshortcuts={baseMovable ? 'Enter Delete' : undefined}
                     aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
                     onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
                     onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
@@ -2026,6 +2223,7 @@ function App() {
                     ) }}
                     tabIndex={baseMovable ? 0 : undefined}
                     role={baseMovable ? 'button' : undefined}
+                    aria-keyshortcuts={baseMovable ? 'Enter Delete' : undefined}
                     aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
                     onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
                     onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
@@ -2046,6 +2244,10 @@ function App() {
                   {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
                 </g>
               })}
+              {anchorPreview && <g className="anchor-preview" aria-hidden="true">
+                <circle cx={anchorPreview.point.x} cy={anchorPreview.point.y} r="12" />
+                <circle cx={anchorPreview.point.x} cy={anchorPreview.point.y} r="3" />
+              </g>}
             </svg>
             <output className="visually-hidden" aria-live="polite">
               {viewportAnnouncement}

@@ -2,12 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   directDeclaredVectorEdit,
   directDeclaredVectorComponents,
+  directPositionAnchorReference,
   directPositionEdit,
   rewriteDirectVector,
   rewriteLiteralComponents,
 } from './directVectorEdit'
 
 describe('direct vector inverse editing', () => {
+  it('recognizes only explicit position anchor references', () => {
+    expect(directPositionAnchorReference('V.position')).toEqual({
+      name: 'V', property: 'position',
+    })
+    expect(directPositionAnchorReference('V.head')).toEqual({
+      name: 'V', property: 'head',
+    })
+    expect(directPositionAnchorReference('V')).toBeNull()
+    expect(directPositionAnchorReference('(1, 2)')).toBeNull()
+  })
   it('rewrites vector constructor components without changing surrounding source', () => {
     const source = 'V = vector(-2, +3)'
     const edit = directDeclaredVectorEdit(source)

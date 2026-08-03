@@ -1501,6 +1501,23 @@ code {
   transform: scale(2.2222);
 }
 
+.anchor-preview {
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.anchor-preview circle:first-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.anchor-preview circle:last-child {
+  fill: currentColor;
+}
+
 .bivector {
   fill: color-mix(in srgb, currentColor 18%, transparent);
   stroke: none;

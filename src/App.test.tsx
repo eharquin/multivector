@@ -455,6 +455,146 @@ describe('VGA 2D vertical slice', () => {
     expect(vectorSource).toHaveValue('B = 2e12')
   })
 
+  it('snaps a vector base to a named vector head and unlinks it by dragging away', () => {
+    const { container } = render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = vector(2, 1)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'W = vector(1, 0)' },
+    })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const base = screen.getByRole('button', { name: 'Move base of W' })
+
+    fireEvent.pointerDown(base, { button: 0, pointerId: 21 })
+    fireEvent.pointerMove(canvas, { pointerId: 21, clientX: 464, clientY: 168 })
+    expect(container.querySelector('.anchor-preview')).toBeInTheDocument()
+    fireEvent.pointerUp(canvas, { pointerId: 21 })
+
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('V.head')
+    expect(screen.getByText('Object base linked to V head.')).toBeInTheDocument()
+    expect(screen.getByLabelText('W')).toHaveAttribute('x1', '464')
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('')
+    fireEvent.click(screen.getByRole('button', { name: 'Redo document change' }))
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('V.head')
+
+    fireEvent.pointerDown(base, { button: 0, pointerId: 22 })
+    fireEvent.pointerMove(canvas, { pointerId: 22, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 22 })
+
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('(1, 1)')
+    expect(container.querySelector('.anchor-preview')).not.toBeInTheDocument()
+  })
+
+  it('snaps a vector base to a named bivector position', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'B = e12' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 1' }), {
+      target: { value: '(1, 1)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'V = vector(1, 0)' },
+    })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move base of V' }), {
+      button: 0, pointerId: 23,
+    })
+    fireEvent.pointerMove(canvas, { pointerId: 23, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 23 })
+
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('B.position')
+    expect(screen.getByText('Object base linked to B position.')).toBeInTheDocument()
+  })
+
+  it('moves a bivector base without snapping to vectors that inherit its position', () => {
+    const { container } = render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V1 = vector(0.66, 3.042)' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 1' }), {
+      target: { value: 'V2.position' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'V2 = vector(1, 0)' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 2' }), {
+      target: { value: 'B.position' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 3' }), {
+      target: { value: 'B = V1 ^ V2' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 3' }), {
+      target: { value: '(0, 0)' },
+    })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move base of B' }), {
+      button: 0, pointerId: 24,
+    })
+    fireEvent.pointerMove(canvas, { pointerId: 24, clientX: 392, clientY: 168 })
+    expect(container.querySelector('.anchor-preview')).not.toBeInTheDocument()
+    fireEvent.pointerUp(canvas, { pointerId: 24 })
+
+    expect(screen.getByRole('textbox', { name: 'Position 3' })).toHaveValue('(1, 1)')
+    expect(screen.getByText('Object manipulation committed.')).toBeInTheDocument()
+  })
+
+  it('cycles anchor targets and unlinks from a vector base with the keyboard', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = vector(2, 1)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'W = vector(1, 0)' },
+    })
+    const base = screen.getByRole('button', { name: 'Move base of W' })
+    expect(base).toHaveAttribute('aria-keyshortcuts', 'Enter Delete')
+
+    fireEvent.keyDown(base, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('V.position')
+    fireEvent.keyDown(base, { key: 'Enter' })
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('V.head')
+    fireEvent.keyDown(base, { key: 'Delete' })
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('(2, 1)')
+    expect(screen.getByText('Object base unlinked and kept at its resolved position.'))
+      .toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('V.head')
+  })
+
+  it('refuses a keyboard anchor that would create a position cycle', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'A = vector(1, 0)' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Position 1' }), {
+      target: { value: 'B.head' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'B = vector(0, 1)' },
+    })
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move base of B' }), {
+      key: 'Enter',
+    })
+
+    expect(screen.getByRole('textbox', { name: 'Position 2' })).toHaveValue('')
+    expect(screen.getByText('No valid anchor target is available.')).toBeInTheDocument()
+  })
+
   it('keeps a vector base draggable through an overlapping bivector area', () => {
     const { container } = render(<App />)
     const vectorSource = screen.getByRole('textbox', { name: 'Expression 1' })

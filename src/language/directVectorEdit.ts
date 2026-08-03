@@ -62,6 +62,18 @@ export function directPositionComponents(
     : null
 }
 
+export function directPositionAnchorReference(
+  source: string,
+): Readonly<{ name: string; property: 'position' | 'head' }> | null {
+  const parsed = parseExpression(source)
+  if (!parsed.ok || parsed.expression.kind !== 'reference' ||
+      parsed.expression.property === null) return null
+  return {
+    name: parsed.expression.name,
+    property: parsed.expression.property,
+  }
+}
+
 export function rewriteLiteralComponents(
   source: string,
   components: readonly [DirectVectorComponentEdit, DirectVectorComponentEdit],
