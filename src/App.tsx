@@ -1285,7 +1285,8 @@ function App() {
                             <span aria-hidden="true">{visible ? '◉' : '⊘'}</span>
                           </button>
                       )}
-                      {valid && !drawable && !scalar && (
+                      {valid && !drawable &&
+                        !(scalar && effectiveControl?.mode === 'slider') && (
                         <span className="expression-action-spacer" aria-hidden="true" />
                       )}
                       {valid ? (

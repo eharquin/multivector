@@ -66,9 +66,10 @@ A user shall be able to:
   document-owned state atomically; bounded coalescing and cancellation produce
   deterministic gesture histories.
 - **M2D-002 — Scalar controls:** Directly rewritable scalar declarations support
-  accessible number and slider modes. Bounds are independent finite scalar
-  dependency nodes; invalid and out-of-range states never silently clamp or
-  replace source.
+  accessible number and slider modes. Slider mode keeps its minimum, maximum,
+  and step fields visible independently of expression focus; Number mode hides
+  them. Bounds are independent finite scalar dependency nodes; invalid and
+  out-of-range states never silently clamp or replace source.
 - **M2D-003 — Viewport creation:** Double-clicking empty viewport space creates
   collision-free vector declarations at mathematical coordinates independent
   of viewport layout. Rendered objects are not directly selectable by click.
