@@ -1462,10 +1462,14 @@ code {
 
 .bivector {
   fill: color-mix(in srgb, currentColor 18%, transparent);
-  stroke: currentColor;
+  stroke: none;
   stroke-width: 3;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.bivector.has-border {
+  stroke: currentColor;
 }
 
 marker path {

@@ -79,6 +79,7 @@ export type ResolvedAppearance = Readonly<{
   label: string
   /** Label actually drawn, or `null` when neither text nor a declared name exists. */
   displayLabel: string | null
+  borderVisible: boolean
 }>
 
 /**
@@ -100,5 +101,6 @@ export function resolveItemAppearance(
     labelVisible: appearance?.labelVisible ?? false,
     label,
     displayLabel: label || declaredName,
+    borderVisible: appearance?.borderVisible ?? false,
   }
 }
