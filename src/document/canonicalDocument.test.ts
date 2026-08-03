@@ -66,6 +66,12 @@ describe('canonical document format', () => {
       .toBe(encoded)
   })
 
+  it('exports object labels as hidden when no appearance override exists', () => {
+    const document = expressionDocument([{ id: 'v', source: 'V = e1' }])
+
+    expect(toCanonicalDocument(document, 'system').appearance.v.labelVisible).toBe(false)
+  })
+
   it('rejects duplicate keys before schema validation', () => {
     expect(errorCode(() => parseCanonicalDocument('{"id":"a","id":"b"}'))).toBe('DOCUMENT_DUPLICATE_KEY')
   })

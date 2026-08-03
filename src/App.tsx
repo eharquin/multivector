@@ -80,8 +80,18 @@ import './App.css'
 
 const engine = createVga2Engine()
 const MIN_PANEL_WIDTH = 240
+const UNIT_NORM_TOLERANCE = 1e-10
 /** Keeps the `.panel-resize` separator reachable at any panel width. */
 const PANEL_RESIZE_WIDTH = 6
+
+function isUnitNaturalNorm(value: Parameters<typeof engine.norm>[0]): boolean {
+  try {
+    return Math.abs(engine.norm(value).coefficients[0] - 1) <= UNIT_NORM_TOLERANCE
+  } catch {
+    return false
+  }
+}
+
 type EditorFocus = Readonly<{
   id: string
   start: number
@@ -1180,6 +1190,17 @@ function App() {
                 evaluation?.status === 'valid' &&
                 evaluation.valueType === 'single' &&
                 supportsVga2Position(evaluation.entity)
+              const supportsNormalization =
+                evaluation?.status === 'valid' &&
+                evaluation.valueType === 'single' &&
+                evaluation.entity.kind !== 'scalar'
+              const normalizationUnavailable =
+                supportsNormalization &&
+                item.normalization === 'natural' &&
+                engine.normalize(evaluation.value).status === 'unavailable'
+              const hasUnitNaturalNorm =
+                supportsNormalization &&
+                isUnitNaturalNorm(evaluation.value)
               const kind = evaluation?.status === 'valid'
                 ? evaluation.valueType === 'list'
                   ? `List (${evaluation.value.elements.length})`
@@ -1323,16 +1344,26 @@ function App() {
                           spellCheck={false}
                           autoComplete="off"
                         />
-                        {supportsPosition && (
-                          <button
-                            type="button"
-                            className={`normalize-toggle${item.normalization ? ' active' : ''}`}
-                            aria-pressed={item.normalization === 'natural'}
-                            onClick={() => executeCommand({
-                              kind: 'update-normalization', itemId: item.id,
-                              normalization: item.normalization === 'natural' ? undefined : 'natural',
-                            })}
-                          >norm</button>
+                        {supportsNormalization && (
+                          <span className="normalize-control">
+                            <button
+                              type="button"
+                              className={`normalize-toggle${item.normalization ? ' active' : ''}`}
+                              aria-pressed={item.normalization === 'natural'}
+                              onClick={() => executeCommand({
+                                kind: 'update-normalization', itemId: item.id,
+                                normalization: item.normalization === 'natural' ? undefined : 'natural',
+                              })}
+                            >norm</button>
+                            <span
+                              className={`unit-norm-indicator${hasUnitNaturalNorm ? ' is-unit' : ''}`}
+                              title={hasUnitNaturalNorm ? 'Unit norm' : undefined}
+                            >
+                              {hasUnitNaturalNorm && (
+                                <span className="visually-hidden">Unit norm</span>
+                              )}
+                            </span>
+                          </span>
                         )}
                       </div>
 
@@ -1367,6 +1398,10 @@ function App() {
                                 </span>
                               )}
                               <output>{evaluation.inspection}</output>
+                              {normalizationUnavailable && <>
+                                <span className="feedback-label">Normalization unavailable</span>
+                                <span>This multivector has zero natural norm and was left unchanged.</span>
+                              </>}
                             </>
                           ) : evaluation?.status === 'invalid' ? (
                             <>
