@@ -41,7 +41,7 @@ describe('canonical document format', () => {
       title: 'Vectors',
       description: 'A test document',
       items: [{ id: 'v', source: 'V = vector(2, 1)', positionSource: '(1, 1)', normalization: 'natural' }],
-      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4', borderVisible: false } },
+      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' } },
     }))
   })
 
@@ -54,7 +54,7 @@ describe('canonical document format', () => {
         positionSource: null, normalization: null, control: null,
       }],
       appearance: {
-        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4', borderVisible: false },
+        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' as const },
       },
     }
     const encoded = serializeCanonicalDocument(annotation)
@@ -72,21 +72,28 @@ describe('canonical document format', () => {
     expect(toCanonicalDocument(document, 'system').appearance.v.labelVisible).toBe(false)
   })
 
-  it('migrates version one appearances to borderless version two records', () => {
+  it('migrates version one appearances to borderless version three records with orientation', () => {
     const current = sample()
     const legacy = {
       ...current,
       formatVersion: 1,
       appearance: Object.fromEntries(Object.entries(current.appearance).map(
         ([id, appearance]) => {
-          const { borderVisible: _borderVisible, ...versionOne } = appearance
+          const {
+            borderVisible: _borderVisible,
+            orientationVisible: _orientationVisible,
+            bivectorShape: _bivectorShape,
+            ...versionOne
+          } = appearance
           return [id, versionOne]
         },
       )),
     }
     const migrated = parseCanonicalDocument(JSON.stringify(legacy))
-    expect(migrated.formatVersion).toBe(2)
+    expect(migrated.formatVersion).toBe(3)
     expect(migrated.appearance.v.borderVisible).toBe(false)
+    expect(migrated.appearance.v.orientationVisible).toBe(true)
+    expect(migrated.appearance.v.bivectorShape).toBe('from-vectors')
   })
 
   it('rejects duplicate keys before schema validation', () => {
@@ -94,7 +101,7 @@ describe('canonical document format', () => {
   })
 
   it('selects the version boundary before complete schema validation', () => {
-    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":3,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
+    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":4,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
   })
 
   it('rejects unknown fields and unregistered styles', () => {

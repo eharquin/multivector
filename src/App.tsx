@@ -147,6 +147,50 @@ function persistViewportLock(locked: boolean): void {
   }
 }
 
+function BivectorOrientationArrow({
+  center, direction, scale,
+}: Readonly<{
+  center: Readonly<{ x: number; y: number }>
+  direction: 1 | -1
+  scale: number
+}>) {
+  const radius = 13 * scale
+  const span = 1.5 * Math.PI
+  const headLength = 0.4 * radius
+  const startAngle = direction > 0 ? -Math.PI / 2 : Math.PI / 2
+  const endAngle = startAngle + direction * span
+  const strokeAngle = endAngle - direction * Math.min(headLength / radius, 0.5)
+  const point = (angle: number) => ({
+    x: center.x + radius * Math.cos(angle),
+    y: center.y - radius * Math.sin(angle),
+  })
+  const start = point(startAngle)
+  const strokeEnd = point(strokeAngle)
+  const end = point(endAngle)
+  const sweep = direction > 0 ? 0 : 1
+  const heading = Math.atan2(end.y - strokeEnd.y, end.x - strokeEnd.x)
+  const spread = 0.5
+  const base = (angle: number) => ({
+    x: end.x - headLength * Math.cos(angle),
+    y: end.y - headLength * Math.sin(angle),
+  })
+  const first = base(heading - spread)
+  const second = base(heading + spread)
+  return <g className="bivector-orientation" aria-hidden="true" pointerEvents="none">
+    <path
+      d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 1 ${sweep} ${strokeEnd.x} ${strokeEnd.y}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={Math.min(2.2 * scale, 0.16 * radius)}
+      strokeLinecap="round"
+    />
+    <polygon
+      points={`${end.x},${end.y} ${first.x},${first.y} ${second.x},${second.y}`}
+      fill="currentColor"
+    />
+  </g>
+}
+
 function App() {
   const persistence = useMemo(
     () => browserDocumentStorage(window.localStorage),
@@ -757,7 +801,7 @@ function App() {
     const kind = evaluated.evaluation.valueType === 'list'
       ? `List (${evaluated.evaluation.value.elements.length})`
       : describeVga2Entity(evaluated.evaluation.entity)
-    const { visible, color, labelVisible, displayLabel, borderVisible } = resolveItemAppearance(
+    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape } = resolveItemAppearance(
       expressionDoc.appearance[evaluated.item.id],
       kind,
       declaredName(evaluated.item.source),
@@ -774,6 +818,8 @@ function App() {
             primitive: element.primitive,
             color,
             borderVisible,
+            orientationVisible,
+            bivectorShape,
             label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
           }]
         : [])
@@ -783,6 +829,8 @@ function App() {
             primitive: evaluated.evaluation.primitive,
             color,
             borderVisible,
+            orientationVisible,
+            bivectorShape,
             label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
           }]
         : []
@@ -832,29 +880,49 @@ function App() {
         ].join(' ') : null,
       }]
   })
-  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label, borderVisible }) => {
+  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label, borderVisible, orientationVisible, bivectorShape }) => {
     if (primitive.kind !== 'oriented-area') return []
-    if (primitive.shape.kind === 'parallelogram') {
+    if (bivectorShape === 'from-vectors' && primitive.shape.kind === 'parallelogram') {
       const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
       return [{
         id,
         primitive,
         color,
         borderVisible,
+        orientationVisible,
+        orientationCenter: {
+          x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+          y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+        },
         label,
         path: `${points.map((point, index) =>
           `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
         labelPoint: points[2],
       }]
     }
-    const center = toScreen(viewport, primitive.shape.center)
-    const radius = primitive.shape.radius * viewport.pixelsPerUnit
+    const mathematicalCenter = primitive.shape.kind === 'loop'
+      ? primitive.shape.center
+      : primitive.shape.vertices[0]
+    const center = toScreen(viewport, mathematicalCenter)
+    if (bivectorShape === 'square') {
+      const side = Math.sqrt(primitive.area) * viewport.pixelsPerUnit
+      const half = side / 2
+      return [{
+        id, primitive, color, borderVisible, orientationVisible,
+        orientationCenter: center, label,
+        path: `M ${center.x - half} ${center.y - half} H ${center.x + half} V ${center.y + half} H ${center.x - half} Z`,
+        labelPoint: { x: center.x + half, y: center.y - half },
+      }]
+    }
+    const radius = Math.sqrt(primitive.area / Math.PI) * viewport.pixelsPerUnit
     const sweep = primitive.orientation === 'counterclockwise' ? 1 : 0
     return [{
       id,
       primitive,
       color,
       borderVisible,
+      orientationVisible,
+      orientationCenter: center,
       label,
       path: `M ${center.x + radius} ${center.y} ` +
         `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
@@ -1640,6 +1708,12 @@ function App() {
                       labelVisible={labelVisible}
                       label={label}
                       borderVisible={expressionDoc.appearance[item.id]?.borderVisible ?? false}
+                      orientationVisible={expressionDoc.appearance[item.id]?.orientationVisible ?? true}
+                      bivectorShape={expressionDoc.appearance[item.id]?.bivectorShape ?? 'from-vectors'}
+                      parallelogramAvailable={evaluation?.status === 'valid' &&
+                        evaluation.valueType === 'single' &&
+                        evaluation.primitive?.kind === 'oriented-area' &&
+                        evaluation.primitive.shape.kind === 'parallelogram'}
                       colorOnly={!drawable}
                       control={scalarControlAvailable ? effectiveControl : undefined}
                       reducedMotion={reducedMotion}
@@ -1658,6 +1732,12 @@ function App() {
                       }, `appearance-label:${item.id}`)}
                       onBorderVisibleChange={(borderVisible) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { borderVisible },
+                      })}
+                      onOrientationVisibleChange={(orientationVisible) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { orientationVisible },
+                      })}
+                      onBivectorShapeChange={(bivectorShape) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { bivectorShape },
                       })}
                       onControlChange={(control) => {
                         if (isPlaying) stopPlayback()
@@ -1797,20 +1877,6 @@ function App() {
             >
               <title id="canvas-title">Two-dimensional VGA viewport</title>
               <desc id="canvas-description">{canvasDescription}</desc>
-              <defs>
-                <marker
-                  id="area-arrowhead"
-                  markerWidth="7"
-                  markerHeight="7"
-                  refX="6"
-                  refY="3.5"
-                  orient="auto"
-                  markerUnits="strokeWidth"
-                >
-                  <path d="M 0 0 L 7 3.5 L 0 7 z" />
-                </marker>
-              </defs>
-
               {expressionDoc.view.display.gridVisible && <g aria-hidden="true">
                 {grid.vertical.map((line) => <line
                   key={`grid-x-${line.coordinate}`}
@@ -1932,7 +1998,7 @@ function App() {
                   {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
                 </g>
               })}
-              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint, borderVisible }) => {
+              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint, borderVisible, orientationVisible, orientationCenter }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 const baseMovable = !!item && objectBaseMovable(item)
                 const base = primitive.shape.kind === 'loop'
@@ -1943,10 +2009,15 @@ function App() {
                   <path
                     className={`bivector${borderVisible ? ' has-border' : ''}`}
                     d={path}
-                    markerEnd="url(#area-arrowhead)"
                     strokeWidth={3 * objectRenderScale}
+                    pointerEvents="none"
                     aria-label={primitive.accessibleDescription}
                   />
+                  {orientationVisible && <BivectorOrientationArrow
+                    center={orientationCenter}
+                    direction={primitive.orientation === 'counterclockwise' ? 1 : -1}
+                    scale={objectRenderScale}
+                  />}
                   {item && <><circle
                     className={`manipulation-base-contour${baseMovable ? ' is-movable' : ''}`}
                     cx={base.x} cy={base.y} r={10 * objectRenderScale}

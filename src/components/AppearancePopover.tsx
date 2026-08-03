@@ -14,6 +14,9 @@ type AppearancePopoverProps = Readonly<{
   labelVisible: boolean
   label: string
   borderVisible?: boolean
+  orientationVisible?: boolean
+  bivectorShape?: 'from-vectors' | 'disk' | 'square'
+  parallelogramAvailable?: boolean
   colorOnly?: boolean
   control?: ExpressionControl
   reducedMotion?: boolean
@@ -23,6 +26,8 @@ type AppearancePopoverProps = Readonly<{
   onLabelVisibleChange(visible: boolean): void
   onLabelChange(label: string): void
   onBorderVisibleChange?(visible: boolean): void
+  onOrientationVisibleChange?(visible: boolean): void
+  onBivectorShapeChange?(shape: 'from-vectors' | 'disk' | 'square'): void
   onControlChange?(control: ExpressionControl): void
   onClose(): void
 }>
@@ -34,6 +39,9 @@ export function AppearancePopover({
   labelVisible,
   label,
   borderVisible = false,
+  orientationVisible = true,
+  bivectorShape = 'from-vectors',
+  parallelogramAvailable = false,
   colorOnly = false,
   control,
   reducedMotion = false,
@@ -43,6 +51,8 @@ export function AppearancePopover({
   onLabelVisibleChange,
   onLabelChange,
   onBorderVisibleChange,
+  onOrientationVisibleChange,
+  onBivectorShapeChange,
   onControlChange,
   onClose,
 }: AppearancePopoverProps) {
@@ -135,6 +145,40 @@ export function AppearancePopover({
               role="switch"
               checked={borderVisible}
               onChange={(event) => onBorderVisibleChange(event.target.checked)}
+            />
+          </label>
+        </section>
+      )}
+      {kind === 'Bivector' && onBivectorShapeChange && (
+        <section className="appearance-section">
+          <h3>Shape</h3>
+          <div className="bivector-shape-grid" role="group" aria-label="Bivector shape">
+            <button type="button" aria-label="From vectors" aria-pressed={bivectorShape === 'from-vectors'}
+              disabled={!parallelogramAvailable} onClick={() => onBivectorShapeChange('from-vectors')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><polygon points="3,18 10,4 25,4 18,18" /></svg>
+            </button>
+            <button type="button" aria-label="Disk" aria-pressed={bivectorShape === 'disk'}
+              onClick={() => onBivectorShapeChange('disk')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><circle cx="14" cy="11" r="8" /></svg>
+            </button>
+            <button type="button" aria-label="Square" aria-pressed={bivectorShape === 'square'}
+              onClick={() => onBivectorShapeChange('square')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><rect x="6" y="3" width="16" height="16" /></svg>
+            </button>
+          </div>
+          {!parallelogramAvailable && <p className="appearance-shape-note">From vectors unavailable for this expression.</p>}
+        </section>
+      )}
+      {kind === 'Bivector' && onOrientationVisibleChange && (
+        <section className="appearance-section">
+          <h3>Orientation</h3>
+          <label className="appearance-toggle-row">
+            <span>{orientationVisible ? 'Orientation visible' : 'Orientation hidden'}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={orientationVisible}
+              onChange={(event) => onOrientationVisibleChange(event.target.checked)}
             />
           </label>
         </section>

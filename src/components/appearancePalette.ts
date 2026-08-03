@@ -80,6 +80,8 @@ export type ResolvedAppearance = Readonly<{
   /** Label actually drawn, or `null` when neither text nor a declared name exists. */
   displayLabel: string | null
   borderVisible: boolean
+  orientationVisible: boolean
+  bivectorShape: 'from-vectors' | 'disk' | 'square'
 }>
 
 /**
@@ -102,5 +104,7 @@ export function resolveItemAppearance(
     label,
     displayLabel: label || declaredName,
     borderVisible: appearance?.borderVisible ?? false,
+    orientationVisible: appearance?.orientationVisible ?? true,
+    bivectorShape: appearance?.bivectorShape ?? 'from-vectors',
   }
 }
