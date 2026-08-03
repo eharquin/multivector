@@ -129,6 +129,23 @@ const DEFAULT_SCALAR_CONTROL: ExpressionControl = {
   stepSource: '0.1',
   animation: DEFAULT_SCALAR_ANIMATION,
 }
+const VIEWPORT_LOCK_STORAGE_KEY = 'multivector.viewportLocked'
+
+function restoredViewportLock(): boolean {
+  try {
+    return window.localStorage.getItem(VIEWPORT_LOCK_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function persistViewportLock(locked: boolean): void {
+  try {
+    window.localStorage.setItem(VIEWPORT_LOCK_STORAGE_KEY, String(locked))
+  } catch {
+    // The lock remains usable for this session when browser storage is unavailable.
+  }
+}
 
 function App() {
   const persistence = useMemo(
@@ -222,6 +239,7 @@ function App() {
     initial.diagnostic,
   )
   const [viewportAnnouncement, setViewportAnnouncement] = useState('')
+  const [viewportLocked, setViewportLocked] = useState(restoredViewportLock)
   const [activePlayback, setActivePlayback] = useState<ActiveScalarPlayback | null>(null)
   const [playbackAnnouncement, setPlaybackAnnouncement] = useState('')
   const [reducedMotion, setReducedMotion] = useState(
@@ -295,11 +313,12 @@ function App() {
   })
   const handleViewportWheel = (event: WheelEvent<SVGSVGElement>) => {
     event.preventDefault()
+    if (viewportLocked) return
     zoomViewport(Math.exp(-event.deltaY * 0.0015), screenPoint(event.clientX, event.clientY))
   }
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     setAppearanceItemId(null)
-    if (event.button !== 0 || event.target !== event.currentTarget) return
+    if (viewportLocked || event.button !== 0 || event.target !== event.currentTarget) return
     event.currentTarget.focus({ preventScroll: true })
     viewportPan.current = {
       pointerId: event.pointerId,
@@ -488,6 +507,12 @@ function App() {
   const navigateViewportWithKeyboard = (event: KeyboardEvent<SVGSVGElement>) => {
     const amount = event.shiftKey ? 120 : 40
     let next: Viewport2d | null = null
+    const navigationKey = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '0', 'Home']
+      .includes(event.key)
+    if (viewportLocked && navigationKey) {
+      event.preventDefault()
+      return
+    }
     if (event.key === 'ArrowLeft') next = panByScreen(viewport, { x: amount, y: 0 })
     else if (event.key === 'ArrowRight') next = panByScreen(viewport, { x: -amount, y: 0 })
     else if (event.key === 'ArrowUp') next = panByScreen(viewport, { x: 0, y: amount })
@@ -501,6 +526,14 @@ function App() {
     } else return
     event.preventDefault()
     updateViewport(next)
+  }
+
+  const toggleViewportLock = () => {
+    const locked = !viewportLocked
+    viewportPan.current = null
+    setViewportLocked(locked)
+    setViewportAnnouncement(locked ? 'Viewport locked.' : 'Viewport unlocked.')
+    persistViewportLock(locked)
   }
 
   const createVectorFromViewport = (event: ReactMouseEvent<SVGSVGElement>) => {
@@ -1670,9 +1703,29 @@ function App() {
             >
               <button
                 type="button"
+                className="viewport-command viewport-lock"
+                onClick={toggleViewportLock}
+                aria-label={viewportLocked ? 'Unlock viewport' : 'Lock viewport'}
+                aria-pressed={viewportLocked}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <rect x="3.25" y="7" width="9.5" height="7" rx="1.25" fill="none" />
+                  <path
+                    d={viewportLocked
+                      ? 'M5.25 7V5a2.75 2.75 0 0 1 5.5 0v2'
+                      : 'M10.75 7V5a2.75 2.75 0 0 0-5.5 0'}
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <div className="viewport-navigation">
+              <button
+                type="button"
                 className="viewport-command"
                 onClick={() => zoomViewport(1.25)}
                 aria-label="Zoom in"
+                disabled={viewportLocked}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                   <line x1="8" y1="3" x2="8" y2="13" strokeLinecap="round" />
@@ -1684,6 +1737,7 @@ function App() {
                 className="viewport-command"
                 onClick={() => zoomViewport(0.8)}
                 aria-label="Zoom out"
+                disabled={viewportLocked}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                   <line x1="3" y1="8" x2="13" y2="8" strokeLinecap="round" />
@@ -1694,6 +1748,7 @@ function App() {
                 className="viewport-command"
                 onClick={resetViewport}
                 aria-label="Reset view"
+                disabled={viewportLocked}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
                   <line x1="8" y1="1.5" x2="8" y2="14.5" strokeLinecap="round" />
@@ -1714,10 +1769,11 @@ function App() {
               <output className="viewport-zoom" aria-live="polite">
                 {Math.round(viewport.pixelsPerUnit / DEFAULT_PIXELS_PER_UNIT * 100)}%
               </output>
+              </div>
             </div>
             <svg
               ref={viewportSvgRef}
-              className="canvas"
+              className={`canvas${viewportLocked ? ' is-viewport-locked' : ''}`}
               viewBox={`0 0 ${viewport.width} ${viewport.height}`}
               role="img"
               aria-labelledby="canvas-title canvas-description"
