@@ -455,6 +455,29 @@ describe('VGA 2D vertical slice', () => {
     expect(vectorSource).toHaveValue('B = 2e12')
   })
 
+  it('keeps a vector base draggable through an overlapping bivector area', () => {
+    const { container } = render(<App />)
+    const vectorSource = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(vectorSource, { target: { value: 'V = vector(2, 1)' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'B = 4e12' },
+    })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const bivector = container.querySelector('.bivector')
+
+    expect(bivector).toHaveAttribute('pointer-events', 'none')
+    const vectorBase = screen.getByRole('button', { name: 'Move base of V' })
+    fireEvent.pointerDown(vectorBase, { button: 0, pointerId: 18 })
+    fireEvent.pointerMove(canvas, { pointerId: 18, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 18 })
+
+    expect(screen.getByRole('textbox', { name: 'Position 1' })).toHaveValue('(1, 1)')
+    expect(vectorSource).toHaveValue('V = vector(2, 1)')
+    expect(screen.getByRole('button', { name: 'Move base of B' })).toBeInTheDocument()
+  })
+
   it('keeps locked bases as solid points and gives list copies no handles', () => {
     const { container } = render(<App />)
     const source = screen.getByRole('textbox', { name: 'Expression 1' })
@@ -872,13 +895,49 @@ describe('VGA 2D vertical slice', () => {
     })
     const bivector = container.querySelector('.bivector')
     expect(bivector).not.toHaveClass('has-border')
+    expect(container.querySelector('.bivector-orientation')).toBeInTheDocument()
+    expect(bivector).not.toHaveAttribute('marker-end')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Bivector menu for B' }))
+    expect(screen.getByRole('button', { name: 'From vectors' })).toBeDisabled()
     const border = screen.getByRole('switch', { name: 'Border hidden' })
     fireEvent.click(border)
 
     expect(screen.getByRole('switch', { name: 'Border visible' })).toBeChecked()
     expect(bivector).toHaveClass('has-border')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Orientation visible' }))
+    expect(screen.getByRole('switch', { name: 'Orientation hidden' })).not.toBeChecked()
+    expect(container.querySelector('.bivector-orientation')).not.toBeInTheDocument()
+  })
+
+  it('selects visual bivector shapes while preserving construction availability', () => {
+    const { container } = render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'V = vector(2, 0)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'W = vector(0, 2)' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 3' }), {
+      target: { value: 'B = V ^ W' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bivector menu for B' }))
+
+    const fromVectors = screen.getByRole('button', { name: 'From vectors' })
+    expect(fromVectors).toBeEnabled()
+    expect(fromVectors).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.bivector')).toHaveAttribute('d', expect.stringContaining('L'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Disk' }))
+    expect(screen.getByRole('button', { name: 'Disk' })).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.bivector')).toHaveAttribute('d', expect.stringContaining('A'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Square' }))
+    expect(screen.getByRole('button', { name: 'Square' })).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.bivector')).toHaveAttribute('d', expect.stringContaining('H'))
   })
 
   it('restores the declared name when the label text is cleared', () => {

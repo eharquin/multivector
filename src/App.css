@@ -1177,6 +1177,48 @@ h2 {
   accent-color: var(--accent);
 }
 
+.bivector-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.bivector-shape-grid button {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.bivector-shape-grid button[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface-active);
+  border-color: var(--accent);
+}
+
+.bivector-shape-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.bivector-shape-grid svg {
+  width: 28px;
+  height: 22px;
+  fill: color-mix(in srgb, currentColor 18%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.appearance-shape-note {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .appearance-label-row input {
   min-width: 0;
   width: 150px;
@@ -1359,7 +1401,6 @@ code {
 .graduation-label,
 .axis-name,
 .object-label {
-  pointer-events: none;
 }
 
 .grid-line.is-major {
@@ -1466,14 +1507,11 @@ code {
   stroke-width: 3;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+  pointer-events: none;
 }
 
 .bivector.has-border {
   stroke: currentColor;
-}
-
-marker path {
-  fill: context-stroke;
 }
 
 @media (prefers-reduced-motion: reduce) {

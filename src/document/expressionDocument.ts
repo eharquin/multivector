@@ -6,6 +6,8 @@ export type ExpressionAppearance = Readonly<{
   labelVisible?: boolean
   label?: string
   borderVisible?: boolean
+  orientationVisible?: boolean
+  bivectorShape?: 'from-vectors' | 'disk' | 'square'
 }>
 
 export type ExpressionControl = Readonly<{
