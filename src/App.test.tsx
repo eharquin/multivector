@@ -452,9 +452,18 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByRole('slider', { name: 'Value for a' })).toBeEnabled()
     expect(screen.getByRole('textbox', { name: 'Minimum source' }))
       .toHaveValue('-10')
+    fireEvent.blur(source)
+    expect(screen.getByRole('textbox', { name: 'Minimum source' }))
+      .toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Maximum source' }))
+      .toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Step source' }))
+      .toBeVisible()
     const trigger = screen.getByRole('button', {
       name: 'Open Scalar menu for a',
     })
+    expect(trigger.parentElement?.firstElementChild)
+      .toHaveClass('scalar-play-button')
 
     fireEvent.click(trigger)
     expect(screen.getByRole('dialog', { name: 'Scalar' })).toBeInTheDocument()
@@ -476,6 +485,8 @@ describe('VGA 2D vertical slice', () => {
     expect(source).toHaveValue('a = ((2))')
 
     fireEvent.click(screen.getByRole('button', { name: 'Number' }))
+    expect(trigger.parentElement?.firstElementChild)
+      .toHaveClass('expression-action-spacer')
     expect(screen.queryByRole('slider', { name: 'Value for a' }))
       .not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Play scalar animation' }))

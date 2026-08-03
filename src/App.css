@@ -700,14 +700,10 @@ h2 {
 }
 
 .scalar-interval-row {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 8px 6px 0;
-}
-
-.expression-item:focus-within .scalar-interval-row {
-  display: flex;
 }
 
 .scalar-interval-label {
