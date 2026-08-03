@@ -865,6 +865,22 @@ describe('VGA 2D vertical slice', () => {
       .toHaveStyle({ color: '#0F9D57' })
   })
 
+  it('renders bivectors without a border by default and enables it from appearance', () => {
+    const { container } = render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'B = e1 ^ e2' },
+    })
+    const bivector = container.querySelector('.bivector')
+    expect(bivector).not.toHaveClass('has-border')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Bivector menu for B' }))
+    const border = screen.getByRole('switch', { name: 'Border hidden' })
+    fireEvent.click(border)
+
+    expect(screen.getByRole('switch', { name: 'Border visible' })).toBeChecked()
+    expect(bivector).toHaveClass('has-border')
+  })
+
   it('restores the declared name when the label text is cleared', () => {
     render(<App />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {

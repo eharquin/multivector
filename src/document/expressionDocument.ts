@@ -5,6 +5,7 @@ export type ExpressionAppearance = Readonly<{
   style?: string
   labelVisible?: boolean
   label?: string
+  borderVisible?: boolean
 }>
 
 export type ExpressionControl = Readonly<{

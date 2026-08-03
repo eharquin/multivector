@@ -41,7 +41,7 @@ describe('canonical document format', () => {
       title: 'Vectors',
       description: 'A test document',
       items: [{ id: 'v', source: 'V = vector(2, 1)', positionSource: '(1, 1)', normalization: 'natural' }],
-      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4' } },
+      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4', borderVisible: false } },
     }))
   })
 
@@ -54,7 +54,7 @@ describe('canonical document format', () => {
         positionSource: null, normalization: null, control: null,
       }],
       appearance: {
-        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4' },
+        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4', borderVisible: false },
       },
     }
     const encoded = serializeCanonicalDocument(annotation)
@@ -72,12 +72,29 @@ describe('canonical document format', () => {
     expect(toCanonicalDocument(document, 'system').appearance.v.labelVisible).toBe(false)
   })
 
+  it('migrates version one appearances to borderless version two records', () => {
+    const current = sample()
+    const legacy = {
+      ...current,
+      formatVersion: 1,
+      appearance: Object.fromEntries(Object.entries(current.appearance).map(
+        ([id, appearance]) => {
+          const { borderVisible: _borderVisible, ...versionOne } = appearance
+          return [id, versionOne]
+        },
+      )),
+    }
+    const migrated = parseCanonicalDocument(JSON.stringify(legacy))
+    expect(migrated.formatVersion).toBe(2)
+    expect(migrated.appearance.v.borderVisible).toBe(false)
+  })
+
   it('rejects duplicate keys before schema validation', () => {
     expect(errorCode(() => parseCanonicalDocument('{"id":"a","id":"b"}'))).toBe('DOCUMENT_DUPLICATE_KEY')
   })
 
   it('selects the version boundary before complete schema validation', () => {
-    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":2,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
+    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":3,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
   })
 
   it('rejects unknown fields and unregistered styles', () => {

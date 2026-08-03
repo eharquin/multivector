@@ -13,6 +13,7 @@ type AppearancePopoverProps = Readonly<{
   visible: boolean
   labelVisible: boolean
   label: string
+  borderVisible?: boolean
   colorOnly?: boolean
   control?: ExpressionControl
   reducedMotion?: boolean
@@ -21,6 +22,7 @@ type AppearancePopoverProps = Readonly<{
   onVisibleChange(visible: boolean): void
   onLabelVisibleChange(visible: boolean): void
   onLabelChange(label: string): void
+  onBorderVisibleChange?(visible: boolean): void
   onControlChange?(control: ExpressionControl): void
   onClose(): void
 }>
@@ -31,6 +33,7 @@ export function AppearancePopover({
   visible,
   labelVisible,
   label,
+  borderVisible = false,
   colorOnly = false,
   control,
   reducedMotion = false,
@@ -39,6 +42,7 @@ export function AppearancePopover({
   onVisibleChange,
   onLabelVisibleChange,
   onLabelChange,
+  onBorderVisibleChange,
   onControlChange,
   onClose,
 }: AppearancePopoverProps) {
@@ -121,6 +125,20 @@ export function AppearancePopover({
           ))}
         </div>
       </section>
+      {kind === 'Bivector' && onBorderVisibleChange && (
+        <section className="appearance-section">
+          <h3>Outline</h3>
+          <label className="appearance-toggle-row">
+            <span>{borderVisible ? 'Border visible' : 'Border hidden'}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={borderVisible}
+              onChange={(event) => onBorderVisibleChange(event.target.checked)}
+            />
+          </label>
+        </section>
+      )}
       {control && onControlChange && (
         <>
           <section className="appearance-section">

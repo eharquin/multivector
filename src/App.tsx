@@ -757,7 +757,7 @@ function App() {
     const kind = evaluated.evaluation.valueType === 'list'
       ? `List (${evaluated.evaluation.value.elements.length})`
       : describeVga2Entity(evaluated.evaluation.entity)
-    const { visible, color, labelVisible, displayLabel } = resolveItemAppearance(
+    const { visible, color, labelVisible, displayLabel, borderVisible } = resolveItemAppearance(
       expressionDoc.appearance[evaluated.item.id],
       kind,
       declaredName(evaluated.item.source),
@@ -773,6 +773,7 @@ function App() {
             id: `${evaluated.item.id}:${element.id}`,
             primitive: element.primitive,
             color,
+            borderVisible,
             label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
           }]
         : [])
@@ -781,6 +782,7 @@ function App() {
             id: evaluated.item.id,
             primitive: evaluated.evaluation.primitive,
             color,
+            borderVisible,
             label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
           }]
         : []
@@ -830,7 +832,7 @@ function App() {
         ].join(' ') : null,
       }]
   })
-  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
+  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label, borderVisible }) => {
     if (primitive.kind !== 'oriented-area') return []
     if (primitive.shape.kind === 'parallelogram') {
       const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
@@ -838,6 +840,7 @@ function App() {
         id,
         primitive,
         color,
+        borderVisible,
         label,
         path: `${points.map((point, index) =>
           `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
@@ -851,6 +854,7 @@ function App() {
       id,
       primitive,
       color,
+      borderVisible,
       label,
       path: `M ${center.x + radius} ${center.y} ` +
         `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
@@ -1635,6 +1639,7 @@ function App() {
                       visible={visible}
                       labelVisible={labelVisible}
                       label={label}
+                      borderVisible={expressionDoc.appearance[item.id]?.borderVisible ?? false}
                       colorOnly={!drawable}
                       control={scalarControlAvailable ? effectiveControl : undefined}
                       reducedMotion={reducedMotion}
@@ -1651,6 +1656,9 @@ function App() {
                       onLabelChange={(nextLabel) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { label: nextLabel },
                       }, `appearance-label:${item.id}`)}
+                      onBorderVisibleChange={(borderVisible) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { borderVisible },
+                      })}
                       onControlChange={(control) => {
                         if (isPlaying) stopPlayback()
                         pausedPlayback.current = null
@@ -1924,7 +1932,7 @@ function App() {
                   {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
                 </g>
               })}
-              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint }) => {
+              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint, borderVisible }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 const baseMovable = !!item && objectBaseMovable(item)
                 const base = primitive.shape.kind === 'loop'
@@ -1933,7 +1941,7 @@ function App() {
                 const baseKey = `${id}:base`
                 return <g key={id} style={{ color }}>
                   <path
-                    className="bivector"
+                    className={`bivector${borderVisible ? ' has-border' : ''}`}
                     d={path}
                     markerEnd="url(#area-arrowhead)"
                     strokeWidth={3 * objectRenderScale}
