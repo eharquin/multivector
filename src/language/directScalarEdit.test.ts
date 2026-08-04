@@ -18,5 +18,6 @@ describe('direct scalar edit boundary', () => {
     expect(formatScalarSource(-0)).toBe('0')
     expect(formatScalarSource(1 / 3)).toBe('0.3333333333333333')
     expect(Number(formatScalarSource(Math.PI * 2))).toBe(Math.PI * 2)
+    expect(formatScalarSource(7.179585925776166e-9)).toBe('7.179585925776166E-9')
   })
 })

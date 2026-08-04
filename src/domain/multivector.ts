@@ -1,3 +1,5 @@
+import { formatRoundTripNumber } from './numberFormat'
+
 export const VGA_2D_BLADE_NAMES = ['e', 'e1', 'e2', 'e12'] as const
 
 /**
@@ -43,8 +45,8 @@ export function inspectMultivector(value: OwnedMultivector): string {
     const blade = VGA_2D_BLADE_NAMES[index]
     const body =
       index === 0
-        ? String(magnitude)
-        : `${magnitude === 1 ? '' : magnitude}${blade}`
+        ? formatRoundTripNumber(magnitude)
+        : `${magnitude === 1 ? '' : formatRoundTripNumber(magnitude)}${blade}`
 
     if (terms.length === 0) {
       terms.push(coefficient < 0 ? `-${body}` : body)

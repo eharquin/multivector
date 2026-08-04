@@ -1,4 +1,5 @@
 import type { OwnedMultivector } from './multivector'
+import { formatRoundTripNumber } from './numberFormat'
 
 export const MAX_GENERATED_VALUES = 10_000
 
@@ -48,8 +49,8 @@ export function inspectLanguageValue(value: LanguageValue): string {
       if (coefficient === 0) return
       const magnitude = Math.abs(coefficient)
       const body = index === 0
-        ? String(magnitude)
-        : `${magnitude === 1 ? '' : magnitude}${blades[index]}`
+        ? formatRoundTripNumber(magnitude)
+        : `${magnitude === 1 ? '' : formatRoundTripNumber(magnitude)}${blades[index]}`
       terms.push(terms.length === 0
         ? `${coefficient < 0 ? '-' : ''}${body}`
         : `${coefficient < 0 ? '-' : '+'} ${body}`)

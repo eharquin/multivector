@@ -15,6 +15,17 @@ describe('expression tokenizer', () => {
     })
   })
 
+  it('accepts uppercase scientific exponents emitted by generated output', () => {
+    expect(tokenize('7.179585925776166E-9e12')).toMatchObject({
+      ok: true,
+      tokens: [
+        { kind: 'number', text: '7.179585925776166E-9' },
+        { kind: 'blade', text: 'e12' },
+        { kind: 'end' },
+      ],
+    })
+  })
+
   it('retains user identifiers for document-level name resolution', () => {
     expect(tokenize('V1 = e3')).toMatchObject({
       ok: true,

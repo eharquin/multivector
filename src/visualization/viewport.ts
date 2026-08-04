@@ -1,3 +1,5 @@
+import { formatRoundTripNumber } from '../domain/numberFormat'
+
 /**
  * An axis-aligned 2D view with a mathematical center and reference-pixel
  * scale. An SVG renderer may scale those reference pixels during layout.
@@ -102,7 +104,7 @@ function oneTwoFiveStep(raw: number): number {
 export function formatGridNumber(value: number, step: number): string {
   const normalized = Math.abs(value) < step * 1e-10 ? 0 : value
   const decimals = Math.max(0, Math.min(12, -Math.floor(Math.log10(step)) + 1))
-  return Number(normalized.toFixed(decimals)).toString()
+  return formatRoundTripNumber(Number(normalized.toFixed(decimals)))
 }
 
 function axisLines(

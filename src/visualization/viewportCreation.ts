@@ -1,3 +1,5 @@
+import { formatRoundTripNumber } from '../domain/numberFormat'
+
 const DECLARATION_NAME = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/
 const MAX_COORDINATE_DECIMALS = 8
 
@@ -30,7 +32,7 @@ export function formatViewportCoordinate(
     ),
   )
   const rounded = Number(value.toFixed(decimals))
-  return Object.is(rounded, -0) ? '0' : rounded.toString()
+  return formatRoundTripNumber(rounded)
 }
 
 export function vectorCreationSource(
