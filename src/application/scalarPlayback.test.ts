@@ -46,6 +46,31 @@ describe('deterministic scalar playback', () => {
       animation: { ...tauParameters.animation, direction: 'reverse' },
     }, 2000).value).toBe(0)
   })
+
+  it('rounds away binary64 step-multiplication artifacts, e.g. 357 * 0.01', () => {
+    // Reported case: playing a "0, tau, 0.01" slider showed a = 3.5700000000000003.
+    const tauParameters: PlaybackParameters = {
+      minimum: 0,
+      maximum: Math.PI * 2,
+      step: 0.01,
+      animation: { mode: 'once', direction: 'forward', durationSeconds: 2 },
+    }
+    expect(scalarPlaybackFrame(tauParameters, 1136.37).value).toBe(3.57)
+  })
+
+  it('never produces a value with more decimal digits than its step implies', () => {
+    const tauParameters: PlaybackParameters = {
+      minimum: 0,
+      maximum: Math.PI * 2,
+      step: 0.01,
+      animation: { mode: 'once', direction: 'forward', durationSeconds: 2 },
+    }
+    for (let elapsed = 0; elapsed <= 2000; elapsed += 17) {
+      const { value } = scalarPlaybackFrame(tauParameters, elapsed)
+      const decimals = (value.toString().split('.')[1] ?? '').length
+      expect(decimals).toBeLessThanOrEqual(2)
+    }
+  })
 })
 
 describe('slider bound snapping', () => {

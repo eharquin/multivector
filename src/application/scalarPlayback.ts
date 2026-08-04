@@ -12,6 +12,17 @@ export type PlaybackFrame = Readonly<{
   completed: boolean
 }>
 
+/**
+ * Rounds away binary64 representation artifacts introduced by multiplying a
+ * step count (e.g. `357 * 0.01 === 3.5700000000000003`), using the decimal
+ * precision implied by `step` itself — the same technique as
+ * `formatGridNumber` in `src/visualization/viewport.ts`.
+ */
+function roundToStep(value: number, step: number): number {
+  const decimals = Math.max(0, Math.min(12, -Math.floor(Math.log10(step)) + 1))
+  return Number(value.toFixed(decimals))
+}
+
 function steppedValue(
   minimum: number,
   maximum: number,
@@ -21,7 +32,7 @@ function steppedValue(
   if (progress <= 0) return minimum
   if (progress >= 1) return maximum
   const raw = minimum + (maximum - minimum) * progress
-  const stepped = minimum + Math.round((raw - minimum) / step) * step
+  const stepped = roundToStep(minimum + Math.round((raw - minimum) / step) * step, step)
   return Math.min(maximum, Math.max(minimum, stepped))
 }
 
