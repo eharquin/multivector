@@ -41,5 +41,5 @@ export function directScalarEdit(source: string): DirectScalarEdit | null {
 
 export function formatScalarSource(value: number): string {
   if (!Number.isFinite(value)) throw new Error('Scalar source values must be finite.')
-  return Object.is(value, -0) ? '0' : Number(value.toPrecision(12)).toString()
+  return Object.is(value, -0) ? '0' : value.toString()
 }

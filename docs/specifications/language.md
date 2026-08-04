@@ -53,6 +53,11 @@ semantic rule does not require dense storage: implementations may use optimized
 zero, scalar, sparse, or dense representations behind one owned multivector
 abstraction.
 
+When an interaction rewrites an authoritative numeric literal, it uses the
+shortest decimal representation that round-trips to the same finite binary64
+value. Presentation precision never shortens rewritten source. Negative zero is
+written as `0`.
+
 Lists are first-class ordered collections of multivectors. Nested lists are not
 supported in the initial language scope.
 
