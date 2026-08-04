@@ -1,5 +1,4 @@
 import {
-  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -1689,33 +1688,34 @@ function App() {
               const listExpanded = expandedListIds.has(item.id)
               const listDetailsId = `list-details-${item.id}`
 
+              const dropBefore = dropTargetIndex === index
+              const dropAfter = dropTargetIndex === evaluatedItems.length &&
+                index === evaluatedItems.length - 1
+
               return (
-                <Fragment key={item.id}>
-                  {dropTargetIndex === index && (
-                    <div className="expression-drop-indicator" aria-hidden="true" />
-                  )}
-                  <article
-                    ref={(element) => {
-                      if (element) expressionRowRefs.current.set(item.id, element)
-                      else expressionRowRefs.current.delete(item.id)
-                    }}
-                    className={`expression-item${visible ? '' : ' is-hidden'}${
-                      empty ? ' is-empty-expression' : ''
-                    } ${
-                      invalid || invalidPosition ? 'has-error' : ''
-                    }`}
+                <article
+                  key={item.id}
+                  ref={(element) => {
+                    if (element) expressionRowRefs.current.set(item.id, element)
+                    else expressionRowRefs.current.delete(item.id)
+                  }}
+                  className={`expression-item${visible ? '' : ' is-hidden'}${
+                    empty ? ' is-empty-expression' : ''
+                  }${dropBefore ? ' drop-before' : ''}${dropAfter ? ' drop-after' : ''} ${
+                    invalid || invalidPosition ? 'has-error' : ''
+                  }`}
+                >
+                  <button
+                    type="button"
+                    className="reorder-handle"
+                    aria-label={`Reorder ${objectName}. Shift plus arrow keys to move.`}
+                    onPointerDown={(event) => beginRowReorder(event, item.id)}
+                    onKeyDown={(event) => reorderRowWithKeyboard(event, item.id)}
                   >
+                    <span aria-hidden="true">⠿</span>
+                  </button>
                   <div className="expression-input-row">
                     <div className="expression-actions">
-                      <button
-                        type="button"
-                        className="reorder-handle"
-                        aria-label={`Reorder ${objectName}. Shift plus arrow keys to move.`}
-                        onPointerDown={(event) => beginRowReorder(event, item.id)}
-                        onKeyDown={(event) => reorderRowWithKeyboard(event, item.id)}
-                      >
-                        <span aria-hidden="true">⠿</span>
-                      </button>
                       {scalar && effectiveControl?.mode === 'slider' ? (
                         <button
                           type="button"
@@ -2143,13 +2143,9 @@ function App() {
                       onClose={closeAppearance}
                     />
                   )}
-                  </article>
-                </Fragment>
+                </article>
               )
             })}
-            {dropTargetIndex === evaluatedItems.length && (
-              <div className="expression-drop-indicator" aria-hidden="true" />
-            )}
           </div>
           <div className="expression-panel-footer">
             <button

@@ -202,6 +202,8 @@ h2 {
 
 .expression-item {
   flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
   border: 0;
   border-bottom: 1px solid var(--border-subtle);
   border-radius: 0;
@@ -362,6 +364,8 @@ h2 {
 }
 
 .expression-input-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: flex-start;
   min-height: 68px;
@@ -389,8 +393,7 @@ h2 {
 }
 
 .visibility-toggle,
-.appearance-swatch,
-.reorder-handle {
+.appearance-swatch {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -405,11 +408,28 @@ h2 {
 }
 
 .reorder-handle {
+  flex-shrink: 0;
+  width: 18px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1;
   cursor: grab;
   touch-action: none;
+  opacity: 0;
+  transition: opacity 100ms ease, color 120ms ease, background 120ms ease;
+}
+
+.expression-item:hover .reorder-handle,
+.expression-item:focus-within .reorder-handle,
+.reorder-handle:focus-visible {
+  opacity: 1;
 }
 
 .reorder-handle:hover {
@@ -424,14 +444,16 @@ body.reordering-items {
 
 body.reordering-items .reorder-handle {
   cursor: grabbing;
+  opacity: 1;
 }
 
-.expression-drop-indicator {
-  height: 2px;
-  margin: -1px 0;
-  background: var(--accent);
-  border-radius: 1px;
-  pointer-events: none;
+/* Inset shadow avoids layout shift from a separate indicator element. */
+.expression-item.drop-before {
+  box-shadow: inset 0 2px 0 0 var(--accent);
+}
+
+.expression-item.drop-after {
+  box-shadow: inset 0 -2px 0 0 var(--accent);
 }
 
 .expression-action-spacer {
