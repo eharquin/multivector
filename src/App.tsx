@@ -64,6 +64,11 @@ import {
   type ThemeMode,
 } from './document/canonicalDocument'
 import { browserDocumentStorage } from './document/documentStorage'
+import {
+  formatDisplayMultivector,
+  formatDisplayNumber,
+  formatDisplayValue,
+} from './presentation/formatNumber'
 import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
 import {
@@ -1362,6 +1367,10 @@ function App() {
   }
 
   const visibleCount = renderedVectors.length + renderedAreas.length
+  const displayedNumber = (value: number) => formatDisplayNumber(
+    value,
+    expressionDoc.view.display.decimalPlaces,
+  )
   const canvasDescription = visibleCount === 0
       ? `No spatial objects are visible from ${expressionDoc.items.length} expressions. ` +
         'Double-click empty viewport space to create a vector.'
@@ -1373,11 +1382,27 @@ function App() {
               `${primitive.accessibleName} runs from ${
                 primitive.start.x === 0 && primitive.start.y === 0
                   ? 'the origin'
-                  : `${primitive.start.x}, ${primitive.start.y}`
-              } to ${primitive.end.x}, ${primitive.end.y}.`,
+                  : `${displayedNumber(primitive.start.x)}, ${displayedNumber(primitive.start.y)}`
+              } to ${displayedNumber(primitive.end.x)}, ${displayedNumber(primitive.end.y)}.`,
           )
           .join(' ')} ${renderedAreas
-          .map(({ primitive }) => primitive.accessibleDescription)
+          .map(({ primitive }) => {
+            const position = primitive.shape.kind === 'loop'
+              ? primitive.shape.center
+              : primitive.shape.vertices[0]
+            const at = position.x === 0 && position.y === 0
+              ? 'the origin'
+              : `(${displayedNumber(position.x)}, ${displayedNumber(position.y)})`
+            const shape = primitive.shape.kind === 'parallelogram'
+              ? 'oriented parallelogram'
+              : 'oriented loop'
+            const signedValue = primitive.orientation === 'counterclockwise'
+              ? primitive.area
+              : -primitive.area
+            return `${primitive.accessibleName} is an ${shape} with signed value ${
+              displayedNumber(signedValue)
+            }, area ${displayedNumber(primitive.area)}, ${primitive.orientation} orientation, positioned at ${at}.`
+          })
           .join(' ')}${omittedRenderElements > 0
             ? ` ${omittedRenderElements} additional list elements are omitted by the rendering limit.`
             : ''} Double-click empty viewport space to create a vector.`
@@ -1699,7 +1724,10 @@ function App() {
                                   {kind}
                                 </span>
                               )}
-                              <output>{evaluation.inspection}</output>
+                              <output>{formatDisplayValue(
+                                evaluation.value,
+                                expressionDoc.view.display.decimalPlaces,
+                              )}</output>
                               {normalizationUnavailable && <>
                                 <span className="feedback-label">Normalization unavailable</span>
                                 <span>This multivector has zero natural norm and was left unchanged.</span>
@@ -1742,7 +1770,9 @@ function App() {
 
                       {scalar && effectiveControl?.mode === 'slider' && controlEvaluation && (
                         <div className="scalar-slider-row">
-                          <span>{controlEvaluation.minimum ?? '—'}</span>
+                          <span>{controlEvaluation.minimum == null
+                            ? '—'
+                            : displayedNumber(controlEvaluation.minimum)}</span>
                           <input
                             type="range"
                             aria-label={`Value for ${declaredName(item.source) ?? `Scalar ${position}`}`}
@@ -1766,7 +1796,9 @@ function App() {
                               }, `scalar-control:${item.id}`)
                             }}
                           />
-                          <span>{controlEvaluation.maximum ?? '—'}</span>
+                          <span>{controlEvaluation.maximum == null
+                            ? '—'
+                            : displayedNumber(controlEvaluation.maximum)}</span>
                           {!scalarEdit && <small>Direct control requires a declared numeric literal.</small>}
                           {scalarEdit && controlEvaluation.status === 'valid' &&
                             (scalarEdit.value < controlEvaluation.minimum! ||
@@ -1837,14 +1869,23 @@ function App() {
                                 <span className="list-element-kind">
                                   {describeVga2Entity(element.entity)}
                                 </span>
-                                <code>{element.inspection}</code>
+                                <code>{formatDisplayMultivector(
+                                  element.value,
+                                  expressionDoc.view.display.decimalPlaces,
+                                )}</code>
                                 {element.positionConflict ? (
                                   <span className="list-element-position is-error">
                                     position conflict
                                   </span>
                                 ) : element.position ? (
                                   <span className="list-element-position">
-                                    position ({element.position.x}, {element.position.y})
+                                    position ({formatDisplayNumber(
+                                      element.position.x,
+                                      expressionDoc.view.display.decimalPlaces,
+                                    )}, {formatDisplayNumber(
+                                      element.position.y,
+                                      expressionDoc.view.display.decimalPlaces,
+                                    )})
                                   </span>
                                 ) : null}
                               </li>
@@ -2099,14 +2140,14 @@ function App() {
                   const axisY = Math.max(16, Math.min(viewport.height - 18, origin.y))
                   return <g key={`graduation-x-${line.coordinate}`}>
                     <line className="graduation" x1={line.screen} y1={axisY - 4} x2={line.screen} y2={axisY + 4} />
-                    <text className="graduation-label" x={line.screen} y={axisY + 16}>{line.label}</text>
+                    <text className="graduation-label" x={line.screen} y={axisY + 16}>{displayedNumber(line.coordinate)}</text>
                   </g>
                 })}
                 {grid.horizontal.filter((line) => line.major && line.coordinate !== 0).map((line) => {
                   const axisX = Math.max(28, Math.min(viewport.width - 28, origin.x))
                   return <g key={`graduation-y-${line.coordinate}`}>
                     <line className="graduation" x1={axisX - 4} y1={line.screen} x2={axisX + 4} y2={line.screen} />
-                    <text className="graduation-label is-y" x={axisX - 8} y={line.screen + 4}>{line.label}</text>
+                    <text className="graduation-label is-y" x={axisX - 8} y={line.screen + 4}>{displayedNumber(line.coordinate)}</text>
                   </g>
                 })}
               </g>}

@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { type ThemeMode } from '../document/canonicalDocument'
+import {
+  MAX_DECIMAL_PLACES,
+  MIN_DECIMAL_PLACES,
+} from '../presentation/formatNumber'
 
 export type DisplaySettings = Readonly<{
+  decimalPlaces: number
   gridVisible: boolean
   axisLabelsVisible: boolean
   graduationsVisible: boolean
@@ -130,6 +135,28 @@ export function DisplaySettingsMenu({
                 onDisplayChange({ graduationsVisible })
               }
             />
+            <label className="settings-row">
+              <span className="settings-row-label">Decimal places</span>
+              <input
+                className="settings-number"
+                type="number"
+                aria-label="Decimal places"
+                min={MIN_DECIMAL_PLACES}
+                max={MAX_DECIMAL_PLACES}
+                step="1"
+                value={display.decimalPlaces}
+                onChange={(event) => {
+                  const value = Number(event.target.value)
+                  if (!Number.isInteger(value)) return
+                  onDisplayChange({
+                    decimalPlaces: Math.max(
+                      MIN_DECIMAL_PLACES,
+                      Math.min(MAX_DECIMAL_PLACES, value),
+                    ),
+                  })
+                }}
+              />
+            </label>
             <label className="settings-row settings-row-slider">
               <span className="settings-row-label">Object size</span>
               <input

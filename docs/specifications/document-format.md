@@ -240,9 +240,12 @@ Format version 1 supports these closed `viewport` variants:
 
 `DisplaySettings` has exactly `decimalPlaces`, `axisLabelsVisible`,
 `graduationsVisible`, `gridVisible`, `objectScale`, and `theme`.
-`decimalPlaces` is an integer from 0 through 15, `objectScale` is finite and
-positive, the visibility fields are booleans, and `theme` is `light`, `dark`, or
-`system`. Later format versions may add viewport variants through migration.
+`decimalPlaces` is an integer from 0 through 15 and defaults to 4 for new
+documents. It controls presentation only: trailing zeroes are omitted, negative
+zero is displayed as zero, and a non-zero magnitude that would round to zero is
+shown in scientific notation. `objectScale` is finite and positive, the
+visibility fields are booleans, and `theme` is `light`, `dark`, or `system`.
+Later format versions may add viewport variants through migration.
 
 ## 3. Canonical JSON
 
