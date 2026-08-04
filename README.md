@@ -148,6 +148,12 @@ The example is loaded as the default graph only when no local document exists.
   [VGA 2D foundation](docs/requirements/milestones/vga-2d-foundation.md), and
   [VGA 2D visual workflow](docs/requirements/milestones/vga-2d-visual-workflow.md)
 - [Project workflow](docs/project-workflow.md)
+- [Release roadmap](ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- Publication preparation:
+  [JOSS readiness](docs/publication/joss-readiness.md),
+  [research impact evidence](docs/publication/research-impact.md), and
+  [generative AI usage](docs/publication/ai-usage.md)
 - [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)
 
 ## Contributing
