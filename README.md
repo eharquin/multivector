@@ -86,6 +86,8 @@ open document, and failed writes retain the last saved revision.
 The two-dimensional viewport supports cursor-centered wheel zoom, pointer pan,
 keyboard pan and zoom, and reset to the origin. Controls in the canvas corner
 zoom, reset the view, and widen the expression panel until the canvas is square.
+The camera spans 0.001 through 1,000,000 reference pixels per mathematical unit;
+changing it never changes evaluated values.
 Double-clicking empty viewport space creates a named `vector(x, y)` expression
 at that mathematical coordinate; rendered objects are not directly selectable.
 The header's display settings menu gives the adaptive grid, axes and labels,

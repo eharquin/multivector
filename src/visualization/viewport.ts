@@ -15,8 +15,8 @@ export type Viewport2d = Readonly<{
 }>
 
 export const DEFAULT_PIXELS_PER_UNIT = 72
-export const MIN_PIXELS_PER_UNIT = 8
-export const MAX_PIXELS_PER_UNIT = 512
+export const MIN_PIXELS_PER_UNIT = 0.001
+export const MAX_PIXELS_PER_UNIT = 1_000_000
 export const GRID_TARGET_PIXELS = 72
 export const MAX_GRID_LINES = 256
 
@@ -63,6 +63,16 @@ export function toMathematical(
 
 export function clampZoom(zoom: number): number {
   return Math.min(MAX_PIXELS_PER_UNIT, Math.max(MIN_PIXELS_PER_UNIT, zoom))
+}
+
+/** Formats the camera scale compactly across the complete supported range. */
+export function formatZoomPercentage(pixelsPerUnit: number): string {
+  const percentage = pixelsPerUnit / DEFAULT_PIXELS_PER_UNIT * 100
+  if (percentage < 0.01 || percentage >= 10_000) {
+    return `${percentage.toExponential(2).replace('e', 'E').replace('E+', 'E')}%`
+  }
+  if (percentage >= 100) return `${Math.round(percentage)}%`
+  return `${Number(percentage.toPrecision(3))}%`
 }
 
 /** Changes scale while leaving the mathematical point under the cursor fixed. */

@@ -92,12 +92,14 @@ textual inspection and export.
 ## 6. Interaction constants
 
 The two-dimensional viewport uses 72 reference pixels per mathematical unit
-after reset. Interactive zoom is clamped from 8 through 512 reference pixels
-per unit. Its adaptive grid targets 72 reference pixels between major lines,
-selects the next spacing from the 1–2–5 × 10^n progression, subdivides major
-steps into four or five intervals, and generates no more than 256 lines per
-axis. Wheel zoom uses a continuous exponential scale and preserves the
-mathematical coordinate under the pointer.
+after reset. Interactive zoom is clamped from 0.001 through 1,000,000 reference
+pixels per unit. This range covers a 1,000,000-unit overview in a
+1,000-reference-pixel canvas and resolves features near one millionth of a
+unit at close inspection. Its adaptive grid targets 72 reference pixels
+between major lines, selects the next spacing from the 1–2–5 × 10^n
+progression, subdivides major steps into four or five intervals, and generates
+no more than 256 lines per axis. Wheel zoom uses a continuous exponential scale
+and preserves the mathematical coordinate under the pointer.
 
 Viewport-created vector coordinates retain approximately one tenth of a
 reference screen pixel at the active zoom. Their decimal precision is

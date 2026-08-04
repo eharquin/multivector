@@ -43,6 +43,7 @@ import {
   clampZoom,
   DEFAULT_PIXELS_PER_UNIT,
   formatGridNumber,
+  formatZoomPercentage,
   panByScreen,
   toMathematical,
   toScreen,
@@ -2092,7 +2093,7 @@ function App() {
                 </svg>
               </button>
               <output className="viewport-zoom" aria-live="polite">
-                {Math.round(viewport.pixelsPerUnit / DEFAULT_PIXELS_PER_UNIT * 100)}%
+                {formatZoomPercentage(viewport.pixelsPerUnit)}
               </output>
               </div>
             </div>
