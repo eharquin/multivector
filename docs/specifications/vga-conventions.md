@@ -241,6 +241,8 @@ Canonical textual inspection:
 - emits the scalar term without a blade suffix;
 - emits canonical increasing blade names;
 - uses the common shortest round-tripping binary64 number format;
+- uses uppercase `E` for the decimal exponent marker while basis blade names
+  remain lowercase;
 - emits zero as `0`;
 - never exposes backend array indices, classes, or serialization.
 

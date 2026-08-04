@@ -20,6 +20,7 @@ describe('viewport vector creation', () => {
     expect(formatViewportCoordinate(-0.0001, 72)).toBe('0')
     expect(formatViewportCoordinate(1 / 3, 512)).toBe('0.3333')
     expect(formatViewportCoordinate(1 / 3, 1e12)).toBe('0.33333333')
+    expect(formatViewportCoordinate(1e-8, 1e12)).toBe('1E-8')
   })
 
   it('builds documented VGA vector source', () => {
