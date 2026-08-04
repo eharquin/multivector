@@ -46,6 +46,7 @@
 .viewport-command:focus-visible,
 .display-settings-button:focus-visible,
 .settings-select:focus-visible,
+.settings-number:focus-visible,
 .appearance-header button:focus-visible,
 .appearance-colors button:focus-visible {
   outline: 2px solid var(--accent);
@@ -983,6 +984,20 @@ h2 {
 }
 
 .settings-select:hover {
+  border-color: var(--accent-border);
+}
+
+.settings-number {
+  width: 5.5ch;
+  padding: 4px 5px;
+  color: var(--text);
+  background: var(--background);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.settings-number:hover {
   border-color: var(--accent-border);
 }
 

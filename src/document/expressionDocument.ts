@@ -95,7 +95,7 @@ export function expressionDocument(
       positionEnabled: true,
       viewport: { kind: 'two-dimensional', centerX: 0, centerY: 0, zoom: 72 },
       display: {
-        decimalPlaces: 6,
+        decimalPlaces: 4,
         axisLabelsVisible: true,
         graduationsVisible: true,
         gridVisible: true,

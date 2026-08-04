@@ -783,6 +783,8 @@ describe('VGA 2D vertical slice', () => {
     const trigger = openDisplaySettings()
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('switch', { name: 'Grid' })).toHaveFocus()
+    expect(screen.getByRole('spinbutton', { name: 'Decimal places' }))
+      .toHaveValue(4)
 
     fireEvent.click(screen.getByRole('switch', { name: 'Grid' }))
     expect(undo).toBeDisabled()
@@ -797,6 +799,33 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.pointerDown(outsideControl)
     expect(screen.queryByRole('switch', { name: 'Grid' })).not.toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('changes numeric presentation without changing source, value kind, or history', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, {
+      target: { value: 'R = -1 + 0.0000000035897930298416118e12' },
+    })
+    expect(screen.getByText('Rotor')).toBeInTheDocument()
+    expect(screen.getByText('-1 + 3.5898E-9e12')).toBeInTheDocument()
+
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    fireEvent.click(undo)
+    expect(source).toHaveValue('vector(2, 1)')
+    fireEvent.change(source, {
+      target: { value: 'R = -1 + 0.0000000035897930298416118e12' },
+    })
+    openDisplaySettings()
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Decimal places' }), {
+      target: { value: '2' },
+    })
+
+    expect(source).toHaveValue('R = -1 + 0.0000000035897930298416118e12')
+    expect(screen.getByText('Rotor')).toBeInTheDocument()
+    expect(screen.getByText('-1 + 3.59E-9e12')).toBeInTheDocument()
+    fireEvent.click(undo)
+    expect(source).toHaveValue('vector(2, 1)')
   })
 
   it('shows a textual, source-associated diagnostic and removes stale output', () => {
