@@ -93,3 +93,8 @@ A selected technology should be reconsidered only when measurements or a
 required capability show that it is inadequate. A replacement shall preserve
 the document format, owned mathematical values, deterministic behavior,
 accessibility, deployment profile, and active milestone guarantees.
+
+The proposed multi-algebra computational precision and classification policy is
+tracked separately in [Numerical Policy Options](numerical-policy-options.md).
+It is non-normative until its required experiments and convention consequences
+are reviewed.
