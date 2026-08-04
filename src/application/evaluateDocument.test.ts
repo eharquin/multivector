@@ -20,6 +20,26 @@ function evaluateItems(items: readonly ExpressionItem[]) {
 }
 
 describe('document dependency evaluation', () => {
+  it('avoids source-truncation noise at the full-turn VGA example endpoint', () => {
+    const fullTurn = (angle: string) => evaluate(
+      'V1 = vector(0.66, 3.042)',
+      `a = ${angle}`,
+      'R = exp(0.5*a*e12)',
+      'V2 = R >>> V1',
+      'B = V1 ^ V2',
+    )[4].evaluation
+    const precise = fullTurn((Math.PI * 2).toString())
+    const truncated = fullTurn(Number((Math.PI * 2).toPrecision(12)).toString())
+    if (precise?.status !== 'valid' || precise.valueType !== 'single' ||
+        truncated?.status !== 'valid' || truncated.valueType !== 'single') {
+      throw new Error('Expected valid full-turn bivectors')
+    }
+    const preciseResidual = Math.abs(precise.value.coefficients[3])
+    const truncatedResidual = Math.abs(truncated.value.coefficients[3])
+    expect(preciseResidual).toBeLessThan(1e-12)
+    expect(preciseResidual).toBeLessThan(truncatedResidual)
+  })
+
   it('preserves annotations without parsing or evaluating their source', () => {
     const [annotation, expression] = evaluateItems([
       { id: 'note', kind: 'annotation', source: 'This is prose, not an expression!' },

@@ -18,9 +18,11 @@ function steppedValue(
   step: number,
   progress: number,
 ): number {
+  if (progress <= 0) return minimum
+  if (progress >= 1) return maximum
   const raw = minimum + (maximum - minimum) * progress
   const stepped = minimum + Math.round((raw - minimum) / step) * step
-  return Math.min(maximum, Math.max(minimum, Number(stepped.toPrecision(12))))
+  return Math.min(maximum, Math.max(minimum, stepped))
 }
 
 /** Deterministic elapsed-time mapping; frame cadence never enters the result. */

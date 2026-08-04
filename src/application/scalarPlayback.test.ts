@@ -26,4 +26,19 @@ describe('deterministic scalar playback', () => {
     expect(scalarPlaybackOffset(parameters('once'), 4)).toBe(800)
     expect(scalarPlaybackOffset(parameters('once', 'reverse'), 4)).toBe(1200)
   })
+
+  it('reaches full-precision endpoints even when the step does not divide the interval', () => {
+    const maximum = Math.PI * 2
+    const tauParameters: PlaybackParameters = {
+      minimum: 0,
+      maximum,
+      step: 0.01,
+      animation: { mode: 'once', direction: 'forward', durationSeconds: 2 },
+    }
+    expect(scalarPlaybackFrame(tauParameters, 2000).value).toBe(maximum)
+    expect(scalarPlaybackFrame({
+      ...tauParameters,
+      animation: { ...tauParameters.animation, direction: 'reverse' },
+    }, 2000).value).toBe(0)
+  })
 })
