@@ -1,22 +1,31 @@
 import type { OwnedMultivector } from '../domain/multivector'
+import {
+  classificationEpsilon,
+  classificationScale,
+  STANDARD_VGA2_CLASSIFICATION_POLICY,
+  type Vga2ClassificationPolicy,
+} from './vga2ClassificationPolicy'
 
 /** A renderer-independent Euclidean vector in mathematical coordinates. */
 export type Vector2dEntity = Readonly<{
   kind: 'vector-2d'
   x: number
   y: number
+  approximated: boolean
 }>
 
 /** A renderer-independent scalar value with no spatial extent. */
 export type ScalarEntity = Readonly<{
   kind: 'scalar'
   value: number
+  approximated: boolean
 }>
 
 /** A signed oriented area with no intrinsic location. */
 export type Bivector2dEntity = Readonly<{
   kind: 'bivector-2d'
   value: number
+  approximated: boolean
 }>
 
 /** An even-grade VGA(2) value with scalar and bivector parts. */
@@ -24,6 +33,7 @@ export type Rotor2dEntity = Readonly<{
   kind: 'rotor-2d'
   scalar: number
   bivector: number
+  approximated: boolean
 }>
 
 /** A valid value spanning object kinds with no single standard reading. */
@@ -58,35 +68,61 @@ export function supportsVga2Position(entity: StandardVga2Entity): boolean {
  * Interpretation depends only on coefficients. The all-zero multivector is
  * therefore classified canonically as scalar zero, regardless of its source
  * construction.
+ *
+ * Classification tolerates harmless floating-point leakage per VGA-INT-005:
+ * a coefficient outside a candidate kind's retained fields does not block
+ * that classification when it is nonzero but within
+ * `epsilon = absoluteFloor + relativeTerm * scale`, where `scale` is the
+ * largest absolute coefficient. The returned entity reports
+ * `approximated: true` whenever such a coefficient was ignored. This only
+ * affects the classification decision — the returned numeric fields are
+ * always the exact, untouched owned coefficients.
  */
 export function interpretVga2(
   value: OwnedMultivector,
+  policy: Vga2ClassificationPolicy = STANDARD_VGA2_CLASSIFICATION_POLICY,
 ): StandardVga2Entity {
   const [scalar, x, y, bivector] = value.coefficients
-  if (x === 0 && y === 0 && bivector === 0) {
+  const epsilon = classificationEpsilon(
+    policy,
+    classificationScale(value.coefficients),
+  )
+  // A coefficient that is exactly zero was never "ignored" — only a
+  // genuinely nonzero-but-negligible one makes a classification approximate.
+  const negligible = (v: number) => v !== 0 && Math.abs(v) <= epsilon
+  const zeroLike = (v: number) => v === 0 || negligible(v)
+
+  if (zeroLike(x) && zeroLike(y) && zeroLike(bivector)) {
     return Object.freeze({
       kind: 'scalar' as const,
       value: scalar,
+      approximated: negligible(x) || negligible(y) || negligible(bivector),
     })
   }
 
-  if (scalar === 0 && bivector === 0) {
+  if (zeroLike(scalar) && zeroLike(bivector)) {
     return Object.freeze({
       kind: 'vector-2d' as const,
       x,
       y,
+      approximated: negligible(scalar) || negligible(bivector),
     })
   }
 
-  if (scalar === 0 && x === 0 && y === 0) {
-    return Object.freeze({ kind: 'bivector-2d' as const, value: bivector })
+  if (zeroLike(scalar) && zeroLike(x) && zeroLike(y)) {
+    return Object.freeze({
+      kind: 'bivector-2d' as const,
+      value: bivector,
+      approximated: negligible(scalar) || negligible(x) || negligible(y),
+    })
   }
 
-  if (x === 0 && y === 0) {
+  if (zeroLike(x) && zeroLike(y)) {
     return Object.freeze({
       kind: 'rotor-2d' as const,
       scalar,
       bivector,
+      approximated: negligible(x) || negligible(y),
     })
   }
 

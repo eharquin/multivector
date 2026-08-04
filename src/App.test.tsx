@@ -803,11 +803,14 @@ describe('VGA 2D vertical slice', () => {
 
   it('changes numeric presentation without changing source, value kind, or history', () => {
     render(<App />)
+    openDisplaySettings()
+    fireEvent.click(screen.getByRole('switch', { name: 'Show approximated residue' }))
+    openDisplaySettings()
     const source = screen.getByRole('textbox', { name: 'Expression 1' })
     fireEvent.change(source, {
       target: { value: 'R = -1 + 0.0000000035897930298416118e12' },
     })
-    expect(screen.getByText('Rotor')).toBeInTheDocument()
+    expect(screen.getByText('Scalar')).toBeInTheDocument()
     expect(screen.getByText('-1 + 3.5898E-9e12')).toBeInTheDocument()
 
     const undo = screen.getByRole('button', { name: 'Undo document change' })
@@ -822,10 +825,27 @@ describe('VGA 2D vertical slice', () => {
     })
 
     expect(source).toHaveValue('R = -1 + 0.0000000035897930298416118e12')
-    expect(screen.getByText('Rotor')).toBeInTheDocument()
+    expect(screen.getByText('Scalar')).toBeInTheDocument()
     expect(screen.getByText('-1 + 3.59E-9e12')).toBeInTheDocument()
     fireEvent.click(undo)
     expect(source).toHaveValue('vector(2, 1)')
+  })
+
+  it('hides approximated residue by default and reveals it via the display setting', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, {
+      target: { value: 'R = -1 + 0.0000000035897930298416118e12' },
+    })
+    const item = source.closest('.expression-item') as HTMLElement
+    expect(within(item).getByText('Scalar')).toBeInTheDocument()
+    expect(within(item).getByText('-1')).toBeInTheDocument()
+    expect(within(item).queryByText('-1 + 3.5898E-9e12')).not.toBeInTheDocument()
+
+    openDisplaySettings()
+    fireEvent.click(screen.getByRole('switch', { name: 'Show approximated residue' }))
+    expect(within(item).getByText('Scalar')).toBeInTheDocument()
+    expect(within(item).getByText('-1 + 3.5898E-9e12')).toBeInTheDocument()
   })
 
   it('shows a textual, source-associated diagnostic and removes stale output', () => {

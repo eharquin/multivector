@@ -17,7 +17,7 @@ describe('vector primitive adapter', () => {
     expect(result.omitted).toBe(3)
   })
   it('creates an oriented segment without algebra identifiers or coefficients', () => {
-    const primitive = vectorToPrimitive({ kind: 'vector-2d', x: 2, y: 1 })
+    const primitive = vectorToPrimitive({ kind: 'vector-2d', x: 2, y: 1, approximated: false })
 
     expect(primitive).toEqual({
       kind: 'oriented-segment',
@@ -32,7 +32,7 @@ describe('vector primitive adapter', () => {
   it('translates both endpoints without changing the vector entity', () => {
     expect(
       vectorToPrimitive(
-        { kind: 'vector-2d', x: 2, y: 1 },
+        { kind: 'vector-2d', x: 2, y: 1, approximated: false },
         'V',
         { x: -1, y: 2 },
       ),
@@ -47,12 +47,12 @@ describe('vector primitive adapter', () => {
 describe('bivector primitive adapter', () => {
   it('uses area magnitude and non-color orientation for generic loops', () => {
     const positive = bivectorToPrimitive(
-      { kind: 'bivector-2d', value: 4 },
+      { kind: 'bivector-2d', value: 4, approximated: false },
       'B',
       { x: 2, y: -1 },
     )
     const negative = bivectorToPrimitive(
-      { kind: 'bivector-2d', value: -4 },
+      { kind: 'bivector-2d', value: -4, approximated: false },
       'C',
       { x: 2, y: -1 },
     )
@@ -76,12 +76,12 @@ describe('bivector primitive adapter', () => {
 
   it('uses a direct outer-product construction when its area is consistent', () => {
     const primitive = bivectorToPrimitive(
-      { kind: 'bivector-2d', value: 5 },
+      { kind: 'bivector-2d', value: 5, approximated: false },
       'area',
       { x: -1, y: 2 },
       [
-        { kind: 'vector-2d', x: 2, y: 1 },
-        { kind: 'vector-2d', x: 1, y: 3 },
+        { kind: 'vector-2d', x: 2, y: 1, approximated: false },
+        { kind: 'vector-2d', x: 1, y: 3, approximated: false },
       ],
     )
 
@@ -102,12 +102,12 @@ describe('bivector primitive adapter', () => {
 
   it('falls back to the same-area loop for inconsistent provenance', () => {
     const primitive = bivectorToPrimitive(
-      { kind: 'bivector-2d', value: 5 },
+      { kind: 'bivector-2d', value: 5, approximated: false },
       'area',
       { x: 0, y: 0 },
       [
-        { kind: 'vector-2d', x: 1, y: 0 },
-        { kind: 'vector-2d', x: 0, y: 1 },
+        { kind: 'vector-2d', x: 1, y: 0, approximated: false },
+        { kind: 'vector-2d', x: 0, y: 1, approximated: false },
       ],
     )
 

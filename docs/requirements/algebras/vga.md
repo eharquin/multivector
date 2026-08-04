@@ -90,6 +90,17 @@ interpretation.
 - **VGA-INT-004:** Alternative interpretations, including projective readings of
   VGA values, are not part of the initial VGA milestones and require their own
   approved requirements.
+- **VGA-INT-005:** The standard interpretation shall classify an owned
+  VGA(2) value using a declared tolerance policy of the form `epsilon =
+  absoluteFloor + relativeTerm * scale`, where `scale` is the maximum
+  absolute value across the value's own coefficients. A coefficient outside
+  a candidate entity's retained fields that is nonzero but within `epsilon`
+  shall not block that classification, and the returned entity shall report
+  `approximated: true` when such a coefficient was ignored. This tolerance
+  governs classification decisions only: it shall not alter owned
+  coefficients, dependent evaluation, or the exact binary64 zero used for
+  algebra-level grade membership under
+  [VGA convention version 1, section 10](../../specifications/vga-conventions.md).
 
 ## 5. Natural normalization
 

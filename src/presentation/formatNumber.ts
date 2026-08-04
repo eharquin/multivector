@@ -3,6 +3,11 @@ import {
   VGA_2D_BLADE_NAMES,
   type OwnedMultivector,
 } from '../domain/multivector'
+import {
+  classificationEpsilon,
+  classificationScale,
+  STANDARD_VGA2_CLASSIFICATION_POLICY,
+} from '../geometry/vga2ClassificationPolicy'
 
 export const MIN_DECIMAL_PLACES = 0
 export const MAX_DECIMAL_PLACES = 15
@@ -28,14 +33,29 @@ export function formatDisplayNumber(value: number, decimalPlaces: number): strin
   return rounded.toString()
 }
 
-/** Formats a VGA(2) value without changing its coefficients or semantic kind. */
+/**
+ * Formats a VGA(2) value without changing its coefficients or semantic kind.
+ *
+ * When `showApproximatedResidue` is false, a coefficient within the same
+ * classification tolerance used by `interpretVga2` (VGA-INT-005) is omitted
+ * from the printed terms, exactly mirroring which coefficients made that
+ * value's classification `approximated`. This only changes which terms are
+ * printed — the returned string is never used as a computational value.
+ */
 export function formatDisplayMultivector(
   value: OwnedMultivector,
   decimalPlaces: number,
+  showApproximatedResidue = true,
 ): string {
+  const epsilon = showApproximatedResidue
+    ? 0
+    : classificationEpsilon(
+        STANDARD_VGA2_CLASSIFICATION_POLICY,
+        classificationScale(value.coefficients),
+      )
   const terms: string[] = []
   value.coefficients.forEach((coefficient, index) => {
-    if (coefficient === 0) return
+    if (coefficient === 0 || Math.abs(coefficient) <= epsilon) return
     const magnitude = Math.abs(coefficient)
     const formatted = formatDisplayNumber(magnitude, decimalPlaces)
     const blade = VGA_2D_BLADE_NAMES[index]
@@ -53,10 +73,11 @@ export function formatDisplayMultivector(
 export function formatDisplayValue(
   value: LanguageValue,
   decimalPlaces: number,
+  showApproximatedResidue = true,
 ): string {
   if (value.kind === 'multivector') {
-    return formatDisplayMultivector(value, decimalPlaces)
+    return formatDisplayMultivector(value, decimalPlaces, showApproximatedResidue)
   }
   return `[${value.elements.map(({ value: element }) =>
-    formatDisplayMultivector(element, decimalPlaces)).join(', ')}]`
+    formatDisplayMultivector(element, decimalPlaces, showApproximatedResidue)).join(', ')}]`
 }

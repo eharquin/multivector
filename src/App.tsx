@@ -81,6 +81,7 @@ import {
 import {
   scalarPlaybackFrame,
   scalarPlaybackOffset,
+  snapToControlBounds,
   type PlaybackParameters,
 } from './application/scalarPlayback'
 import './App.css'
@@ -1551,6 +1552,9 @@ function App() {
               )
               const objectName = displayLabel ?? kind
               const valid = evaluation?.status === 'valid'
+              const approximated = valid && evaluation.valueType === 'single' &&
+                evaluation.entity.kind !== 'mixed-multivector' &&
+                evaluation.entity.approximated
               const scalar = valid && evaluation.valueType === 'single' &&
                 evaluation.entity.kind === 'scalar'
               const scalarEdit = scalar ? directScalarEdit(item.source) : null
@@ -1723,11 +1727,23 @@ function App() {
                               ) : (
                                 <span className="object-kind" style={{ color }}>
                                   {kind}
+                                  {approximated && (
+                                    <span
+                                      className="approximated-indicator"
+                                      title="A negligible coefficient was ignored when classifying this object"
+                                    >
+                                      <span aria-hidden="true">≈</span>
+                                      <span className="visually-hidden">
+                                        {' '}(approximated; a negligible coefficient was ignored)
+                                      </span>
+                                    </span>
+                                  )}
                                 </span>
                               )}
                               <output>{formatDisplayValue(
                                 evaluation.value,
                                 expressionDoc.view.display.decimalPlaces,
+                                expressionDoc.view.display.showApproximatedResidue,
                               )}</output>
                               {normalizationUnavailable && <>
                                 <span className="feedback-label">Normalization unavailable</span>
@@ -1793,7 +1809,12 @@ function App() {
                               pausedPlayback.current = null
                               executeCommand({
                                 kind: 'set-scalar-value', itemId: item.id,
-                                value: Number(event.target.value),
+                                value: snapToControlBounds(
+                                  Number(event.target.value),
+                                  controlEvaluation.minimum ?? 0,
+                                  controlEvaluation.maximum ?? 1,
+                                  controlEvaluation.step ?? 1,
+                                ),
                               }, `scalar-control:${item.id}`)
                             }}
                           />
@@ -1870,9 +1891,22 @@ function App() {
                                 <span className="list-element-kind">
                                   {describeVga2Entity(element.entity)}
                                 </span>
+                                {element.entity.kind !== 'mixed-multivector' &&
+                                  element.entity.approximated && (
+                                    <span
+                                      className="approximated-indicator"
+                                      title="A negligible coefficient was ignored when classifying this object"
+                                    >
+                                      <span aria-hidden="true">≈</span>
+                                      <span className="visually-hidden">
+                                        {' '}(approximated; a negligible coefficient was ignored)
+                                      </span>
+                                    </span>
+                                  )}
                                 <code>{formatDisplayMultivector(
                                   element.value,
                                   expressionDoc.view.display.decimalPlaces,
+                                  expressionDoc.view.display.showApproximatedResidue,
                                 )}</code>
                                 {element.positionConflict ? (
                                   <span className="list-element-position is-error">

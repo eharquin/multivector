@@ -25,6 +25,24 @@ function steppedValue(
   return Math.min(maximum, Math.max(minimum, stepped))
 }
 
+/**
+ * Snaps a directly-reported control value (slider drag, keyboard step) to its
+ * declared bound when native step quantization can never land exactly on
+ * that bound — for example an irrational maximum like `tau` with a rational
+ * step. Without this, dragging a slider to its visual end can stop one step
+ * short of the true bound.
+ */
+export function snapToControlBounds(
+  value: number,
+  minimum: number,
+  maximum: number,
+  step: number,
+): number {
+  if (value <= maximum && maximum - value < step) return maximum
+  if (value >= minimum && value - minimum < step) return minimum
+  return value
+}
+
 /** Deterministic elapsed-time mapping; frame cadence never enters the result. */
 export function scalarPlaybackFrame(
   parameters: PlaybackParameters,
