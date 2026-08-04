@@ -921,6 +921,12 @@ h2 {
   opacity: 0.85;
 }
 
+.approximated-indicator {
+  margin-left: 2px;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
 .display-settings {
   position: relative;
   display: inline-block;

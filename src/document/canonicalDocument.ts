@@ -15,7 +15,7 @@ export type CanonicalViewport = Readonly<{ kind: 'none' }> | Readonly<{ kind: 't
 
 export type CanonicalDocument = Readonly<{
   id: string
-  formatVersion: 3
+  formatVersion: 4
   languageVersion: number
   algebra: Readonly<{ algebraId: string; definitionVersion: number; conventionVersion: number; parameters: Readonly<Record<string, unknown>> }>
   interpretation: Readonly<{ interpretationId: string; interpretationVersion: number }> | null
@@ -26,7 +26,7 @@ export type CanonicalDocument = Readonly<{
     visualizerId: string | null
     positionEnabled: boolean
     viewport: CanonicalViewport
-    display: Readonly<{ decimalPlaces: number; axisLabelsVisible: boolean; graduationsVisible: boolean; gridVisible: boolean; objectScale: number; theme: ThemeMode }>
+    display: Readonly<{ decimalPlaces: number; axisLabelsVisible: boolean; graduationsVisible: boolean; gridVisible: boolean; objectScale: number; showApproximatedResidue: boolean; theme: ThemeMode }>
   }>
 }>
 
@@ -173,37 +173,56 @@ export function parseCanonicalDocument(source: string): CanonicalDocument {
 }
 
 /**
- * Version-selection boundary. Older formats migrate one deterministic step at a time.
- * add one deterministic step at a time here, bounded before schema evaluation.
+ * Version-selection boundary. Older formats migrate one deterministic step at
+ * a time, looping until the current version is reached, bounded by
+ * `MAX_MIGRATION_STEPS` before schema evaluation.
  */
 export function migrateDocument(value: unknown): unknown {
-  if (value === null || typeof value !== 'object' || Array.isArray(value))
-    fail('DOCUMENT_SCHEMA', 'document must be an object.')
-  const version = (value as Record<string, unknown>).formatVersion
-  if (version === 1) {
-    const document = value as Record<string, unknown>
-    const appearance = document.appearance as Record<string, Record<string, unknown>>
-    return {
-      ...document,
-      formatVersion: 3,
-      appearance: Object.fromEntries(Object.entries(appearance).map(
-        ([id, entry]) => [id, { ...entry, borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' }],
-      )),
+  let current = value
+  for (let step = 0; step < MAX_MIGRATION_STEPS; step += 1) {
+    if (current === null || typeof current !== 'object' || Array.isArray(current))
+      fail('DOCUMENT_SCHEMA', 'document must be an object.')
+    const document = current as Record<string, unknown>
+    const version = document.formatVersion
+    if (version === 4) return current
+    if (version === 1) {
+      const appearance = document.appearance as Record<string, Record<string, unknown>>
+      current = {
+        ...document,
+        formatVersion: 3,
+        appearance: Object.fromEntries(Object.entries(appearance).map(
+          ([id, entry]) => [id, { ...entry, borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' }],
+        )),
+      }
+      continue
     }
-  }
-  if (version === 2) {
-    const document = value as Record<string, unknown>
-    const appearance = document.appearance as Record<string, Record<string, unknown>>
-    return {
-      ...document,
-      formatVersion: 3,
-      appearance: Object.fromEntries(Object.entries(appearance).map(
-        ([id, entry]) => [id, { ...entry, orientationVisible: true, bivectorShape: 'from-vectors' }],
-      )),
+    if (version === 2) {
+      const appearance = document.appearance as Record<string, Record<string, unknown>>
+      current = {
+        ...document,
+        formatVersion: 3,
+        appearance: Object.fromEntries(Object.entries(appearance).map(
+          ([id, entry]) => [id, { ...entry, orientationVisible: true, bivectorShape: 'from-vectors' }],
+        )),
+      }
+      continue
     }
+    if (version === 3) {
+      const view = document.view as Record<string, unknown>
+      const display = view.display as Record<string, unknown>
+      current = {
+        ...document,
+        formatVersion: 4,
+        // Preserves the pre-existing document's exact prior appearance:
+        // format version 3 always showed residue, since the toggle did not
+        // exist yet.
+        view: { ...view, display: { ...display, showApproximatedResidue: true } },
+      }
+      continue
+    }
+    fail('DOCUMENT_FORMAT_VERSION', 'Unsupported format version ' + String(version) + '.')
   }
-  if (version === 3) return value
-  fail('DOCUMENT_FORMAT_VERSION', 'Unsupported format version ' + String(version) + '.')
+  fail('DOCUMENT_FORMAT_VERSION', 'Migration exceeded the maximum number of steps.')
 }
 
 export function parseCanonicalDocumentBytes(bytes: Uint8Array): CanonicalDocument {
@@ -222,7 +241,7 @@ export function parseCanonicalDocumentBytes(bytes: Uint8Array): CanonicalDocumen
 
 export function validateCanonicalDocument(value: unknown): CanonicalDocument {
   const root = record(value, 'document', requiredRoot)
-  if (root.formatVersion !== 3) fail('DOCUMENT_FORMAT_VERSION', 'Unsupported format version ' + String(root.formatVersion) + '.')
+  if (root.formatVersion !== 4) fail('DOCUMENT_FORMAT_VERSION', 'Unsupported format version ' + String(root.formatVersion) + '.')
   const algebra = record(root.algebra, 'algebra', ['algebraId', 'definitionVersion', 'conventionVersion', 'parameters'])
   if (algebra.parameters === null || typeof algebra.parameters !== 'object' || Array.isArray(algebra.parameters))
     fail('DOCUMENT_SCHEMA', 'algebra.parameters must be an object.')
@@ -281,14 +300,14 @@ export function validateCanonicalDocument(value: unknown): CanonicalDocument {
   } else {
     fail('DOCUMENT_VIEWPORT', 'view.viewport.kind must be “none” or “two-dimensional”.')
   }
-  const display = record(view.display, 'view.display', ['decimalPlaces', 'axisLabelsVisible', 'graduationsVisible', 'gridVisible', 'objectScale', 'theme'])
+  const display = record(view.display, 'view.display', ['decimalPlaces', 'axisLabelsVisible', 'graduationsVisible', 'gridVisible', 'objectScale', 'showApproximatedResidue', 'theme'])
   const decimalPlaces = finite(display.decimalPlaces, 'view.display.decimalPlaces')
   if (!Number.isInteger(decimalPlaces) || decimalPlaces < 0 || decimalPlaces > 15)
     fail('DOCUMENT_SCHEMA', 'decimalPlaces must be an integer from 0 through 15.')
   if (!['light', 'dark', 'system'].includes(display.theme as string))
     fail('DOCUMENT_SCHEMA', 'view.display.theme is invalid.')
   return {
-    id: text(root.id, 'document.id', true), formatVersion: 3,
+    id: text(root.id, 'document.id', true), formatVersion: 4,
     languageVersion: positiveInteger(root.languageVersion, 'languageVersion'),
     algebra: { algebraId: text(algebra.algebraId, 'algebra.algebraId', true), definitionVersion: positiveInteger(algebra.definitionVersion, 'algebra.definitionVersion'), conventionVersion: positiveInteger(algebra.conventionVersion, 'algebra.conventionVersion'), parameters },
     interpretation: interpretation && { interpretationId: text(interpretation.interpretationId, 'interpretation.interpretationId', true), interpretationVersion: positiveInteger(interpretation.interpretationVersion, 'interpretation.interpretationVersion') },
@@ -298,7 +317,7 @@ export function validateCanonicalDocument(value: unknown): CanonicalDocument {
       visualizerId: view.visualizerId === null ? null : text(view.visualizerId, 'view.visualizerId', true),
       positionEnabled: truth(view.positionEnabled, 'view.positionEnabled'),
       viewport,
-      display: { decimalPlaces, axisLabelsVisible: truth(display.axisLabelsVisible, 'view.display.axisLabelsVisible'), graduationsVisible: truth(display.graduationsVisible, 'view.display.graduationsVisible'), gridVisible: truth(display.gridVisible, 'view.display.gridVisible'), objectScale: finite(display.objectScale, 'view.display.objectScale', true), theme: display.theme as ThemeMode },
+      display: { decimalPlaces, axisLabelsVisible: truth(display.axisLabelsVisible, 'view.display.axisLabelsVisible'), graduationsVisible: truth(display.graduationsVisible, 'view.display.graduationsVisible'), gridVisible: truth(display.gridVisible, 'view.display.gridVisible'), objectScale: finite(display.objectScale, 'view.display.objectScale', true), showApproximatedResidue: truth(display.showApproximatedResidue, 'view.display.showApproximatedResidue'), theme: display.theme as ThemeMode },
     },
   }
 }
@@ -342,7 +361,7 @@ export function toCanonicalDocument(
     return [item.id, { visible: stored?.visible ?? true, labelVisible: stored?.labelVisible ?? false, label: stored?.label ?? '', style: stored?.style ?? resolvedStyles[item.id] ?? defaultStyleForKind('Object'), borderVisible: stored?.borderVisible ?? false, orientationVisible: stored?.orientationVisible ?? true, bivectorShape: stored?.bivectorShape ?? 'from-vectors' }]
   }))
   return validateCanonicalDocument({
-    id: document.id, formatVersion: 3, languageVersion: document.languageVersion,
+    id: document.id, formatVersion: 4, languageVersion: document.languageVersion,
     algebra: document.algebra,
     interpretation: document.interpretation,
     metadata: { title: document.title, description: document.description },

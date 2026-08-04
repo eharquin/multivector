@@ -61,6 +61,7 @@ export type ExpressionDocument = Readonly<{
       graduationsVisible: boolean
       gridVisible: boolean
       objectScale: number
+      showApproximatedResidue: boolean
     }>
   }>
   items: readonly ExpressionItem[]
@@ -100,6 +101,7 @@ export function expressionDocument(
         graduationsVisible: true,
         gridVisible: true,
         objectScale: 1,
+        showApproximatedResidue: false,
       },
     },
     items: retainedItems.map((item) => ({ ...item })),

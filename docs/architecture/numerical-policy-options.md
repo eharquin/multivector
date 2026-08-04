@@ -1,6 +1,6 @@
 # Numerical Policy Options
 
-**Status:** Proposed for review  
+**Status:** Stage 1 accepted and implemented; Stage 2 still proposed for review  
 **Issue:** #68  
 **Date:** 2026-08-04  
 **Decision owner:** Algebra-definition and interpretation architecture
@@ -186,6 +186,11 @@ computational baseline.
 
 Stage 1 can improve classification, but it must not claim that a displayed zero
 is an exact algebraic zero.
+
+Implemented in `src/geometry/vga2ClassificationPolicy.ts` and
+`src/geometry/vga2Interpretation.ts` as VGA-INT-005, with `absoluteFloor =
+1E-10` and `relativeTerm = 1E-6` as the standard VGA(2) policy constants,
+confirmed by the fixtures in `src/geometry/vga2Interpretation.test.ts`.
 
 ### Stage 2 — Evaluated uncertainty
 

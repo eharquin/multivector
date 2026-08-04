@@ -11,6 +11,7 @@ export type DisplaySettings = Readonly<{
   axisLabelsVisible: boolean
   graduationsVisible: boolean
   objectScale: number
+  showApproximatedResidue: boolean
 }>
 
 export const MIN_OBJECT_SCALE = 0.25
@@ -157,6 +158,13 @@ export function DisplaySettingsMenu({
                 }}
               />
             </label>
+            <SwitchRow
+              label="Show approximated residue"
+              checked={display.showApproximatedResidue}
+              onChange={(showApproximatedResidue) =>
+                onDisplayChange({ showApproximatedResidue })
+              }
+            />
             <label className="settings-row settings-row-slider">
               <span className="settings-row-label">Object size</span>
               <input

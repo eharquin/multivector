@@ -14,6 +14,9 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   geometric operations, rotors, lists, and positioned 2D visualization.
 - Added natural normalization, scalar controls and deterministic playback,
   direct positioned-object manipulation, and dynamic base/head anchoring.
+- Added a tolerance-aware VGA(2) classification policy so harmless
+  floating-point leakage no longer changes an object's semantic kind, with
+  an explicit "approximated" indicator when it is suppressed.
 
 ### Document and convention changes
 

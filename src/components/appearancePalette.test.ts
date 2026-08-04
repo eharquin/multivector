@@ -9,10 +9,10 @@ import {
 } from './appearancePalette'
 
 const entities: readonly StandardVga2Entity[] = [
-  { kind: 'scalar', value: 0 },
-  { kind: 'vector-2d', x: 1, y: 0 },
-  { kind: 'bivector-2d', value: 1 },
-  { kind: 'rotor-2d', scalar: 1, bivector: 0 },
+  { kind: 'scalar', value: 0, approximated: false },
+  { kind: 'vector-2d', x: 1, y: 0, approximated: false },
+  { kind: 'bivector-2d', value: 1, approximated: false },
+  { kind: 'rotor-2d', scalar: 1, bivector: 0, approximated: false },
   { kind: 'mixed-multivector' },
 ]
 

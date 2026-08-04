@@ -90,10 +90,36 @@ describe('canonical document format', () => {
       )),
     }
     const migrated = parseCanonicalDocument(JSON.stringify(legacy))
-    expect(migrated.formatVersion).toBe(3)
+    expect(migrated.formatVersion).toBe(4)
     expect(migrated.appearance.v.borderVisible).toBe(false)
     expect(migrated.appearance.v.orientationVisible).toBe(true)
     expect(migrated.appearance.v.bivectorShape).toBe('from-vectors')
+  })
+
+  it('migrates version three documents to version four, defaulting to showing residue', () => {
+    const current = sample()
+    const { showApproximatedResidue: _showApproximatedResidue, ...legacyDisplay } = current.view.display
+    const legacy = {
+      ...current,
+      formatVersion: 3,
+      view: { ...current.view, display: legacyDisplay },
+    }
+    const migrated = parseCanonicalDocument(JSON.stringify(legacy))
+    expect(migrated.formatVersion).toBe(4)
+    // Preserves the pre-existing document's prior appearance: version 3 had
+    // no toggle, so it always behaved as if residue were shown.
+    expect(migrated.view.display.showApproximatedResidue).toBe(true)
+  })
+
+  it('round-trips showApproximatedResidue and validates its type', () => {
+    const encoded = serializeCanonicalDocument(sample())
+    expect(parseCanonicalDocument(encoded).view.display.showApproximatedResidue).toBe(false)
+
+    const invalid = {
+      ...sample(),
+      view: { ...sample().view, display: { ...sample().view.display, showApproximatedResidue: 'yes' } },
+    }
+    expect(errorCode(() => serializeCanonicalDocument(invalid as never))).toBe('DOCUMENT_SCHEMA')
   })
 
   it('rejects duplicate keys before schema validation', () => {
@@ -101,7 +127,7 @@ describe('canonical document format', () => {
   })
 
   it('selects the version boundary before complete schema validation', () => {
-    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":4,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
+    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":5,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
   })
 
   it('rejects unknown fields and unregistered styles', () => {

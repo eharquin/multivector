@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { scalarPlaybackFrame, scalarPlaybackOffset, type PlaybackParameters } from './scalarPlayback'
+import {
+  scalarPlaybackFrame,
+  scalarPlaybackOffset,
+  snapToControlBounds,
+  type PlaybackParameters,
+} from './scalarPlayback'
 
 const parameters = (
   mode: 'once' | 'loop' | 'ping-pong',
@@ -40,5 +45,33 @@ describe('deterministic scalar playback', () => {
       ...tauParameters,
       animation: { ...tauParameters.animation, direction: 'reverse' },
     }, 2000).value).toBe(0)
+  })
+})
+
+describe('slider bound snapping', () => {
+  it('snaps the last reachable step below an unreachable maximum to that maximum', () => {
+    // A "0, tau, 0.00001" slider can only reach 6.28318 by native stepping;
+    // this is the reported scenario this function exists to fix.
+    const maximum = Math.PI * 2
+    expect(snapToControlBounds(6.28318, 0, maximum, 0.00001)).toBe(maximum)
+  })
+
+  it('snaps the first reachable step above an unreachable minimum to that minimum', () => {
+    expect(snapToControlBounds(0.00001, 0.000005307179586, 10, 0.00001))
+      .toBe(0.000005307179586)
+  })
+
+  it('leaves a value untouched when it is more than a step away from either bound', () => {
+    expect(snapToControlBounds(5, 0, 10, 1)).toBe(5)
+  })
+
+  it('leaves an exact bound untouched', () => {
+    expect(snapToControlBounds(0, 0, 10, 1)).toBe(0)
+    expect(snapToControlBounds(10, 0, 10, 1)).toBe(10)
+  })
+
+  it('does not snap a value already past the maximum toward the minimum branch', () => {
+    // Ensures both branches independently guard with a directional comparison.
+    expect(snapToControlBounds(9.9999, 0, 10, 0.01)).toBe(10)
   })
 })
