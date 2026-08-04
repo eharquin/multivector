@@ -9,6 +9,7 @@ import { directScalarEdit, formatScalarSource } from '../language/directScalarEd
 
 export type DocumentCommand =
   | Readonly<{ kind: 'insert-item'; item: ExpressionItem; anchorId?: string; placement?: 'before' | 'after' }>
+  | Readonly<{ kind: 'move-item'; itemId: string; anchorId?: string; placement?: 'before' | 'after' }>
   | Readonly<{ kind: 'delete-item'; itemId: string }>
   | Readonly<{ kind: 'clear-items' }>
   | Readonly<{ kind: 'update-source'; itemId: string; source: string }>
@@ -65,6 +66,28 @@ export function executeDocumentCommand(
       document: {
         ...document,
         items: [...document.items.slice(0, index), { ...command.item }, ...document.items.slice(index)],
+      },
+    }
+  }
+
+  if (command.kind === 'move-item') {
+    if (itemIndex(document, command.itemId) < 0)
+      return invalid(document, `Item “${command.itemId}” does not exist.`)
+    if (command.anchorId === command.itemId)
+      return invalid(document, 'An item cannot move relative to itself.')
+    const item = document.items[itemIndex(document, command.itemId)]
+    const withoutItem = document.items.filter(({ id }) => id !== command.itemId)
+    let index = withoutItem.length
+    if (command.anchorId !== undefined) {
+      const anchor = withoutItem.findIndex(({ id }) => id === command.anchorId)
+      if (anchor < 0) return invalid(document, `Item “${command.anchorId}” does not exist.`)
+      index = anchor + (command.placement === 'before' ? 0 : 1)
+    }
+    return {
+      status: 'applied',
+      document: {
+        ...document,
+        items: [...withoutItem.slice(0, index), item, ...withoutItem.slice(index)],
       },
     }
   }

@@ -18,6 +18,81 @@ describe('semantic document commands', () => {
     ])
   })
 
+  it('moves an item before or after an anchor, preserving other items', () => {
+    const document = expressionDocument([
+      { id: 'a', source: 'A = 1' },
+      { id: 'b', source: 'B = 2' },
+      { id: 'c', source: 'C = 3' },
+    ])
+    const beforeA = executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'c', anchorId: 'a', placement: 'before',
+    })
+    expect(beforeA.document.items.map(({ id }) => id)).toEqual(['c', 'a', 'b'])
+
+    const afterA = executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'c', anchorId: 'a', placement: 'after',
+    })
+    expect(afterA.document.items.map(({ id }) => id)).toEqual(['a', 'c', 'b'])
+  })
+
+  it('moves an item to the end when no anchor is given', () => {
+    const document = expressionDocument([
+      { id: 'a', source: 'A = 1' },
+      { id: 'b', source: 'B = 2' },
+    ])
+    const result = executeDocumentCommand(document, { kind: 'move-item', itemId: 'a' })
+    expect(result.document.items.map(({ id }) => id)).toEqual(['b', 'a'])
+  })
+
+  it('moves an item to the start using the first item as a before-anchor', () => {
+    const document = expressionDocument([
+      { id: 'a', source: 'A = 1' },
+      { id: 'b', source: 'B = 2' },
+      { id: 'c', source: 'C = 3' },
+    ])
+    const result = executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'c', anchorId: 'a', placement: 'before',
+    })
+    expect(result.document.items.map(({ id }) => id)).toEqual(['c', 'a', 'b'])
+  })
+
+  it('rejects moving an item relative to itself or a missing item', () => {
+    const document = expressionDocument([
+      { id: 'a', source: 'A = 1' },
+      { id: 'b', source: 'B = 2' },
+    ])
+    expect(executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'a', anchorId: 'a',
+    })).toEqual({
+      status: 'invalid', document,
+      reason: 'An item cannot move relative to itself.',
+    })
+    expect(executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'a', anchorId: 'missing',
+    })).toEqual({
+      status: 'invalid', document,
+      reason: 'Item “missing” does not exist.',
+    })
+    expect(executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'missing',
+    })).toEqual({
+      status: 'invalid', document,
+      reason: 'Item “missing” does not exist.',
+    })
+  })
+
+  it('preserves appearance, control, and other item fields across a move', () => {
+    const document = expressionDocument([
+      { id: 'a', source: 'A = 1', control: { mode: 'number', minimumSource: '0', maximumSource: '1', stepSource: '0.1', animation: null } },
+      { id: 'b', source: 'B = 2' },
+    ], { a: { visible: false } })
+    const result = executeDocumentCommand(document, {
+      kind: 'move-item', itemId: 'a', anchorId: 'b', placement: 'after',
+    })
+    expect(result.document.items.find(({ id }) => id === 'a')).toEqual(document.items[0])
+    expect(result.document.appearance).toEqual(document.appearance)
+  })
+
   it('returns explicit invalid and unsupported results without mutation', () => {
     const document = expressionDocument([
       { id: 'note', kind: 'annotation', source: 'prose' },
