@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   adaptiveGrid,
+  formatZoomPercentage,
   MAX_GRID_LINES,
   MAX_PIXELS_PER_UNIT,
   MIN_PIXELS_PER_UNIT,
@@ -38,6 +39,23 @@ describe('2D viewport transform', () => {
     expect(toMathematical(zoomed, cursor)).toEqual(anchor)
     expect(zoomAt(viewport, cursor, 0).pixelsPerUnit).toBe(MIN_PIXELS_PER_UNIT)
     expect(zoomAt(viewport, cursor, 1e9).pixelsPerUnit).toBe(MAX_PIXELS_PER_UNIT)
+
+    for (const requestedZoom of [MIN_PIXELS_PER_UNIT, MAX_PIXELS_PER_UNIT]) {
+      const extreme = zoomAt(viewport, cursor, requestedZoom)
+      const retained = toMathematical(extreme, cursor)
+      expect(retained.x).toBeCloseTo(anchor.x, 10)
+      expect(retained.y).toBeCloseTo(anchor.y, 10)
+      const retainedScreen = toScreen(extreme, anchor)
+      expect(Math.abs(retainedScreen.x - cursor.x)).toBeLessThan(1e-8)
+      expect(Math.abs(retainedScreen.y - cursor.y)).toBeLessThan(1e-8)
+      expect(Object.values(extreme).every(Number.isFinite)).toBe(true)
+    }
+  })
+
+  it('formats useful zoom readouts at normal and extreme scales', () => {
+    expect(formatZoomPercentage(72)).toBe('100%')
+    expect(formatZoomPercentage(MIN_PIXELS_PER_UNIT)).toBe('1.39E-3%')
+    expect(formatZoomPercentage(MAX_PIXELS_PER_UNIT)).toBe('1.39E6%')
   })
 
   it('pans in screen space without changing scale', () => {
@@ -55,6 +73,9 @@ describe('2D viewport transform', () => {
       expect(grid.vertical.length).toBeLessThanOrEqual(MAX_GRID_LINES)
       expect(grid.horizontal.length).toBeLessThanOrEqual(MAX_GRID_LINES)
       expect(grid.vertical.every(({ screen }) => Number.isFinite(screen))).toBe(true)
+      expect(grid.horizontal.every(({ screen }) => Number.isFinite(screen))).toBe(true)
+      expect([...grid.vertical, ...grid.horizontal]
+        .every(({ coordinate }) => Number.isFinite(coordinate))).toBe(true)
     }
   })
 })
