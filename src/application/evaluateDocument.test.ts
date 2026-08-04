@@ -305,6 +305,21 @@ describe('document dependency evaluation', () => {
     ])
   })
 
+  it('distinguishes a vector value from its displayed base and head in positions', () => {
+    const results = evaluateItems([
+      { id: 'source', source: 'V1 = vector(2, 1)', positionSource: '(3, 4)' },
+      { id: 'value', source: 'A = e1', positionSource: 'V1' },
+      { id: 'base', source: 'B = e1', positionSource: 'V1.position' },
+      { id: 'head', source: 'H = e1', positionSource: 'V1.head' },
+    ])
+
+    expect(results.slice(1).map((result) => result.evaluation)).toMatchObject([
+      { status: 'valid', primitive: { start: { x: 2, y: 1 } } },
+      { status: 'valid', primitive: { start: { x: 3, y: 4 } } },
+      { status: 'valid', primitive: { start: { x: 5, y: 5 } } },
+    ])
+  })
+
   it('renders an invalid position at the origin without invalidating the value', () => {
     const [result] = evaluateItems([
       { id: 'v', source: 'V = e1', positionSource: '12' },
