@@ -389,7 +389,8 @@ h2 {
 }
 
 .visibility-toggle,
-.appearance-swatch {
+.appearance-swatch,
+.reorder-handle {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
@@ -401,6 +402,36 @@ h2 {
   border-radius: 4px;
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease;
+}
+
+.reorder-handle {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.reorder-handle:hover {
+  color: var(--accent);
+  background: var(--surface-active);
+}
+
+body.reordering-items {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body.reordering-items .reorder-handle {
+  cursor: grabbing;
+}
+
+.expression-drop-indicator {
+  height: 2px;
+  margin: -1px 0;
+  background: var(--accent);
+  border-radius: 1px;
+  pointer-events: none;
 }
 
 .expression-action-spacer {

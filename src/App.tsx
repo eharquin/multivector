@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -256,6 +257,12 @@ function App() {
   const resizeDrag = useRef<Readonly<{ startX: number; startWidth: number }> | null>(
     null,
   )
+  const reorderDrag = useRef<Readonly<{
+    itemId: string
+    pointerId: number
+    targetIndex: number
+  }> | null>(null)
+  const expressionRowRefs = useRef(new Map<string, HTMLElement>())
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const viewportSvgRef = useRef<SVGSVGElement>(null)
   const canvasFrameRef = useRef<HTMLDivElement>(null)
@@ -292,6 +299,8 @@ function App() {
     initial.diagnostic,
   )
   const [viewportAnnouncement, setViewportAnnouncement] = useState('')
+  const [reorderAnnouncement, setReorderAnnouncement] = useState('')
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [anchorPreview, setAnchorPreview] = useState<Readonly<{
     draggedId: string
     targetId: string
@@ -1222,6 +1231,105 @@ function App() {
     setPanelWidth(Math.max(MIN_PANEL_WIDTH, Math.min(maximumPanelWidth, next)))
   }
 
+  /** Insertion index into the current item order nearest a pointer position. */
+  const resolveDropTargetIndex = useCallback((clientY: number): number => {
+    const rows = expressionDoc.items
+      .map((item) => expressionRowRefs.current.get(item.id))
+      .filter((row): row is HTMLElement => row !== undefined)
+    for (let index = 0; index < rows.length; index += 1) {
+      const rect = rows[index].getBoundingClientRect()
+      if (clientY < rect.top + rect.height / 2) return index
+    }
+    return rows.length
+  }, [expressionDoc.items])
+
+  const announceMove = useCallback((itemId: string, targetIndex: number) => {
+    const item = expressionDoc.items.find((candidate) => candidate.id === itemId)
+    if (!item) return
+    const name = declaredName(item.source) ?? 'Expression'
+    setReorderAnnouncement(
+      `Moved ${name} to position ${targetIndex + 1} of ${expressionDoc.items.length}.`,
+    )
+  }, [expressionDoc.items])
+
+  /** Dispatches a move-item command placing itemId at the given final position. */
+  const moveItemToIndex = useCallback((itemId: string, target: number) => {
+    const from = expressionDoc.items.findIndex((item) => item.id === itemId)
+    if (from < 0) return
+    const withoutItem = expressionDoc.items.filter((item) => item.id !== itemId)
+    const clamped = Math.max(0, Math.min(withoutItem.length, target))
+    if (clamped === from) return
+    const anchor = withoutItem[clamped]
+    executeCommand(anchor === undefined
+      ? { kind: 'move-item', itemId }
+      : { kind: 'move-item', itemId, anchorId: anchor.id, placement: 'before' })
+    announceMove(itemId, clamped)
+  }, [expressionDoc.items, executeCommand, announceMove])
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!reorderDrag.current) return
+      const index = resolveDropTargetIndex(event.clientY)
+      reorderDrag.current = { ...reorderDrag.current, targetIndex: index }
+      setDropTargetIndex(index)
+    }
+    const endDrag = (commit: boolean) => {
+      const drag = reorderDrag.current
+      reorderDrag.current = null
+      document.body.classList.remove('reordering-items')
+      setDropTargetIndex(null)
+      if (!drag) return
+      if (commit) {
+        moveItemToIndex(drag.itemId, drag.targetIndex)
+        dispatchHistory({ type: 'commit-transaction' })
+      } else {
+        dispatchHistory({ type: 'cancel-transaction' })
+      }
+    }
+    const handlePointerUp = () => endDrag(true)
+    const handlePointerCancel = () => endDrag(false)
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerCancel)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+      document.body.classList.remove('reordering-items')
+    }
+  }, [resolveDropTargetIndex, moveItemToIndex])
+
+  const beginRowReorder = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    itemId: string,
+  ) => {
+    const index = expressionDoc.items.findIndex((item) => item.id === itemId)
+    reorderDrag.current = { itemId, pointerId: event.pointerId, targetIndex: index }
+    dispatchHistory({ type: 'begin-transaction' })
+    document.body.classList.add('reordering-items')
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+    event.preventDefault()
+  }
+
+  const reorderRowWithKeyboard = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    itemId: string,
+  ) => {
+    if (!event.shiftKey) return
+    const from = expressionDoc.items.findIndex((item) => item.id === itemId)
+    if (from < 0) return
+    let target = from
+    if (event.key === 'ArrowUp') target = from - 1
+    else if (event.key === 'ArrowDown') target = from + 1
+    else if (event.key === 'Home') target = 0
+    else if (event.key === 'End') target = expressionDoc.items.length - 1
+    else return
+
+    event.preventDefault()
+    moveItemToIndex(itemId, target)
+  }
+
   /**
    * Widens the expression panel until the remaining canvas is as wide as it is
    * tall. The panel cap does not apply: squaring needs the exact width the
@@ -1582,16 +1690,32 @@ function App() {
               const listDetailsId = `list-details-${item.id}`
 
               return (
-                <article
-                  className={`expression-item${visible ? '' : ' is-hidden'}${
-                    empty ? ' is-empty-expression' : ''
-                  } ${
-                    invalid || invalidPosition ? 'has-error' : ''
-                  }`}
-                  key={item.id}
-                >
+                <Fragment key={item.id}>
+                  {dropTargetIndex === index && (
+                    <div className="expression-drop-indicator" aria-hidden="true" />
+                  )}
+                  <article
+                    ref={(element) => {
+                      if (element) expressionRowRefs.current.set(item.id, element)
+                      else expressionRowRefs.current.delete(item.id)
+                    }}
+                    className={`expression-item${visible ? '' : ' is-hidden'}${
+                      empty ? ' is-empty-expression' : ''
+                    } ${
+                      invalid || invalidPosition ? 'has-error' : ''
+                    }`}
+                  >
                   <div className="expression-input-row">
                     <div className="expression-actions">
+                      <button
+                        type="button"
+                        className="reorder-handle"
+                        aria-label={`Reorder ${objectName}. Shift plus arrow keys to move.`}
+                        onPointerDown={(event) => beginRowReorder(event, item.id)}
+                        onKeyDown={(event) => reorderRowWithKeyboard(event, item.id)}
+                      >
+                        <span aria-hidden="true">⠿</span>
+                      </button>
                       {scalar && effectiveControl?.mode === 'slider' ? (
                         <button
                           type="button"
@@ -2019,9 +2143,13 @@ function App() {
                       onClose={closeAppearance}
                     />
                   )}
-                </article>
+                  </article>
+                </Fragment>
               )
             })}
+            {dropTargetIndex === evaluatedItems.length && (
+              <div className="expression-drop-indicator" aria-hidden="true" />
+            )}
           </div>
           <div className="expression-panel-footer">
             <button
@@ -2339,6 +2467,9 @@ function App() {
       )}
       <output className="visually-hidden" aria-live="polite">
         {playbackAnnouncement}
+      </output>
+      <output className="visually-hidden" aria-live="polite">
+        {reorderAnnouncement}
       </output>
       {infoDialog === 'expressions' && (
         <ExpressionReferenceDialog

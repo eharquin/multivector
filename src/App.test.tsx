@@ -682,7 +682,8 @@ describe('VGA 2D vertical slice', () => {
     const trigger = screen.getByRole('button', {
       name: 'Open Scalar menu for a',
     })
-    expect(trigger.parentElement?.firstElementChild)
+    expect(within(trigger.parentElement as HTMLElement)
+      .getByRole('button', { name: 'Play scalar animation' }))
       .toHaveClass('scalar-play-button')
 
     fireEvent.click(trigger)
@@ -705,8 +706,8 @@ describe('VGA 2D vertical slice', () => {
     expect(source).toHaveValue('a = ((2))')
 
     fireEvent.click(screen.getByRole('button', { name: 'Number' }))
-    expect(trigger.parentElement?.firstElementChild)
-      .toHaveClass('expression-action-spacer')
+    expect(trigger.parentElement?.querySelector('.expression-action-spacer'))
+      .toBeInTheDocument()
     expect(screen.queryByRole('slider', { name: 'Value for a' }))
       .not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Play scalar animation' }))
@@ -718,6 +719,89 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.queryByRole('dialog', { name: 'Scalar' }))
       .not.toBeInTheDocument()
     expect(trigger).toHaveFocus()
+  })
+
+  it('reorders expression rows with Shift+Arrow keys on the drag handle, with undo/redo', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'A = 1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'B = 2' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 3' }), {
+      target: { value: 'C = 3' },
+    })
+
+    const sourceValues = () => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => (element as HTMLInputElement).value)
+    const handleFor = (value: string) => {
+      const input = screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+        .find((element) => (element as HTMLInputElement).value === value) as HTMLInputElement
+      return within(input.closest('.expression-item') as HTMLElement)
+        .getByRole('button', { name: /^Reorder / })
+    }
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2', 'C = 3'])
+
+    fireEvent.keyDown(handleFor('A = 1'), { key: 'ArrowDown' })
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2', 'C = 3']) // no shift: no-op
+
+    fireEvent.keyDown(handleFor('A = 1'), { key: 'ArrowDown', shiftKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
+    expect(screen.getByText('Moved A to position 2 of 3.')).toBeInTheDocument()
+
+    fireEvent.keyDown(handleFor('C = 3'), { key: 'ArrowUp', shiftKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'C = 3', 'A = 1'])
+
+    fireEvent.keyDown(handleFor('B = 2'), { key: 'End', shiftKey: true })
+    expect(sourceValues()).toEqual(['C = 3', 'A = 1', 'B = 2'])
+
+    fireEvent.keyDown(handleFor('B = 2'), { key: 'Home', shiftKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'C = 3', 'A = 1'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(sourceValues()).toEqual(['C = 3', 'A = 1', 'B = 2'])
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2', 'C = 3'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo document change' }))
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
+  })
+
+  it('moves a row via pointer drag onto another row, and cancels on pointercancel', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'A = 1' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), {
+      target: { value: 'B = 2' },
+    })
+
+    const sourceValues = () => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => (element as HTMLInputElement).value)
+    const handle = within(
+      screen.getByRole('textbox', { name: 'Expression 1' })
+        .closest('.expression-item') as HTMLElement,
+    ).getByRole('button', { name: /^Reorder / })
+    const rows = screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => element.closest('.expression-item') as HTMLElement)
+    rows[0].getBoundingClientRect = () => ({ top: 0, bottom: 40, height: 40 }) as DOMRect
+    rows[1].getBoundingClientRect = () => ({ top: 40, bottom: 80, height: 40 }) as DOMRect
+
+    fireEvent.pointerDown(handle, { pointerId: 1 })
+    fireEvent.pointerMove(window, { clientY: 70 })
+    fireEvent.pointerCancel(window, { pointerId: 1 })
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2'])
+
+    fireEvent.pointerDown(handle, { pointerId: 1 })
+    fireEvent.pointerMove(window, { clientY: 70 })
+    fireEvent.pointerUp(window, { pointerId: 1 })
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1'])
   })
 
   it('preserves unsupported or out-of-range scalar source without clamping', () => {
