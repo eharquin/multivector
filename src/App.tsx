@@ -1535,7 +1535,6 @@ function App() {
         >
           VGA · 2D
         </button>
-        <span className="app-status">Research preview</span>
         <input
           ref={importInputRef}
           className="document-file-input"
@@ -1544,7 +1543,7 @@ function App() {
           aria-label="Import document file"
           onChange={importDocument}
         />
-        <button type="button" className="document-command" onClick={() => importInputRef.current?.click()}>
+        <button type="button" className="document-command document-import-command" onClick={() => importInputRef.current?.click()}>
           Import
         </button>
         <button type="button" className="document-command" onClick={exportDocument}>

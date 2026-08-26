@@ -53,8 +53,7 @@
   outline-offset: 3px;
 }
 
-.algebra-badge,
-.app-status {
+.algebra-badge {
   padding: 4px 9px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
@@ -75,9 +74,8 @@
   background: color-mix(in srgb, var(--accent-soft) 65%, var(--surface));
 }
 
-.app-status {
+.document-import-command {
   margin-left: auto;
-  color: var(--muted);
 }
 
 .document-file-input {
@@ -1848,10 +1846,6 @@ body.resizing-panel {
 @media (max-width: 760px) {
   .app-header {
     padding: 0 16px;
-  }
-
-  .app-status {
-    display: none;
   }
 
   .workspace {
