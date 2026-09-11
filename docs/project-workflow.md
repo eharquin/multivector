@@ -81,3 +81,18 @@ an undocumented comment or placeholder requirement.
 Milestone completion additionally requires the acceptance evidence named by its
 milestone document. Changing a document status to **Implemented** requires that
 evidence; merging a requirements document alone does not imply implementation.
+
+## 6. Publish an accepted release
+
+A release is published only after its stated workflow has an acceptance record
+and the release commit has passed the canonical verification workflow on
+`main`. Update the package version, changelog, citation metadata, and applicable
+release documentation together before creating the version tag.
+
+Pull requests and pushes to `main` run type checking, linting, tests, and the
+production build without changing the public site. Publishing a stable GitHub
+release reruns the same verification against the release tag, uploads that
+build as the GitHub Pages artifact, deploys it, and smoke-tests the deployed
+application. Draft and prerelease releases do not deploy the public site. If
+release verification or deployment fails, the previously deployed version
+remains the public version until a corrected stable release succeeds.

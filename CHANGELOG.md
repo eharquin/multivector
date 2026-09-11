@@ -39,6 +39,12 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added keyboard workflows, textual announcements, reduced-motion behavior,
   bounded clear interaction, and recorded VGA foundation accessibility checks.
 
+### Distribution
+
+- Changed the public GitHub Pages deployment to publish only verified stable
+  release artifacts while pull requests and `main` pushes retain production
+  build validation.
+
 ## Maintenance rules
 
 - Pull requests add an Unreleased entry when they change a scientific
@@ -49,4 +55,3 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A release moves relevant Unreleased entries under a dated version heading,
   links the Git tag and acceptance record, and leaves a new empty Unreleased
   section.
-

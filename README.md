@@ -3,161 +3,107 @@
 **Interactive geometric algebra constructions for research, exploration, and
 learning.**
 
-MultiVector is a research-driven visual tool for building geometric
-constructions directly with multivector expressions.
+MultiVector is a browser-based tool for writing multivector expressions and
+turning them into interactive geometric constructions. It is developed as part
+of PhD research and is intended for both geometric-algebra research and
+learning.
 
-It is developed as part of PhD research and is intended to grow into a public,
-open-source tool for the geometric algebra community, with an interface that is
-also approachable for learners.
+> **Project status:** MultiVector is preparing its first `0.1.0` release. The
+> current implemented scope is a two-dimensional vectorial geometric algebra
+> workflow, VGA(2). Other algebras are future work, and compatibility is not yet
+> guaranteed.
 
-MultiVector is under active research development.
+[Open the public application](https://eharquin.github.io/multivector/)
 
-## Project status
+## Current capabilities
 
-MultiVector is under active research development. The current implementation is
-an initial VGA(2) vertical slice: users can create, edit, and delete an ordered
-list of scalar, compact-blade (`e1`, `e2`, `e12`, `e21`), `vector(x, y)`, or
-concise tuple-vector `(x, y)`
-expressions. Rows may declare names and refer to declarations in other rows:
+- Write named scalar and multivector expressions with dependencies, geometric
+  products, outer and inner products, duality, grade operations, rotors, lists,
+  ranges, indexing, and broadcasting.
+- Visualize and style VGA(2) vectors and bivectors in a navigable viewport.
+- Position and directly manipulate eligible objects with pointer or keyboard
+  controls, with undo and redo.
+- Drive constructions with scalar sliders and deterministic playback.
+- Save the active document locally and import or export canonical JSON.
+
+For example:
 
 ```text
 V1 = (1, 1)
 V2 = (2, 1)
-B = V1 * V2
-```
-
-The current geometric-operation subset includes outer product `^`, inner
-product `|`, regressive product `&`, reverse `~`, dual `!`, grade involution,
-the pseudoscalar `ps`, grade projections, and blade-coefficient extraction.
-Reverse, dual, and grade involution also have the canonical postfix forms
-`.reverse`, `.dual`, and `.involution`. For example:
-
-```text
 area = V1 ^ V2
-dot = V1 | V2
-vectorPart = (1 + V1 + 3e12).g1
-involuted = (1 + V1 + 3e12).involution
+rotated = exp(-(pi / 4) * e12) >>> V1
 ```
 
-VGA(2) rotor support includes scalar trigonometric and hyperbolic functions,
-closed-form multivector exponentials, integer powers, inverse and division,
-the primary norm, explicit normalization, and the sandwich action. For example,
-`exp(-(pi/4) * e12) >>> e1` rotates `e1` to `e2`.
+The [expression language specification](docs/specifications/language.md)
+defines the supported syntax and operations.
 
-Lists are ordered, flat collections with stable element identities. The
-language supports list literals, arithmetic integer ranges, zero-based
-indexing, and value/list or compatible list/list broadcasting. For example,
-`V = [1...3] * e1` creates three vectors and `V[1]` selects the second. Vector
-and bivector list elements retain separately evaluated positions and render in
-prefix order up to the documented visual limit.
+## Getting started
 
-The document evaluator resolves forward references, evaluates acyclic
-dependencies in dependency order, and reports source-localized missing-name,
-duplicate-name, cycle, and invalid-dependency diagnostics while independent
-branches continue evaluating. Values pass through the isolated algebra-engine
-adapter and value-based standard interpretation. The expression panel identifies
-scalars, vectors, bivectors, rotors, and mixed multivectors before showing their
-canonical values. Supported vectors and bivectors, including list elements,
-render together in list order. Expression rows provide separate visibility and
-appearance controls, Studio-compatible semantic color styles, configurable
-labels, and natural VGA normalization for individual vectors and bivectors.
-Appearance applies to a whole list and never changes its element values. Hidden
-objects retain their evaluated text. The application supports persistent
-system, light, and dark theme selection. Additional viewport display settings
-remain part of future view-state controls. Each single-vector or single-bivector
-row also owns an optional position expression; lists instead preserve the
-inherited positions of their elements. Positioned vectors render from that
-position to their derived head. Positioned bivectors render as signed
-oriented-area loops; a direct `V ^ W` uses an oriented parallelogram when its
-construction is safely available. `V.position` and `V.head`, and `B.position`,
-may be referenced by other expressions. Position metadata remains separate from
-multivector coefficients. Scalars, rotors, and mixed-grade values retain
-textual states when the viewport has no spatial visualization for them. The
-header's VGA badge opens an algebra-information sheet, and the bottom of the
-expression panel provides a reference limited to the expression syntax
-currently implemented. A neighboring clear control requires a one-second
-pointer or keyboard hold, removes all expressions and their appearance records,
-and returns focus to the add-expression control.
+### Prerequisites
 
-Documents are saved locally after valid edits. The header provides explicit
-canonical JSON import and export; imports are validated before replacing the
-open document, and failed writes retain the last saved revision.
+- Node.js `^22.13.0` or `>=24.0.0`;
+- npm, included with Node.js;
+- a modern desktop browser.
 
-The two-dimensional viewport supports cursor-centered wheel zoom, pointer pan,
-keyboard pan and zoom, and reset to the origin. Controls in the canvas corner
-zoom, reset the view, and widen the expression panel until the canvas is square.
-The camera spans 0.001 through 1,000,000 reference pixels per mathematical unit;
-changing it never changes evaluated values.
-Double-clicking empty viewport space creates a named `vector(x, y)` expression
-at that mathematical coordinate; rendered objects are not directly selectable.
-The header's display settings menu gives the adaptive grid, axes and labels,
-graduations, object size, numerical display precision, and application theme
-independent persistent controls; view-only changes remain outside mathematical
-undo history. Display precision shortens approximations without changing owned
-coefficients, evaluation, zero classification, or expression source.
+Chrome, Firefox, Edge, and Safari are the browser targets for `0.1.0`. Exact
+support claims will be recorded in the
+[0.1 acceptance record](docs/acceptance/vga-2d-visual-workflow.md) after the
+cross-browser validation is complete.
 
-`Enter` adds an expression below the active expression or position field;
-`Shift+Enter` adds one above. Evaluated lists can be expanded to inspect each
-element's index, semantic type, canonical value, and inherited position.
+### Run locally
 
-Directly declared numeric scalars use slider controls by default, backed by
-expression-valued minimum, maximum, and step sources shown below the slider
-while its expression is focused. Slider changes rewrite the authoritative
-scalar literal and participate in document undo and redo; invalid or
-out-of-range configurations leave the source unchanged. Number mode hides both
-the slider and its playback button.
+```sh
+git clone https://github.com/eharquin/multivector.git
+cd multivector
+npm ci
+npm run dev
+```
 
-Slider controls provide deterministic once, loop, or ping-pong playback. Their
-single Play button also pauses and resumes playback; completion and Escape
-cancellation update authoritative source through one transient history
-transaction. Active playback itself is never persisted.
-Reduced-motion preferences prevent automatic motion and remove decorative
-control transitions while leaving explicit playback available.
+The development server prints the local application URL when it starts.
 
-Eligible positioned vectors and bivectors expose Studio-compatible base points:
-dragging a base changes only its position, while dragging an editable vector
-head rewrites its direct components. Pointer gestures preview dependent results
-inside one undo transaction and can be cancelled with Escape; the same handles
-support keyboard arrow movement. Compound or ambiguous sources remain locked
-without making rendered object bodies directly selectable. Additional algebras
-remain planned work.
+### Verify and preview a production build
 
-The current public application delivers the accepted VGA 2D Foundation
-workflow. Broader geometry and interaction capabilities remain incremental.
+```sh
+npm run verify
+npm run preview
+```
 
-The keyboard-only [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md)
-and its [acceptance record](docs/acceptance/vga-2d-foundation.md) track the
-accepted release workflow and its evidence.
-The example is loaded as the default graph only when no local document exists.
+`npm run verify` runs type checking, linting, the complete test suite, and the
+production build. `npm run preview` serves the resulting `dist` directory
+locally. Pull requests and pushes to `main` run the same verification; only a
+published stable release deploys the public site.
+
+## Release status
+
+The initial [VGA 2D Foundation](docs/acceptance/vga-2d-foundation.md) is
+accepted. The
+[VGA 2D Visual Workflow acceptance record](docs/acceptance/vga-2d-visual-workflow.md)
+tracks the remaining manual and release evidence for `0.1.0`.
+
+The keyboard-only
+[VGA 2D Foundation example](docs/examples/vga-2d-foundation.md) is loaded for a
+new browser session when no local document exists.
+
+See the [roadmap](ROADMAP.md) for the planned multi-algebra and research-release
+work, and the [changelog](CHANGELOG.md) for user-visible changes.
 
 ## Documentation
 
 - [Design requirements](docs/design-requirements.md)
-- [Requirement identifier convention](docs/requirements/identifier-convention.md)
-- [Requirement prefix registry](docs/requirements/requirement-prefix-registry.md)
 - [Application architecture](docs/architecture/application-architecture.md)
 - [Technology decisions](docs/architecture/technology-decisions.md)
 - [Expression language](docs/specifications/language.md)
-- [Document format](docs/specifications/document-format.md)
-- [Limits and interaction constants](docs/specifications/limits-and-constants.md)
+- [Canonical document format](docs/specifications/document-format.md)
 - [VGA convention version 1](docs/specifications/vga-conventions.md)
-- [Algebra definition requirements](docs/requirements/algebras/algebra-definition.md)
-- [VGA requirements](docs/requirements/algebras/vga.md)
-- [2D visualization requirements](docs/requirements/visualization/2d.md)
-- Milestones:
-  [language foundation](docs/requirements/milestones/language-foundation.md),
-  [VGA core](docs/requirements/milestones/vga-core.md),
-  [VGA 2D foundation](docs/requirements/milestones/vga-2d-foundation.md), and
-  [VGA 2D visual workflow](docs/requirements/milestones/vga-2d-visual-workflow.md)
+- [Limits and interaction constants](docs/specifications/limits-and-constants.md)
 - [Project workflow](docs/project-workflow.md)
-- [Release roadmap](ROADMAP.md)
-- [Changelog](CHANGELOG.md)
-- Publication preparation:
-  [JOSS readiness](docs/publication/joss-readiness.md),
-  [research impact evidence](docs/publication/research-impact.md), and
-  [generative AI usage](docs/publication/ai-usage.md)
+- [JOSS readiness](docs/publication/joss-readiness.md)
 - [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)
 
-## Contributing
+## Contributing and citation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) before proposing substantial changes.
+MultiVector is open-source software under the [MIT License](LICENSE). Read the
+[contribution guide](CONTRIBUTING.md) before proposing substantial work. If you
+use MultiVector in research, citation metadata is available in
+[`CITATION.cff`](CITATION.cff).

@@ -29,7 +29,7 @@ review and before submission.
 | Browsable, cloneable public source and issue tracker | Met | GitHub repository and project workflow | Reconfirm repository access before submission |
 | Clear research application and statement of need | Partial | [Design requirements](../design-requirements.md) and README | Write a non-aspirational statement tied to demonstrated research workflows |
 | Architecture suitable for a testable web research tool | Strong | [Application architecture](../architecture/application-architecture.md), owned-value boundary, isolated algebra adapter | Demonstrate the boundary with PGA(2), not VGA(2) alone |
-| Installation and functionality documentation | Partial | `package.json`, README, deployed example | Add explicit prerequisites, local installation, development, verification, and browser-support instructions |
+| Installation and functionality documentation | Partial | Explicit prerequisites, local installation, development, and verification in the README; deployed example | Complete the release-specific browser-support record |
 | Examples | Partial | [VGA foundation example](../examples/vga-2d-foundation.md) | Add research case studies and PGA workflows with downloadable canonical documents |
 | Automated tests and CI | Strong | `npm run verify`, GitHub Actions, acceptance record | Publish release-specific results and maintain independent mathematical fixtures |
 | Community pathways | Partial | CONTRIBUTING, issue templates, code of conduct | State where to seek support and add a research-use issue path |
@@ -73,4 +73,3 @@ service, obtain its DOI, and update citation metadata.
 - A criterion becomes Met only when its Evidence cell links to a durable record.
 - Policy changes update the Last reviewed date and the cited official sources.
 - Missing evidence remains explicit; roadmap intent is never impact evidence.
-

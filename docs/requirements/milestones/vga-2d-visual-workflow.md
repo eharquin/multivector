@@ -3,6 +3,7 @@
 **Status:** Draft for review
 **Kind:** Product milestone
 **Depends on:** VGA 2D Foundation
+**Acceptance:** [VGA 2D Visual Workflow Acceptance Record](../../acceptance/vga-2d-visual-workflow.md)
 **Applies:** CMD-001 through CMD-008; EDIT-001 through EDIT-004; CTRL-001
 through CTRL-004; ANIM-001 through ANIM-005; INTERACT2D-001 through
 INTERACT2D-008
