@@ -7,6 +7,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+The entries below are the candidate contents of release 0.1.0. They remain
+unreleased until the acceptance record is complete and the stable release is
+published.
+
 ### Scientific capabilities
 
 - Added the accepted VGA(2) foundation: owned multivector evaluation,

@@ -78,10 +78,13 @@ and is not claimed as supported merely because it is expected to work.
   [#89](https://github.com/eharquin/multivector/issues/89).
 - [x] Add explicit installation, local verification, and browser-target
   documentation.
-- [ ] Set the package and lockfile version to `0.1.0`.
+- [x] Set the package and lockfile version to `0.1.0`.
+- [x] Draft the `0.1.0` release notes with the intended scope and known
+  limitations.
 - [ ] Move the release changes from `Unreleased` to a dated `0.1.0` changelog
   section and leave a new empty `Unreleased` section.
-- [ ] Update citation metadata with the release version and date.
+- [x] Add the release version to citation metadata.
+- [ ] Add the final release date to citation metadata.
 - [ ] Run `npm ci` and `npm run verify` against the exact release commit.
 - [ ] Change this record and the milestone status to `Accepted` only after all
   required evidence is present.
