@@ -71,8 +71,9 @@ npm run preview
 
 `npm run verify` runs type checking, linting, the complete test suite, and the
 production build. `npm run preview` serves the resulting `dist` directory
-locally. Pull requests and pushes to `main` run the same verification; only a
-published stable release deploys the public site.
+locally. Pull requests and pushes to `main` run the same verification. A
+published stable release deploys the public site automatically; a maintainer
+may also deploy a chosen ref by hand, for browser testing before a release.
 
 ## Release status
 
