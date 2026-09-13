@@ -691,9 +691,12 @@ body.reordering-items .reorder-handle {
   color: var(--accent-2);
   border-width: 2px;
   border-radius: 50%;
-  font-size: 9px;
-  /* The triangle glyph carries no left bearing; 1px recentres it in the circle. */
+  /* The triangle's visual weight sits left; 1px recentres it in the circle. */
   padding: 0 0 0 1px;
+}
+
+.scalar-play-button svg {
+  fill: currentColor;
 }
 
 .scalar-play-button:hover:not(:disabled, .is-playing) {
