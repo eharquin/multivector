@@ -3,8 +3,14 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Point2d } from '../geometry/interpretation'
-import type { AreaLayout, SegmentLayout } from './layout'
-import type { OrientedAreaPrimitive, OrientedSegmentPrimitive } from './primitives'
+import type { AreaLayout, DirectionLayout, LineLayout, SegmentLayout } from './layout'
+import type {
+  DirectionMarkerPrimitive,
+  OrientedAreaPrimitive,
+  OrientedSegmentPrimitive,
+  PointMarkerPrimitive,
+  UnboundedLinePrimitive,
+} from './primitives'
 
 export type ManipulationKind = 'head' | 'base'
 
@@ -39,11 +45,14 @@ type BaseHandleProps = Readonly<{
   controller: HandleController
   /** Lets a coincident head handle win the press (zero-length vectors). */
   yieldToHead?: boolean
+  /** Verb of the accessible name; `Move base of` for objects with a separate position. */
+  handleLabel?: string
 }>
 
 /** The base contour, base point, and keyboard focus ring shared by every located glyph. */
 function BaseHandle({
   itemId, point, mathematical, accessibleName, movable, scale, controller, yieldToHead,
+  handleLabel = 'Move base of',
 }: BaseHandleProps) {
   const key = `${itemId}:base`
   return <>
@@ -57,7 +66,7 @@ function BaseHandle({
       tabIndex={movable ? 0 : undefined}
       role={movable ? 'button' : undefined}
       aria-keyshortcuts={movable ? 'Enter Delete' : undefined}
-      aria-label={movable ? `Move base of ${accessibleName}` : undefined}
+      aria-label={movable ? `${handleLabel} ${accessibleName}` : undefined}
       onPointerEnter={movable ? () => controller.hover(key) : undefined}
       onPointerLeave={movable ? () => controller.unhover(key) : undefined}
       onFocus={movable ? () => controller.focus(key) : undefined}
@@ -243,5 +252,94 @@ export function OrientedAreaGlyph({
       controller={controller}
     />}
     {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
+  </g>
+}
+
+export type PointMarkerGlyphProps = Readonly<{
+  id: string
+  primitive: PointMarkerPrimitive
+  point: Point2d
+  color: string
+  label: string | null
+  scale: number
+  itemPresent: boolean
+  movable: boolean
+  controller: HandleController
+}>
+
+/** A located point: a filled marker whose handle moves the point itself. */
+export function PointMarkerGlyph({
+  id, primitive, point, color, label, scale, itemPresent, movable, controller,
+}: PointMarkerGlyphProps) {
+  return <g style={{ color }}>
+    <circle
+      className="point-marker"
+      cx={point.x} cy={point.y} r={4.5 * scale}
+      aria-label={primitive.accessibleName}
+    />
+    {itemPresent && <BaseHandle
+      itemId={id}
+      point={point}
+      mathematical={primitive.point}
+      accessibleName={primitive.accessibleName}
+      handleLabel="Move"
+      movable={movable}
+      scale={scale}
+      controller={controller}
+    />}
+    {label && <text className="object-label" x={point.x + 8} y={point.y - 8}>{label}</text>}
+  </g>
+}
+
+export type UnboundedLineGlyphProps = Readonly<{
+  primitive: UnboundedLinePrimitive
+  layout: NonNullable<LineLayout>
+  color: string
+  label: string | null
+  scale: number
+}>
+
+/** A line clipped to the viewport; no handle in this milestone (PGA-VIZ-003). */
+export function UnboundedLineGlyph({ primitive, layout, color, label, scale }: UnboundedLineGlyphProps) {
+  return <g style={{ color }}>
+    <line
+      className="unbounded-line"
+      x1={layout.start.x} y1={layout.start.y}
+      x2={layout.end.x} y2={layout.end.y}
+      strokeWidth={2.5 * scale}
+      aria-label={primitive.accessibleName}
+    />
+    {label && <text className="object-label" x={layout.labelPoint.x + 8} y={layout.labelPoint.y - 8}>{label}</text>}
+  </g>
+}
+
+export type DirectionMarkerGlyphProps = Readonly<{
+  primitive: DirectionMarkerPrimitive
+  layout: DirectionLayout
+  color: string
+  label: string | null
+  scale: number
+}>
+
+/** An ideal point: an outward arrow at the viewport edge in its direction. */
+export function DirectionMarkerGlyph({ primitive, layout, color, label, scale }: DirectionMarkerGlyphProps) {
+  const headLength = 10 * scale
+  const spread = Math.PI / 6
+  const head = [
+    `${layout.tip.x},${layout.tip.y}`,
+    `${layout.tip.x - headLength * Math.cos(layout.angle - spread)},${layout.tip.y - headLength * Math.sin(layout.angle - spread)}`,
+    `${layout.tip.x - headLength * Math.cos(layout.angle + spread)},${layout.tip.y - headLength * Math.sin(layout.angle + spread)}`,
+  ].join(' ')
+  return <g style={{ color }}>
+    <line
+      className="direction-marker"
+      x1={layout.tail.x} y1={layout.tail.y}
+      x2={layout.tip.x} y2={layout.tip.y}
+      strokeWidth={2.5 * scale}
+      strokeDasharray={`${4 * scale} ${3 * scale}`}
+      aria-label={primitive.accessibleName}
+    />
+    <polygon className="direction-marker-head" points={head} aria-hidden="true" />
+    {label && <text className="object-label" x={layout.tail.x + 8} y={layout.tail.y - 8}>{label}</text>}
   </g>
 }

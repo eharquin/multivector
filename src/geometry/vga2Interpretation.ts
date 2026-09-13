@@ -141,6 +141,7 @@ export const VGA_2D_INTERPRETATION: Interpretation<StandardVga2Entity> = Object.
   interpretationVersion: 1,
   interpret: (value) => interpretVga2(value),
   describe: describeVga2Entity,
+  detail: () => null,
   supportsPosition: supportsVga2Position,
   supportsHead: (entity) => entity.kind === 'vector-2d',
   // A position is a pure vector: no scalar and no bivector part (VGA-POS-004).
@@ -156,6 +157,8 @@ export const VGA_2D_INTERPRETATION: Interpretation<StandardVga2Entity> = Object.
     return { status: 'unsupported', message: 'This VGA 2D object has no supported visualization.' }
   },
   defaultName: (entity, index) => `${entity.kind === 'bivector-2d' ? 'Bivector' : 'Vector'} ${index + 1}`,
+  creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Vector' },
+  literalEdit: null,
   toPrimitive(entity, { accessibleName, position, construction }) {
     if (entity.kind === 'vector-2d') return vectorToPrimitive(entity, accessibleName, position)
     if (entity.kind !== 'bivector-2d') return null

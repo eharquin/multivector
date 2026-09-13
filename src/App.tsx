@@ -22,7 +22,7 @@ import {
   type DisplaySettings,
 } from './components/DisplaySettingsMenu'
 import { resolveItemAppearance } from './components/appearancePalette'
-import { OPAQUE_INTERPRETATION } from './geometry/interpretation'
+import { OPAQUE_INTERPRETATION, type InterpretedEntity } from './geometry/interpretation'
 import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
@@ -48,12 +48,12 @@ import {
   type Viewport2d,
 } from './visualization/viewport'
 import {
-  nextVectorName,
-  vectorCreationSource,
+  creationSource,
+  nextObjectName,
 } from './visualization/viewportCreation'
-import { OrientedAreaGlyph, OrientedSegmentGlyph, type HandleController } from './visualization/glyphs'
+import { DirectionMarkerGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
-import { collectRenderedPrimitives, layoutOrientedArea, layoutOrientedSegment } from './visualization/layout'
+import { collectRenderedPrimitives, layoutDirectionMarker, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -72,6 +72,11 @@ import {
 } from './presentation/formatNumber'
 import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
+import {
+  directDeclaredConstructorComponents,
+  rewriteConstructorLiterals,
+  type ConstructorComponentEdit,
+} from './language/constructorLiteralEdit'
 import {
   directDeclaredVectorComponents,
   directPositionAnchorReference,
@@ -488,6 +493,28 @@ function App() {
       })
       return
     }
+    if (!interpretation.supportsPosition(rendered.entity)) {
+      // The entity carries its own location: rewrite its constructor literal
+      // (PGA-VIZ-003) with the pointer's grid-rounded coordinates.
+      const components = literalEditComponents(item)
+      if (!components) return
+      const values = [target.x, target.y]
+      const rewritten = rewriteConstructorLiterals(item.source, components, values)
+      if (rewritten !== item.source) executeCommand({
+        kind: 'update-source', itemId, source: rewritten,
+      })
+      components.forEach((component, index) => {
+        if (component.kind !== 'reference') return
+        const scalarItem = expressionDoc.items.find((candidate) =>
+          declaredName(candidate.source) === component.name &&
+          directScalarEdit(candidate.source) !== null)
+        if (scalarItem) executeCommand({
+          kind: 'set-scalar-value', itemId: scalarItem.id,
+          value: values[index] * component.sign,
+        })
+      })
+      return
+    }
     if (!item.positionSource) {
       executeCommand({
         kind: 'update-position', itemId,
@@ -541,7 +568,7 @@ function App() {
     setViewportAnnouncement(`${kind === 'head' ? 'Vector head' : 'Object base'} drag started.`)
   }
   const componentsMovable = (
-    components: ReturnType<typeof directDeclaredVectorComponents>,
+    components: readonly ConstructorComponentEdit[] | null,
   ): boolean => {
     if (!components) return false
     const references = components.filter((component) => component.kind === 'reference')
@@ -553,10 +580,17 @@ function App() {
   }
   const vectorHeadMovable = (item: ExpressionItem): boolean =>
     componentsMovable(directDeclaredVectorComponents(item.source))
-  const objectBaseMovable = (item: ExpressionItem): boolean =>
-    !item.positionSource ||
-    directPositionAnchorReference(item.positionSource) !== null ||
-    componentsMovable(directPositionComponents(item.positionSource))
+  const literalEditComponents = (item: ExpressionItem) => interpretation.literalEdit
+    ? directDeclaredConstructorComponents(
+        item.source, interpretation.literalEdit.constructor, interpretation.literalEdit.arity,
+      )
+    : null
+  const objectBaseMovable = (item: ExpressionItem, entity: InterpretedEntity): boolean =>
+    interpretation.supportsPosition(entity)
+      ? !item.positionSource ||
+        directPositionAnchorReference(item.positionSource) !== null ||
+        componentsMovable(directPositionComponents(item.positionSource))
+      : componentsMovable(literalEditComponents(item))
   const manipulateWithKeyboard = (
     event: KeyboardEvent<SVGCircleElement>,
     itemId: string,
@@ -818,7 +852,7 @@ function App() {
     if (event.target !== event.currentTarget) return
     if (expressionDoc.items.length >= MAX_EXPRESSION_ITEMS) {
       setViewportAnnouncement(
-        `Vector not created. The document already contains the maximum of ${MAX_EXPRESSION_ITEMS} expressions.`,
+        `${interpretation.creation.objectName} not created. The document already contains the maximum of ${MAX_EXPRESSION_ITEMS} expressions.`,
       )
       return
     }
@@ -830,8 +864,8 @@ function App() {
       viewport,
       screenPoint(event.clientX, event.clientY),
     )
-    const name = nextVectorName(expressionDoc.items.map(({ source }) => source))
-    const source = vectorCreationSource(name, point, viewport.pixelsPerUnit)
+    const name = nextObjectName(expressionDoc.items.map(({ source }) => source), interpretation.creation.namePrefix)
+    const source = creationSource(interpretation.creation.constructor, name, point, viewport.pixelsPerUnit)
     viewportCreatedItemIds.current.add(id)
     pendingFocus.current = id
     executeCommand({ kind: 'insert-item', item: { id, source } })
@@ -1043,6 +1077,19 @@ function App() {
   const renderedAreas = renderedPrimitives.flatMap((entry) =>
     entry.primitive.kind === 'oriented-area'
       ? [{ ...entry, primitive: entry.primitive, layout: layoutOrientedArea(entry.primitive, viewport, entry.bivectorShape) }]
+      : [])
+  const renderedPoints = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'point-marker'
+      ? [{ ...entry, primitive: entry.primitive, point: toScreen(viewport, entry.primitive.point) }]
+      : [])
+  const renderedLines = renderedPrimitives.flatMap((entry) => {
+    if (entry.primitive.kind !== 'unbounded-line') return []
+    const layout = layoutUnboundedLine(entry.primitive, viewport)
+    return layout ? [{ ...entry, primitive: entry.primitive, layout }] : []
+  })
+  const renderedDirections = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'direction-marker'
+      ? [{ ...entry, primitive: entry.primitive, layout: layoutDirectionMarker(entry.primitive, viewport, objectRenderScale) }]
       : [])
 
   useEffect(() => {
@@ -1809,6 +1856,10 @@ function App() {
                               ) : (
                                 <span className="object-kind" style={{ color }}>
                                   {kind}
+                                  {evaluation?.status === 'valid' && evaluation.valueType === 'single' &&
+                                    interpretation.detail(evaluation.entity) && (
+                                    <span className="object-detail"> {interpretation.detail(evaluation.entity)}</span>
+                                  )}
                                   {approximated && (
                                     <span
                                       className="approximated-indicator"
@@ -2268,7 +2319,7 @@ function App() {
                 })}
               </g>}
 
-              {renderedVectors.map(({ id, primitive, layout, color, label }) => {
+              {renderedVectors.map(({ id, primitive, entity, layout, color, label }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 return <OrientedSegmentGlyph
                   key={id}
@@ -2280,11 +2331,11 @@ function App() {
                   scale={objectRenderScale}
                   itemPresent={!!item}
                   headMovable={!!item && vectorHeadMovable(item)}
-                  baseMovable={!!item && objectBaseMovable(item)}
+                  baseMovable={!!item && objectBaseMovable(item, entity)}
                   controller={handleController}
                 />
               })}
-              {renderedAreas.map(({ id, primitive, layout, color, label, borderVisible, orientationVisible }) => {
+              {renderedAreas.map(({ id, primitive, entity, layout, color, label, borderVisible, orientationVisible }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 return <OrientedAreaGlyph
                   key={id}
@@ -2297,7 +2348,28 @@ function App() {
                   borderVisible={borderVisible}
                   orientationVisible={orientationVisible}
                   itemPresent={!!item}
-                  baseMovable={!!item && objectBaseMovable(item)}
+                  baseMovable={!!item && objectBaseMovable(item, entity)}
+                  controller={handleController}
+                />
+              })}
+              {renderedLines.map(({ id, primitive, layout, color, label }) => (
+                <UnboundedLineGlyph key={id} primitive={primitive} layout={layout} color={color} label={label} scale={objectRenderScale} />
+              ))}
+              {renderedDirections.map(({ id, primitive, layout, color, label }) => (
+                <DirectionMarkerGlyph key={id} primitive={primitive} layout={layout} color={color} label={label} scale={objectRenderScale} />
+              ))}
+              {renderedPoints.map(({ id, primitive, entity, point, color, label }) => {
+                const item = expressionDoc.items.find((candidate) => candidate.id === id)
+                return <PointMarkerGlyph
+                  key={id}
+                  id={id}
+                  primitive={primitive}
+                  point={point}
+                  color={color}
+                  label={label}
+                  scale={objectRenderScale}
+                  itemPresent={!!item}
+                  movable={!!item && objectBaseMovable(item, entity)}
                   controller={handleController}
                 />
               })}

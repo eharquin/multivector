@@ -4,7 +4,8 @@ const DECLARATION_NAME = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/
 const MAX_COORDINATE_DECIMALS = 8
 
 /** Returns the first generated vector name that is not already declared. */
-export function nextVectorName(sources: readonly string[]): string {
+/** The first free `prefix<n>` name among the document's declarations. */
+export function nextObjectName(sources: readonly string[], prefix: string): string {
   const declarations = new Set(
     sources.flatMap((source) => {
       const name = DECLARATION_NAME.exec(source)?.[1]
@@ -12,8 +13,12 @@ export function nextVectorName(sources: readonly string[]): string {
     }),
   )
   let suffix = 1
-  while (declarations.has(`V${suffix}`)) suffix += 1
-  return `V${suffix}`
+  while (declarations.has(`${prefix}${suffix}`)) suffix += 1
+  return `${prefix}${suffix}`
+}
+
+export function nextVectorName(sources: readonly string[]): string {
+  return nextObjectName(sources, 'V')
 }
 
 /**
@@ -35,12 +40,22 @@ export function formatViewportCoordinate(
   return formatRoundTripNumber(rounded)
 }
 
+/** The declaration created for a located object at a viewport point (INTERACT2D-001). */
+export function creationSource(
+  constructor: string,
+  name: string,
+  point: Readonly<{ x: number; y: number }>,
+  pixelsPerUnit: number,
+): string {
+  return `${name} = ${constructor}(${formatViewportCoordinate(point.x, pixelsPerUnit)}, ${
+    formatViewportCoordinate(point.y, pixelsPerUnit)
+  })`
+}
+
 export function vectorCreationSource(
   name: string,
   point: Readonly<{ x: number; y: number }>,
   pixelsPerUnit: number,
 ): string {
-  return `${name} = vector(${formatViewportCoordinate(point.x, pixelsPerUnit)}, ${
-    formatViewportCoordinate(point.y, pixelsPerUnit)
-  })`
+  return creationSource('vector', name, point, pixelsPerUnit)
 }

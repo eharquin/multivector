@@ -7,6 +7,24 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Scientific capabilities
+
+- Added the plane-based PGA(2) algebra `org.multivector.pga` under
+  [PGA convention version 1](docs/specifications/pga-conventions.md): points,
+  ideal points, and lines with `point`, `ipoint`, and `line`; meet, join
+  through the explicit Hodge dual, incidence, Euclidean and ideal norms, and
+  rotors, translators, motors, reflections, and glide reflections through the
+  common operators; classification, projective descriptions with weight and
+  scale, point markers, clipped lines, and edge direction markers.
+
+### Interface and accessibility
+
+- Added algebra selection for an empty document from the algebra dialog; the
+  header badge and dialog now describe the document's algebra.
+- Compact blade names accept every generator of the active algebra, so an
+  unavailable blade such as `e0` under VGA(2) reports an unknown-blade
+  diagnostic at its span instead of an undefined name.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

@@ -1912,3 +1912,65 @@ describe('VGA 2D vertical slice', () => {
     expect(trigger).toHaveFocus()
   })
 })
+
+describe('PGA 2D foundation workflow', () => {
+  function selectPga() {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Document algebra' }), {
+      target: { value: 'org.multivector.pga' },
+    })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.getByRole('button', { name: 'PGA · 2D' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  }
+
+  it('evaluates, classifies, and draws points, lines, and ideal points', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = point(1, 2)' } })
+    fireEvent.keyDown(first, { key: 'Enter' })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), { target: { value: 'L = line(1, -1, 0)' } })
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Expression 2' }), { key: 'Enter' })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 3' }), { target: { value: 'D = ipoint(0, 1)' } })
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Expression 3' }), { key: 'Enter' })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 4' }), { target: { value: 'I = line(0, 0, 1)' } })
+
+    expect(screen.getByText('Point')).toHaveTextContent('at (1, 2)')
+    expect(screen.getByText('Line')).toHaveTextContent('0.707107x − 0.707107y = 0')
+    expect(screen.getByText('Ideal point')).toHaveTextContent('direction (0, 1)')
+    expect(screen.getByText('Line at infinity')).toBeInTheDocument()
+    expect(screen.getByLabelText('P')).toHaveClass('point-marker')
+    expect(screen.getByLabelText('L')).toHaveClass('unbounded-line')
+    expect(screen.getByLabelText('D')).toHaveClass('direction-marker')
+    expect(screen.queryByLabelText('I')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move P' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Move head/ })).not.toBeInTheDocument()
+  })
+
+  it('drags a literal point as one undoable source rewrite and creates points by double-click', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = point(1, 2)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    const handle = screen.getByRole('button', { name: 'Move P' })
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 21 })
+    fireEvent.pointerMove(canvas, { pointerId: 21, clientX: 536, clientY: 96 })
+    fireEvent.pointerMove(canvas, { pointerId: 21, clientX: 464, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 21 })
+    expect(first).toHaveValue('P = point(2, 1)')
+    expect(screen.getByText('Object manipulation committed.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(first).toHaveValue('P = point(1, 2)')
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move P' }), { key: 'ArrowRight', shiftKey: true })
+    expect(first).toHaveValue('P = point(2, 2)')
+
+    fireEvent.doubleClick(canvas, { clientX: 392, clientY: 168 })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveValue('P1 = point(1, 1)')
+    expect(screen.getByText('P1 created at 1, 1.')).toBeInTheDocument()
+  })
+})

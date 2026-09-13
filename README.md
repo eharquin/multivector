@@ -86,7 +86,10 @@ browsers, and known limitations.
 
 The keyboard-only
 [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md) is loaded for a
-new browser session when no local document exists.
+new browser session when no local document exists. The
+[PGA 2D Foundation example](docs/examples/pga-2d-foundation.md) walks through
+the plane-based projective workflow, which is in progress toward its own
+[acceptance record](docs/acceptance/pga-2d-foundation.md).
 
 See the [roadmap](ROADMAP.md) for the planned multi-algebra and research-release
 work, and the [changelog](CHANGELOG.md) for user-visible changes.

@@ -68,6 +68,7 @@ describe('PGA(2) sources through the language', () => {
     expect(value('norm(line(3, 4, 5))').inspection).toBe('5')
     expect(value('inorm(line(3, 4, 5))').inspection).toBe('5')
     expect(value('inorm(ipoint(3, 4))').inspection).toBe('5')
+    expect(value('ipoint(3, 4).inorm').inspection).toBe('5')
     expect(value('ps').inspection).toBe('e012')
   })
 
@@ -91,6 +92,7 @@ describe('PGA(2) sources through the language', () => {
     const vga = { engine: createVga2Engine(), interpretation: VGA_2D_INTERPRETATION }
     expect(evaluateSource('point(1, 2)', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' } })
     expect(evaluateSource('inorm(e1)', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' } })
+    expect(evaluateSource('e1.inorm', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' } })
     expect(evaluateSource('vector(1, 2)', vga)).toMatchObject({ status: 'valid', inspection: 'e1 + 2e2' })
   })
 })

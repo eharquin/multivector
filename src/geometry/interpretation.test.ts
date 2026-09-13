@@ -17,7 +17,7 @@ describe('interpretation registry', () => {
   })
 
   it('reports an unknown interpretation, an unsupported version, and a missing record', () => {
-    expect(registry.resolveInterpretation({ interpretationId: 'org.multivector.pga-2d', interpretationVersion: 1 }))
+    expect(registry.resolveInterpretation({ interpretationId: 'org.example.cga-2d', interpretationVersion: 1 }))
       .toMatchObject({ status: 'unavailable', code: 'INT_UNKNOWN_INTERPRETATION' })
     expect(registry.resolveInterpretation({ interpretationId: 'org.multivector.vga-2d', interpretationVersion: 2 }))
       .toMatchObject({ status: 'unavailable', code: 'INT_UNSUPPORTED_VERSION' })
