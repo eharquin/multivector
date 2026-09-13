@@ -51,7 +51,9 @@ import {
   nextVectorName,
   vectorCreationSource,
 } from './visualization/viewportCreation'
-import { limitRenderedListElements } from './visualization/primitives'
+import { OrientedAreaGlyph, OrientedSegmentGlyph, type HandleController } from './visualization/glyphs'
+import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
+import { collectRenderedPrimitives, layoutOrientedArea, layoutOrientedSegment } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -88,6 +90,9 @@ import './App.css'
 // algebra record is resolved against it whenever a document is restored,
 // imported, or evaluated (ALG-004, ALG-005).
 const algebraRegistry = createBuiltinAlgebraRegistry()
+const restoreOptions = {
+  visualizerAvailable: (visualizerId: string) => algebraRegistry.resolveVisualizer(visualizerId) !== null,
+}
 const MIN_PANEL_WIDTH = 240
 const UNIT_NORM_TOLERANCE = 1e-10
 /** Keeps the `.panel-resize` separator reachable at any panel width. */
@@ -156,50 +161,6 @@ function persistViewportLock(locked: boolean): void {
   }
 }
 
-function BivectorOrientationArrow({
-  center, direction, scale,
-}: Readonly<{
-  center: Readonly<{ x: number; y: number }>
-  direction: 1 | -1
-  scale: number
-}>) {
-  const radius = 13 * scale
-  const span = 1.5 * Math.PI
-  const headLength = 0.4 * radius
-  const startAngle = direction > 0 ? -Math.PI / 2 : Math.PI / 2
-  const endAngle = startAngle + direction * span
-  const strokeAngle = endAngle - direction * Math.min(headLength / radius, 0.5)
-  const point = (angle: number) => ({
-    x: center.x + radius * Math.cos(angle),
-    y: center.y - radius * Math.sin(angle),
-  })
-  const start = point(startAngle)
-  const strokeEnd = point(strokeAngle)
-  const end = point(endAngle)
-  const sweep = direction > 0 ? 0 : 1
-  const heading = Math.atan2(end.y - strokeEnd.y, end.x - strokeEnd.x)
-  const spread = 0.5
-  const base = (angle: number) => ({
-    x: end.x - headLength * Math.cos(angle),
-    y: end.y - headLength * Math.sin(angle),
-  })
-  const first = base(heading - spread)
-  const second = base(heading + spread)
-  return <g className="bivector-orientation" aria-hidden="true" pointerEvents="none">
-    <path
-      d={`M ${start.x} ${start.y} A ${radius} ${radius} 0 1 ${sweep} ${strokeEnd.x} ${strokeEnd.y}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={Math.min(2.2 * scale, 0.16 * radius)}
-      strokeLinecap="round"
-    />
-    <polygon
-      points={`${end.x},${end.y} ${first.x},${first.y} ${second.x},${second.y}`}
-      fill="currentColor"
-    />
-  </g>
-}
-
 function App() {
   const persistence = useMemo(
     () => browserDocumentStorage(window.localStorage),
@@ -217,7 +178,7 @@ function App() {
     try {
       const stored = persistence.load()
       if (stored === null) return fallback
-      const restored = fromCanonicalDocument(stored)
+      const restored = fromCanonicalDocument(stored, restoreOptions)
       requireAvailableAlgebra(algebraRegistry, restored.document.algebra)
       return { ...restored, diagnostic: restored.recoveryDiagnostic }
     } catch (error) {
@@ -327,6 +288,16 @@ function App() {
     setHoveredManipulation((current) => current === key ? null : current)
     setFocusRingKey((current) => current === key ? null : current)
   }
+  const handleController: HandleController = {
+    hoveredKey: hoveredManipulation,
+    focusRingKey,
+    hover: (key) => setHoveredManipulation(key),
+    unhover: (key) => setHoveredManipulation((current) => current === key ? null : current),
+    focus: focusHandle,
+    blur: blurHandle,
+    pointerDown: (event, itemId, kind) => beginManipulation(event, itemId, kind),
+    keyDown: (event, itemId, kind, current) => manipulateWithKeyboard(event, itemId, kind, current),
+  }
   const [panelWidth, setPanelWidth] = useState(340)
   const [workspaceWidth, setWorkspaceWidth] = useState(0)
   const maximumPanelWidth = Math.max(
@@ -348,13 +319,7 @@ function App() {
   const [viewportAnnouncement, setViewportAnnouncement] = useState('')
   const [reorderAnnouncement, setReorderAnnouncement] = useState('')
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
-  const [anchorPreview, setAnchorPreview] = useState<Readonly<{
-    draggedId: string
-    targetId: string
-    targetName: string
-    property: 'position' | 'head'
-    point: Readonly<{ x: number; y: number }>
-  }> | null>(null)
+  const [anchorPreview, setAnchorPreview] = useState<AnchorCandidate | null>(null)
   const [viewportLocked, setViewportLocked] = useState(restoredViewportLock)
   const [activePlayback, setActivePlayback] = useState<ActiveScalarPlayback | null>(null)
   const [playbackAnnouncement, setPlaybackAnnouncement] = useState('')
@@ -391,7 +356,7 @@ function App() {
       }
     : { ...defaultViewport, ...viewportSize }
   const visualizerActive = interpretationResolution.status === 'resolved' &&
-    expressionDoc.view.visualizerId === algebraDefinition.standardVisualizerId &&
+    algebraRegistry.resolveVisualizer(expressionDoc.view.visualizerId) !== null &&
     expressionDoc.view.viewport.kind === 'two-dimensional'
   const grid = adaptiveGrid(viewport)
   const updateView = useCallback((view: typeof expressionDoc.view) => {
@@ -689,43 +654,17 @@ function App() {
         const rectangle = event.currentTarget.getBoundingClientRect()
         const cssScaleX = rectangle.width > 0 ? rectangle.width / viewport.width : 1
         const cssScaleY = rectangle.height > 0 ? rectangle.height / viewport.height : 1
-        const candidates = renderedPrimitives.flatMap((rendered) => {
-          if (rendered.id.includes(':') || rendered.id === manipulation.itemId) return []
-          const primitive = rendered.primitive
-          const targetItem = expressionDoc.items.find((item) => item.id === rendered.id)
-          const targetName = targetItem ? declaredName(targetItem.source) : null
-          if (!targetName) return []
-          const anchors = primitive.kind === 'oriented-segment'
-            ? [
-                { property: 'position' as const, mathematical: primitive.start },
-                { property: 'head' as const, mathematical: primitive.end },
-              ]
-            : primitive.kind === 'oriented-area'
-              ? [{
-                  property: 'position' as const,
-                  mathematical: primitive.shape.kind === 'loop'
-                    ? primitive.shape.center
-                    : primitive.shape.vertices[0],
-                }]
-              : []
-          return anchors.map(({ property, mathematical }, order) => {
-            const point = toScreen(viewport, mathematical)
-            return {
-              draggedId: manipulation.itemId,
-              targetId: rendered.id,
-              targetName,
-              property,
-              point,
-              mathematical,
-              order,
-              distance: Math.hypot(
-                (pointer.x - point.x) * cssScaleX,
-                (pointer.y - point.y) * cssScaleY,
-              ),
-            }
-          })
-        }).filter((candidate) => candidate.distance <= 22)
-          .filter((candidate) => {
+        const candidates = findAnchorCandidates({
+          draggedId: manipulation.itemId,
+          rendered: renderedPrimitives,
+          viewport,
+          pointer,
+          cssScale: { x: cssScaleX, y: cssScaleY },
+          nameOf: (itemId) => {
+            const targetItem = expressionDoc.items.find((item) => item.id === itemId)
+            return targetItem ? declaredName(targetItem.source) : null
+          },
+          isValid: (candidate) => {
             const key = `${manipulation.itemId}:${candidate.targetId}:${candidate.property}`
             const cached = anchorValidityCache.current.get(key)
             if (cached !== undefined) return cached
@@ -741,17 +680,11 @@ function App() {
             )?.positionEvaluation?.status === 'valid'
             anchorValidityCache.current.set(key, valid)
             return valid
-          })
-          .sort((left, right) => left.distance - right.distance ||
-            left.targetId.localeCompare(right.targetId) || left.order - right.order)
-        const retained = anchorPreview?.draggedId === manipulation.itemId
-          ? candidates.find((candidate) =>
-              candidate.targetId === anchorPreview.targetId &&
-              candidate.property === anchorPreview.property &&
-              candidate.distance <= 22)
-          : null
-        const candidate = retained ?? (
-          candidates[0]?.distance <= 16 ? candidates[0] : null
+          },
+        })
+        const candidate = selectAnchor(
+          candidates,
+          anchorPreview?.draggedId === manipulation.itemId ? anchorPreview : null,
         )
         setAnchorPreview(candidate)
         updateManipulatedItem(
@@ -1100,140 +1033,17 @@ function App() {
   // historical renderer used 1.5 as that baseline, so keep the visual size
   // while restoring a meaningful multiplicative setting.
   const objectRenderScale = expressionDoc.view.display.objectScale * 1.5
-  const renderedPrimitives = evaluatedItems.flatMap((evaluated) => {
-    if (evaluated.evaluation?.status !== 'valid') return []
-    const kind = evaluated.evaluation.valueType === 'list'
-      ? `List (${evaluated.evaluation.value.elements.length})`
-      : interpretation.describe(evaluated.evaluation.entity)
-    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape } = resolveItemAppearance(
-      expressionDoc.appearance[evaluated.item.id],
-      kind,
-      declaredName(evaluated.item.source),
-    )
-    if (!visible) return []
-    const baseLabel = displayLabel
-    return evaluated.evaluation.valueType === 'list'
-      ? limitRenderedListElements(
-          evaluated.evaluation.elements.filter((element) => element.primitive),
-        ).visible
-        .flatMap((element, elementIndex) => element.primitive
-        ? [{
-            id: `${evaluated.item.id}:${element.id}`,
-            primitive: element.primitive,
-            color,
-            borderVisible,
-            orientationVisible,
-            bivectorShape,
-            label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
-          }]
-        : [])
-      : evaluated.evaluation.primitive
-        ? [{
-            id: evaluated.item.id,
-            primitive: evaluated.evaluation.primitive,
-            color,
-            borderVisible,
-            orientationVisible,
-            bivectorShape,
-            label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
-          }]
-        : []
-  })
-  const omittedRenderElements = evaluatedItems.reduce((total, evaluated) => {
-    if (evaluated.evaluation?.status !== 'valid' ||
-        evaluated.evaluation.valueType !== 'list') return total
-    return total + limitRenderedListElements(
-      evaluated.evaluation.elements.filter((element) => element.primitive),
-    ).omitted
-  }, 0)
-  const renderedVectors = renderedPrimitives.flatMap(({ id, primitive, color, label }) => {
-    if (primitive.kind !== 'oriented-segment') return []
-    const start = toScreen(viewport, primitive.start)
-    const end = toScreen(viewport, primitive.end)
-    const dx = end.x - start.x
-    const dy = end.y - start.y
-    const length = Math.hypot(dx, dy)
-    const angle = Math.atan2(dy, dx)
-    const headLength = Math.min(
-      14 * objectRenderScale,
-      length * 0.35,
-    )
-    const headAngle = Math.PI / 6
-    const arrowVisible = length > 8
-    const shaftInset = arrowVisible ? headLength * Math.cos(headAngle) : 0
-    const shaftEnd = length > 0
-      ? {
-          x: end.x - shaftInset * dx / length,
-          y: end.y - shaftInset * dy / length,
-        }
-      : end
-    return [{
-        id,
-        primitive,
-        color,
-        label,
-        start,
-        end,
-        shaftEnd,
-        arrowPoints: arrowVisible ? [
-          `${end.x},${end.y}`,
-          `${end.x - headLength * Math.cos(angle - headAngle)},${
-            end.y - headLength * Math.sin(angle - headAngle)}`,
-          `${end.x - headLength * Math.cos(angle + headAngle)},${
-            end.y - headLength * Math.sin(angle + headAngle)}`,
-        ].join(' ') : null,
-      }]
-  })
-  const renderedAreas = renderedPrimitives.flatMap(({ id, primitive, color, label, borderVisible, orientationVisible, bivectorShape }) => {
-    if (primitive.kind !== 'oriented-area') return []
-    if (bivectorShape === 'from-vectors' && primitive.shape.kind === 'parallelogram') {
-      const points = primitive.shape.vertices.map((point) => toScreen(viewport, point))
-      return [{
-        id,
-        primitive,
-        color,
-        borderVisible,
-        orientationVisible,
-        orientationCenter: {
-          x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-          y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
-        },
-        label,
-        path: `${points.map((point, index) =>
-          `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')} Z`,
-        labelPoint: points[2],
-      }]
-    }
-    const mathematicalCenter = primitive.shape.kind === 'loop'
-      ? primitive.shape.center
-      : primitive.shape.vertices[0]
-    const center = toScreen(viewport, mathematicalCenter)
-    if (bivectorShape === 'square') {
-      const side = Math.sqrt(primitive.area) * viewport.pixelsPerUnit
-      const half = side / 2
-      return [{
-        id, primitive, color, borderVisible, orientationVisible,
-        orientationCenter: center, label,
-        path: `M ${center.x - half} ${center.y - half} H ${center.x + half} V ${center.y + half} H ${center.x - half} Z`,
-        labelPoint: { x: center.x + half, y: center.y - half },
-      }]
-    }
-    const radius = Math.sqrt(primitive.area / Math.PI) * viewport.pixelsPerUnit
-    const sweep = primitive.orientation === 'counterclockwise' ? 1 : 0
-    return [{
-      id,
-      primitive,
-      color,
-      borderVisible,
-      orientationVisible,
-      orientationCenter: center,
-      label,
-      path: `M ${center.x + radius} ${center.y} ` +
-        `A ${radius} ${radius} 0 1 ${sweep} ${center.x - radius} ${center.y} ` +
-        `A ${radius} ${radius} 0 1 ${sweep} ${center.x + radius} ${center.y} Z`,
-      labelPoint: { x: center.x + radius, y: center.y - radius },
-    }]
-  })
+  const { rendered: renderedPrimitives, omitted: omittedRenderElements } = collectRenderedPrimitives(
+    evaluatedItems, expressionDoc.appearance, interpretation, declaredName,
+  )
+  const renderedVectors = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'oriented-segment'
+      ? [{ ...entry, primitive: entry.primitive, layout: layoutOrientedSegment(entry.primitive, viewport, objectRenderScale) }]
+      : [])
+  const renderedAreas = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'oriented-area'
+      ? [{ ...entry, primitive: entry.primitive, layout: layoutOrientedArea(entry.primitive, viewport, entry.bivectorShape) }]
+      : [])
 
   useEffect(() => {
     const id = pendingFocus.current
@@ -1484,6 +1294,7 @@ function App() {
       ) ? 'duplicate' : 'replace'
       const imported = fromCanonicalDocument(
         resolveCanonicalImport(expressionDoc.id, parsed, choice),
+        restoreOptions,
       )
       requireAvailableAlgebra(algebraRegistry, imported.document.algebra)
       dispatchHistory({ type: 'replace', document: imported.document })
@@ -2436,153 +2247,38 @@ function App() {
                 })}
               </g>}
 
-              {renderedVectors.map(({
-                id, primitive, start, end, shaftEnd, arrowPoints, color, label,
-              }) => {
+              {renderedVectors.map(({ id, primitive, layout, color, label }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
-                const baseMovable = !!item && objectBaseMovable(item)
-                const headMovable = !!item && vectorHeadMovable(item)
-                const headAndBaseCoincide = Math.hypot(
-                  end.x - start.x, end.y - start.y,
-                ) < 1
-                const baseKey = `${id}:base`
-                const headKey = `${id}:head`
-                return <g key={id} style={{ color }}>
-                  <line
-                    className={`vector${hoveredManipulation === headKey ? ' is-head-hovered' : ''}`}
-                    x1={start.x}
-                    y1={start.y}
-                    x2={shaftEnd.x}
-                    y2={shaftEnd.y}
-                    strokeWidth={4 * objectRenderScale}
-                    aria-label={primitive.accessibleName}
-                  />
-                  {arrowPoints && <polygon
-                    className="vector-arrowhead"
-                    points={arrowPoints}
-                    aria-hidden="true"
-                  />}
-                  {headMovable && <>
-                    <circle
-                      className="vector-head-point"
-                      cx={end.x} cy={end.y}
-                      r={1.25 * objectRenderScale}
-                      aria-hidden="true"
-                    />
-                    {focusRingKey === headKey && <circle
-                      className="manipulation-focus-ring"
-                      cx={end.x} cy={end.y} r={14 * objectRenderScale}
-                      aria-hidden="true"
-                    />}
-                    {arrowPoints && hoveredManipulation === headKey && <circle
-                      className="vector-head-indicator"
-                      cx={end.x} cy={end.y} r={5 * objectRenderScale}
-                      aria-hidden="true"
-                    />}
-                    <circle
-                      className="manipulation-hit-target vector-head-target"
-                      cx={end.x} cy={end.y} r="12"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Move head of ${primitive.accessibleName}`}
-                      onPointerEnter={() => setHoveredManipulation(headKey)}
-                      onPointerLeave={() => setHoveredManipulation((current) => current === headKey ? null : current)}
-                      onFocus={() => focusHandle(headKey)}
-                      onBlur={() => blurHandle(headKey)}
-                      onPointerDown={(event) => beginManipulation(event, id, 'head')}
-                      onKeyDown={(event) => manipulateWithKeyboard(
-                        event, id, 'head', primitive.end,
-                      )}
-                    />
-                  </>}
-                  {item && <><circle
-                    className={`manipulation-base-contour${baseMovable ? ' is-movable' : ''}`}
-                    cx={start.x} cy={start.y} r={10 * objectRenderScale}
-                    style={{
-                      strokeWidth: Math.max(
-                        0, 24 - 20 * objectRenderScale,
-                      ),
-                      pointerEvents: headMovable && headAndBaseCoincide ? 'none' : undefined,
-                    }}
-                    tabIndex={baseMovable ? 0 : undefined}
-                    role={baseMovable ? 'button' : undefined}
-                    aria-keyshortcuts={baseMovable ? 'Enter Delete' : undefined}
-                    aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
-                    onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
-                    onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
-                    onFocus={baseMovable ? () => focusHandle(baseKey) : undefined}
-                    onBlur={baseMovable ? () => blurHandle(baseKey) : undefined}
-                    onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
-                    onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
-                      event, id, 'base', primitive.start,
-                    ) : undefined}
-                  />
-                  <circle
-                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
-                    cx={start.x} cy={start.y} r={4.5 * objectRenderScale}
-                    aria-hidden="true"
-                  />
-                  {focusRingKey === baseKey && <circle
-                    className="manipulation-focus-ring"
-                    cx={start.x} cy={start.y} r={14 * objectRenderScale}
-                    aria-hidden="true"
-                  />}</>}
-                  {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
-                </g>
+                return <OrientedSegmentGlyph
+                  key={id}
+                  id={id}
+                  primitive={primitive}
+                  layout={layout}
+                  color={color}
+                  label={label}
+                  scale={objectRenderScale}
+                  itemPresent={!!item}
+                  headMovable={!!item && vectorHeadMovable(item)}
+                  baseMovable={!!item && objectBaseMovable(item)}
+                  controller={handleController}
+                />
               })}
-              {renderedAreas.map(({ id, primitive, path, color, label, labelPoint, borderVisible, orientationVisible, orientationCenter }) => {
+              {renderedAreas.map(({ id, primitive, layout, color, label, borderVisible, orientationVisible }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
-                const baseMovable = !!item && objectBaseMovable(item)
-                const base = primitive.shape.kind === 'loop'
-                  ? toScreen(viewport, primitive.shape.center)
-                  : toScreen(viewport, primitive.shape.vertices[0])
-                const baseKey = `${id}:base`
-                return <g key={id} style={{ color }}>
-                  <path
-                    className={`bivector${borderVisible ? ' has-border' : ''}`}
-                    d={path}
-                    strokeWidth={3 * objectRenderScale}
-                    pointerEvents="none"
-                    aria-label={primitive.accessibleDescription}
-                  />
-                  {orientationVisible && <BivectorOrientationArrow
-                    center={orientationCenter}
-                    direction={primitive.orientation === 'counterclockwise' ? 1 : -1}
-                    scale={objectRenderScale}
-                  />}
-                  {item && <><circle
-                    className={`manipulation-base-contour${baseMovable ? ' is-movable' : ''}`}
-                    cx={base.x} cy={base.y} r={10 * objectRenderScale}
-                    style={{ strokeWidth: Math.max(
-                      0, 24 - 20 * objectRenderScale,
-                    ) }}
-                    tabIndex={baseMovable ? 0 : undefined}
-                    role={baseMovable ? 'button' : undefined}
-                    aria-keyshortcuts={baseMovable ? 'Enter Delete' : undefined}
-                    aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
-                    onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
-                    onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
-                    onFocus={baseMovable ? () => focusHandle(baseKey) : undefined}
-                    onBlur={baseMovable ? () => blurHandle(baseKey) : undefined}
-                    onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
-                    onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
-                      event, id, 'base', primitive.shape.kind === 'loop'
-                        ? primitive.shape.center
-                        : primitive.shape.vertices[0],
-                    ) : undefined}
-                  />
-                  <circle
-                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
-                    cx={base.x} cy={base.y} r={4.5 * objectRenderScale}
-                    aria-hidden="true"
-                  />
-                  {focusRingKey === baseKey && <circle
-                    className="manipulation-focus-ring"
-                    cx={base.x} cy={base.y} r={14 * objectRenderScale}
-                    aria-hidden="true"
-                  />}</>}
-                  {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
-                </g>
+                return <OrientedAreaGlyph
+                  key={id}
+                  id={id}
+                  primitive={primitive}
+                  layout={layout}
+                  color={color}
+                  label={label}
+                  scale={objectRenderScale}
+                  borderVisible={borderVisible}
+                  orientationVisible={orientationVisible}
+                  itemPresent={!!item}
+                  baseMovable={!!item && objectBaseMovable(item)}
+                  controller={handleController}
+                />
               })}
               {anchorPreview && <g className="anchor-preview" aria-hidden="true">
                 <circle cx={anchorPreview.point.x} cy={anchorPreview.point.y} r="12" />
