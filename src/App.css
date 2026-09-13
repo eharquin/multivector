@@ -1453,6 +1453,8 @@ code {
   width: 100%;
   height: 100%;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   cursor: grab;
   outline: none;
 }
@@ -1472,6 +1474,7 @@ code {
   vector-effect: non-scaling-stroke;
 }
 
+/* Decorations must not capture presses: a pan starts only on the canvas. */
 .grid-line,
 .axis,
 .origin,
@@ -1479,6 +1482,7 @@ code {
 .graduation-label,
 .axis-name,
 .object-label {
+  pointer-events: none;
 }
 
 .grid-line.is-major {
@@ -1544,6 +1548,18 @@ code {
 .manipulation-hit-target {
   fill: transparent;
   cursor: crosshair;
+}
+
+/* Chrome outlines focused SVG elements on :focus, not only :focus-visible. */
+.manipulation-hit-target:focus,
+.manipulation-base-contour:focus {
+  outline: none;
+}
+
+.manipulation-hit-target:focus-visible,
+.manipulation-base-contour:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .vector-head-indicator {

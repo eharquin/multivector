@@ -231,6 +231,19 @@ describe('VGA 2D vertical slice', () => {
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
   })
 
+  it('zooms on wheel through a listener that can cancel the page zoom', () => {
+    render(<App />)
+    const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
+
+    expect(fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 }))
+      .toBe(false)
+    expect(screen.queryByText('100%', { selector: 'output' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
+    expect(fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 }))
+      .toBe(false)
+  })
+
   it('navigates the persistent viewport without creating mathematical history', () => {
     const { container } = render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
@@ -374,6 +387,21 @@ describe('VGA 2D vertical slice', () => {
     expect(source).toHaveValue('V = vector(3, 2)')
     fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
     expect(source).toHaveValue('V = vector(2, 1)')
+  })
+
+  // Cancelling pointerdown would force a scripted focus, which browsers paint
+  // with a focus ring; selection is prevented by the canvas stylesheet instead.
+  it('keeps the native pointerdown action on a pressed handle', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    sizeViewportCanvas(viewportCanvas())
+
+    for (const name of ['Move head of V', 'Move base of V']) {
+      const handle = screen.getByRole('button', { name })
+      expect(fireEvent.pointerDown(handle, { button: 0, pointerId: 9 })).toBe(true)
+      fireEvent.pointerUp(viewportCanvas(), { pointerId: 9 })
+    }
   })
 
   it('renders the vector arrowhead with Studio screen-space geometry', () => {
