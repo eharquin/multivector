@@ -1,4 +1,6 @@
-export const VGA_2_INFO = Object.freeze({
+import { type AlgebraInfo } from './algebraDefinition'
+
+export const VGA_2_INFO: AlgebraInfo = Object.freeze({
   name: 'Vectorial Geometric Algebra',
   signature: 'ℝ(2,0,0)',
   description:

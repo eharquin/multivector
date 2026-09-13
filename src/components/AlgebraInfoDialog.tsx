@@ -1,10 +1,11 @@
 import type { RefObject } from 'react'
-import { VGA_2_INFO } from '../algebra/vga2Info'
+import { type AlgebraInfo } from '../algebra/algebraDefinition'
 import { DEFAULT_OBJECT_STYLES, paletteEntry } from './appearancePalette'
 import { DefinitionTable } from './DefinitionTable'
 import { InfoDialog } from './InfoDialog'
 
 type AlgebraInfoDialogProps = Readonly<{
+  info: AlgebraInfo
   returnFocusRef: RefObject<HTMLButtonElement | null>
   onClose: () => void
 }>
@@ -40,24 +41,25 @@ function ObjectColorTable() {
 }
 
 export function AlgebraInfoDialog({
+  info,
   returnFocusRef,
   onClose,
 }: AlgebraInfoDialogProps) {
   return (
     <InfoDialog
-      title={`${VGA_2_INFO.name} ${VGA_2_INFO.signature}`}
+      title={`${info.name} ${info.signature}`}
       labelledBy="algebra-info-title"
       returnFocusRef={returnFocusRef}
       onClose={onClose}
     >
-      <p className="info-description">{VGA_2_INFO.description}</p>
+      <p className="info-description">{info.description}</p>
 
       <section className="info-section">
         <h3>Basis &amp; metric</h3>
         <div className="info-table-scroll">
           <table className="algebra-grid">
-            <thead><tr>{VGA_2_INFO.blades.map((blade) => <th key={blade}>{blade}</th>)}</tr></thead>
-            <tbody><tr>{VGA_2_INFO.bladeSquares.map((square, index) => <td key={VGA_2_INFO.blades[index]}>{square}</td>)}</tr></tbody>
+            <thead><tr>{info.blades.map((blade) => <th key={blade}>{blade}</th>)}</tr></thead>
+            <tbody><tr>{info.bladeSquares.map((square, index) => <td key={info.blades[index]}>{square}</td>)}</tr></tbody>
           </table>
         </div>
       </section>
@@ -66,12 +68,12 @@ export function AlgebraInfoDialog({
         <h3>Cayley table</h3>
         <div className="info-table-scroll">
           <table className="algebra-grid cayley-grid">
-            <thead><tr><th aria-label="left times right" />{VGA_2_INFO.blades.map((blade) => <th key={blade}>{blade}</th>)}</tr></thead>
+            <thead><tr><th aria-label="left times right" />{info.blades.map((blade) => <th key={blade}>{blade}</th>)}</tr></thead>
             <tbody>
-              {VGA_2_INFO.cayley.map((row, rowIndex) => (
-                <tr key={VGA_2_INFO.blades[rowIndex]}>
-                  <th scope="row">{VGA_2_INFO.blades[rowIndex]}</th>
-                  {row.map((value, columnIndex) => <td key={VGA_2_INFO.blades[columnIndex]}>{value}</td>)}
+              {info.cayley.map((row, rowIndex) => (
+                <tr key={info.blades[rowIndex]}>
+                  <th scope="row">{info.blades[rowIndex]}</th>
+                  {row.map((value, columnIndex) => <td key={info.blades[columnIndex]}>{value}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -81,7 +83,7 @@ export function AlgebraInfoDialog({
 
       <section className="info-section">
         <h3>Geometric interpretation</h3>
-        <DefinitionTable rows={VGA_2_INFO.objects} codeTerms={false} />
+        <DefinitionTable rows={info.objects} codeTerms={false} />
       </section>
 
       <section className="info-section">
@@ -95,12 +97,12 @@ export function AlgebraInfoDialog({
 
       <section className="info-section">
         <h3>Sub-algebras</h3>
-        <DefinitionTable rows={VGA_2_INFO.subalgebras} codeTerms={false} />
+        <DefinitionTable rows={info.subalgebras} codeTerms={false} />
       </section>
 
       <section className="info-section">
         <h3>Notes</h3>
-        <ul>{VGA_2_INFO.notes.map((note) => <li key={note}>{note}</li>)}</ul>
+        <ul>{info.notes.map((note) => <li key={note}>{note}</li>)}</ul>
       </section>
     </InfoDialog>
   )
