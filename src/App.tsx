@@ -1362,6 +1362,8 @@ function App() {
     const definition = algebraRegistry.definitions().find((candidate) => candidate.algebraId === algebraId)
     if (!definition || definition.algebraId === expressionDoc.algebra.algebraId) return
     const conventionVersion = definition.conventionVersions[definition.conventionVersions.length - 1]
+    const validation = definition.validateParameters({})
+    if (validation.status !== 'valid') return
     setAppearanceItemId(null)
     executeCommand({
       kind: 'select-algebra',
@@ -1369,7 +1371,7 @@ function App() {
         algebraId: definition.algebraId,
         definitionVersion: definition.definitionVersion,
         conventionVersion,
-        parameters: {},
+        parameters: validation.parameters,
       },
       interpretation: { interpretationId: definition.standardInterpretationId, interpretationVersion: 1 },
       visualizerId: definition.standardVisualizerId,

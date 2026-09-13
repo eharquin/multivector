@@ -22,7 +22,7 @@ describe('algebra registry', () => {
   })
 
   it('reports an unknown definition without substituting another algebra', () => {
-    const resolution = createBuiltinAlgebraRegistry().resolve(vga({ algebraId: 'org.multivector.pga' }))
+    const resolution = createBuiltinAlgebraRegistry().resolve(vga({ algebraId: 'org.example.cga' }))
     expect(resolution).toMatchObject({ status: 'unavailable', code: 'ALG_UNKNOWN_DEFINITION' })
   })
 

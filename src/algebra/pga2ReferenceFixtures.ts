@@ -12,7 +12,7 @@
  * e12, e012`.
  */
 
-export const PGA2_BASIS = ['1', 'e0', 'e1', 'e2', 'e01', 'e02', 'e12', 'e012'] as const
+export const PGA2_BASIS = ['e', 'e0', 'e1', 'e2', 'e01', 'e02', 'e12', 'e012'] as const
 
 export type Pga2Coefficients = readonly [
   number, number, number, number, number, number, number, number,
@@ -42,7 +42,7 @@ export const point = (x: number, y: number, w = 1): Pga2Coefficients =>
 /** D3: `ipoint(x, y) = point(x, y, 0)`. */
 export const ipoint = (x: number, y: number): Pga2Coefficients => point(x, y, 0)
 
-export const scalar = (value: number): Pga2Coefficients => blades({ 1: value })
+export const scalar = (value: number): Pga2Coefficients => blades({ e: value })
 export const scale = (value: Pga2Coefficients, factor: number): Pga2Coefficients =>
   value.map((coefficient) => coefficient * factor) as unknown as Pga2Coefficients
 export const blade = (name: (typeof PGA2_BASIS)[number]): Pga2Coefficients => blades({ [name]: 1 })
@@ -50,10 +50,10 @@ export const blade = (name: (typeof PGA2_BASIS)[number]): Pga2Coefficients => bl
 const HALF_SQRT2 = Math.SQRT1_2
 
 /** D9: `exp(-(theta/2) e12)` for `theta = pi/2`. */
-export const rotorQuarterTurn: Pga2Coefficients = blades({ 1: HALF_SQRT2, e12: -HALF_SQRT2 })
+export const rotorQuarterTurn: Pga2Coefficients = blades({ e: HALF_SQRT2, e12: -HALF_SQRT2 })
 /** D9: `T(dx, dy) = 1 - (dx/2) e01 - (dy/2) e02`. */
 export const translator = (dx: number, dy: number): Pga2Coefficients =>
-  blades({ 1: 1, e01: -dx / 2, e02: -dy / 2 })
+  blades({ e: 1, e01: -dx / 2, e02: -dy / 2 })
 
 export type Pga2Operation =
   | 'product'
@@ -166,14 +166,14 @@ export const PGA2_OPERATION_FIXTURES: readonly Pga2OperationFixture[] = [
   },
   // Duality: the explicit Hodge complement J, e_A ^ J(e_A) = e012.
   ...([
-    ['1', blades({ e012: 1 })],
+    ['e', blades({ e012: 1 })],
     ['e0', blades({ e12: 1 })],
     ['e1', blades({ e02: -1 })],
     ['e2', blades({ e01: 1 })],
     ['e01', blades({ e2: 1 })],
     ['e02', blades({ e1: -1 })],
     ['e12', blades({ e0: 1 })],
-    ['e012', blades({ 1: 1 })],
+    ['e012', blades({ e: 1 })],
   ] as const).map(([name, expected]): Pga2OperationFixture => ({
     id: `dual-${name}`, family: 'duality', decision: 'D5',
     description: `J(${name})`,
@@ -235,7 +235,7 @@ export const PGA2_OPERATION_FIXTURES: readonly Pga2OperationFixture[] = [
     id: 'rotor-about-point', family: 'versor-even', decision: 'D9',
     description: 'half turn about point(2, 1) sends point(3, 1) to point(1, 1)',
     operation: 'sandwich',
-    operands: [blades({ 1: Math.cos(Math.PI / 2), e12: -Math.sin(Math.PI / 2), e02: 2 * Math.sin(Math.PI / 2), e01: -Math.sin(Math.PI / 2) }), point(3, 1)],
+    operands: [blades({ e: Math.cos(Math.PI / 2), e12: -Math.sin(Math.PI / 2), e02: 2 * Math.sin(Math.PI / 2), e01: -Math.sin(Math.PI / 2) }), point(3, 1)],
     expected: point(1, 1),
   },
   {
@@ -256,19 +256,19 @@ export const PGA2_OPERATION_FIXTURES: readonly Pga2OperationFixture[] = [
   {
     id: 'translator-ideal-exponent', family: 'versor-even', decision: 'D9',
     description: '(1 + ipoint(1, 0)) >>> point(0, 0) = point(0, 2): an ideal point translates perpendicular to its direction',
-    operation: 'sandwich', operands: [blades({ 1: 1, e02: -1 }), point(0, 0)], expected: point(0, 2),
+    operation: 'sandwich', operands: [blades({ e: 1, e02: -1 }), point(0, 0)], expected: point(0, 2),
   },
   {
     id: 'motor-product', family: 'versor-even', decision: 'D9',
     description: 'M = T(1, 2) * exp(-(pi/4) e12)',
     operation: 'product', operands: [translator(1, 2), rotorQuarterTurn],
-    expected: blades({ 1: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }),
+    expected: blades({ e: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }),
   },
   {
     id: 'motor-action', family: 'versor-even', decision: 'D9',
     description: '(T(1, 2) * exp(-(pi/4) e12)) >>> point(1, 0) = point(1, 3): rotate, then translate',
     operation: 'sandwich',
-    operands: [blades({ 1: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }), point(1, 0)],
+    operands: [blades({ e: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }), point(1, 0)],
     expected: point(1, 3),
   },
   // Odd versors

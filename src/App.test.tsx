@@ -1801,7 +1801,7 @@ describe('VGA 2D vertical slice', () => {
     const enabled = screen.getByRole('combobox', { name: 'Document algebra' })
     expect(enabled).toBeEnabled()
     expect(within(enabled).getAllByRole('option').map((option) => option.textContent))
-      .toEqual(['VGA · 2D — Vector Geometric Algebra'])
+      .toEqual(['VGA · 2D — Vector Geometric Algebra', 'PGA · 2D — Projective Geometric Algebra'])
     // Re-selecting the current algebra is a no-op: one undo returns to the
     // source edit, not to an intermediate selection.
     fireEvent.change(enabled, { target: { value: 'org.multivector.vga' } })

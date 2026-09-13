@@ -36,7 +36,7 @@ const sandwich = (versor: Backend, value: Backend): Backend =>
 
 describe('PGA(2) reference fixtures against ganja.js Cl(2,0,1)', () => {
   it('shares the canonical basis order', () => {
-    expect(Pga2.describe().basis).toEqual([...PGA2_BASIS])
+    expect(Pga2.describe().basis).toEqual(['1', ...PGA2_BASIS.slice(1)])
   })
 
   for (const fixture of PGA2_OPERATION_FIXTURES) {
