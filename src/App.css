@@ -1544,6 +1544,18 @@ code {
   cursor: crosshair;
 }
 
+/* Chrome outlines focused SVG elements on :focus, not only :focus-visible. */
+.manipulation-hit-target:focus,
+.manipulation-base-contour:focus {
+  outline: none;
+}
+
+.manipulation-hit-target:focus-visible,
+.manipulation-base-contour:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 .vector-head-indicator {
   fill: none;
   stroke: var(--point-ring-hover);
