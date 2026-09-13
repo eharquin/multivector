@@ -397,16 +397,23 @@ function App() {
     return () => svg.removeEventListener('wheel', onWheel)
   }, [])
   // Safari extends a selection started on the canvas into any selectable
-  // text the pointer crosses, so selection is disabled document-wide while a
-  // button is held. Released on pointerup or pointercancel anywhere.
+  // text the pointer crosses, and form controls ignore an inherited
+  // user-select, so while a button is held the class also removes the
+  // panels from hit-testing and any selection start is cancelled. Released
+  // on pointerup or pointercancel anywhere.
   const guardGestureSelection = () => document.body.classList.add('canvas-gesture')
   useEffect(() => {
     const release = () => document.body.classList.remove('canvas-gesture')
+    const cancelSelection = (event: Event) => {
+      if (document.body.classList.contains('canvas-gesture')) event.preventDefault()
+    }
     window.addEventListener('pointerup', release)
     window.addEventListener('pointercancel', release)
+    document.addEventListener('selectstart', cancelSelection, true)
     return () => {
       window.removeEventListener('pointerup', release)
       window.removeEventListener('pointercancel', release)
+      document.removeEventListener('selectstart', cancelSelection, true)
       release()
     }
   }, [])
