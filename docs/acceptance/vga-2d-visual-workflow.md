@@ -22,9 +22,9 @@ foundation evidence.
 | M2D-001 — Commands and history | Command, bounded-history, cancellation, focus-recovery, and application fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx) | Run the complete suite against the release commit | Automated evidence ready |
 | M2D-002 — Scalar controls | Scalar-control evaluation, direct scalar rewriting, canonical persistence, undo, and application fixtures in [`src/application`](../../src/application), [`src/language`](../../src/language), and [`src/document`](../../src/document) | Complete the manual scalar workflow in every supported browser | Automated evidence ready |
 | M2D-003 — Viewport creation | Coordinate conversion and collision-free creation fixtures in [`viewportCreation.test.ts`](../../src/visualization/viewportCreation.test.ts) and [`App.test.tsx`](../../src/App.test.tsx) | Confirm pointer and keyboard behavior in the supported-browser matrix | Automated evidence ready |
-| M2D-004 — Positioned-vector manipulation | Direct vector rewriting, gesture history, anchoring, cancellation, keyboard movement, and application fixtures in [`directVectorEdit.test.ts`](../../src/language/directVectorEdit.test.ts) and [`App.test.tsx`](../../src/App.test.tsx) | Resolve or explicitly disposition Chrome dragging issue [#90](https://github.com/eharquin/multivector/issues/90), then complete the manual matrix | Pending manual validation |
+| M2D-004 — Positioned-vector manipulation | Direct vector rewriting, gesture history, anchoring, cancellation, keyboard movement, and application fixtures in [`directVectorEdit.test.ts`](../../src/language/directVectorEdit.test.ts) and [`App.test.tsx`](../../src/App.test.tsx); manual matrix below; [#90](https://github.com/eharquin/multivector/issues/90) closed as not reproducible | Repeat on the stable release artifact | Manual evidence recorded |
 | M2D-005 — Scalar playback | Deterministic once, loop, ping-pong, pause, cancellation, endpoint, and numerical fixtures in [`scalarPlayback.test.ts`](../../src/application/scalarPlayback.test.ts) and [`App.test.tsx`](../../src/App.test.tsx) | Confirm visible behavior and reduced-motion handling in every supported browser | Automated evidence ready |
-| M2D-006 — Persistence and accessibility | Canonical document, failed-write retention, storage, semantic control, focus, keyboard, and reduced-motion fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx) | Complete and record the manual accessibility and compatibility checklist below | Pending manual validation |
+| M2D-006 — Persistence and accessibility | Canonical document, failed-write retention, storage, semantic control, focus, keyboard, and reduced-motion fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx); manual checklist below | Repeat on the stable release artifact | Manual evidence recorded |
 | M2D-007 — Release and feedback | Canonical `npm run verify`, release-only Pages workflow, roadmap, and this acceptance record | Complete release preparation, deploy the stable release artifact, smoke-test it, and record the evidence below | Pending release |
 
 ## Supported-browser and environment record
@@ -34,39 +34,66 @@ and is not claimed as supported merely because it is expected to work.
 
 | Browser | Version | Operating system | Pointer or input setup | Result |
 | --- | --- | --- | --- | --- |
-| Google Chrome | Pending | Pending | Pending | Pending; investigate #90 |
-| Mozilla Firefox | Pending | Pending | Pending | Pending |
-| Microsoft Edge | Pending | Pending | Pending | Pending |
-| Safari | Pending | Pending | Pending | Pending |
+| Google Chrome | 153.0.8010.36 (Flathub Flatpak) | Fedora 44, GNOME 50, desktop, DPR 1, hardware-accelerated rasterization and compositing | Mouse | Pass; #90 not reproducible (closed) |
+| Mozilla Firefox | 155.0 (dnf) | Fedora 44, GNOME 50, desktop, DPR 1 | Mouse | Pass |
+| Mozilla Firefox | 155.0 (dnf) | Fedora 44, GNOME 50, Dell Precision 5480, DPR 2 | Trackpad; touchscreen for #120 only | Pass; touchscreen pinch not supported (#120) |
+| Microsoft Edge | — | — | — | Untested; not claimed |
+| Safari | 17.6 (17618.3.11.11.7) | macOS 12.7.6, MacBook Air 13" | Trackpad | Pass |
 
-- Tester: Pending
-- Test date: Pending
-- Release-candidate revision: Pending
+- Tester: Enzo Harquin, with an independent Safari tester for the initial
+  reports.
+- Test date: 2026-09-13
+- Revision tested: `b75f412` deployed by hand to
+  <https://eharquin.github.io/multivector/> (#105). The stable release
+  artifact must repeat the deployed-application checks below.
+
+Environment notes:
+
+- Reduced motion: neither Chrome (Flatpak) nor Firefox picked up the GNOME 50
+  "reduce animation" setting; the preference was forced with the DevTools
+  media emulation (Chrome) and `ui.prefersReducedMotion` (Firefox). Safari
+  honors the macOS setting directly.
+- Cosmetic differences documented and not treated as failures: the focus
+  indicator that Chrome and Safari show on a handle after Escape (#119, now
+  addressed by #127) and the keyboard-only reachability of controls on macOS,
+  which depends on the system keyboard-navigation setting.
+
+Defects found by this matrix and fixed before the release candidate: #99,
+#101, #104, #106, #109, #111, #113, #122, #124, #126, #130. Deferred with a
+documented limitation: #100, #120. Follow-up improvements: #115, #116, #117,
+#118, #121.
 
 ## Manual workflow checklist
 
-- [ ] Load the application without console errors and complete the documented
+Completed on every browser in the table above, on revision `b75f412`.
+
+- [x] Load the application without console errors and complete the documented
   VGA(2) foundation example.
-- [ ] Create, edit, reorder, delete, undo, and redo expression rows using both
+- [x] Create, edit, reorder, delete, undo, and redo expression rows using both
   visible controls and documented keyboard commands.
-- [ ] Create a vector from the viewport, move an eligible head, move and anchor
+- [x] Create a vector from the viewport, move an eligible head, move and anchor
   an eligible base, cancel a gesture, and confirm that each completed gesture
   creates one recoverable history entry.
-- [ ] Confirm that dragging follows the pointer smoothly, with special attention
+- [x] Confirm that dragging follows the pointer smoothly, with special attention
   to Chrome issue #90.
-- [ ] Configure a direct scalar as a number and as a slider; exercise valid,
+- [x] Configure a direct scalar as a number and as a slider; exercise valid,
   invalid, and out-of-range bounds without unintended source replacement.
-- [ ] Exercise once, loop, and ping-pong playback, including pause, resume,
+- [x] Exercise once, loop, and ping-pong playback, including pause, resume,
   completion, and Escape cancellation.
-- [ ] Pan, zoom, reset, lock, and resize the viewport without changing evaluated
+- [x] Pan, zoom, reset, lock, and resize the viewport without changing evaluated
   mathematical values.
-- [ ] Reload the page, then export and re-import the canonical document without
+- [x] Reload the page, then export and re-import the canonical document without
   losing source, position, appearance, control, or view state.
-- [ ] Complete the manipulation and scalar workflows by keyboard; confirm focus
+- [x] Complete the manipulation and scalar workflows by keyboard; confirm focus
   restoration, accessible names, textual diagnostics, and non-color state.
-- [ ] Check the workflow at 200% browser zoom and with reduced motion enabled.
-- [ ] Record browser-specific failures as dedicated issues and define the
+- [x] Check the workflow at 200% browser zoom and with reduced motion enabled.
+- [x] Record browser-specific failures as dedicated issues and define the
   supported-browser statement from the observed results.
+
+Supported-browser statement for 0.1.0: current Google Chrome and Mozilla
+Firefox on Linux desktops with mouse or trackpad input, and Safari 17.6 on
+macOS 12.7 with trackpad input, at standard and HiDPI density. Microsoft Edge,
+touch input, and mobile browsers are not claimed.
 
 ## Release checklist
 
@@ -74,7 +101,7 @@ and is not claimed as supported merely because it is expected to work.
 
 - [ ] Resolve or explicitly disposition every open issue that affects the
   claimed VGA(2) workflow.
-- [ ] Record the supported-browser boundary and complete issue
+- [x] Record the supported-browser boundary and complete issue
   [#89](https://github.com/eharquin/multivector/issues/89).
 - [x] Add explicit installation, local verification, and browser-target
   documentation.
