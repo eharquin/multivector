@@ -6,6 +6,13 @@ import {
 import { type AlgebraEngine } from './algebraEngine'
 import { type AnyInterpretation } from '../geometry/interpretation'
 
+/** A registered renderer for a visualizer identifier (TECH-004). */
+export type VisualizerDescriptor = Readonly<{
+  visualizerId: string
+  /** Primitive kinds the renderer can draw; others are reported textually. */
+  primitiveKinds: ReadonlySet<string>
+}>
+
 export type InterpretationReference = Readonly<{
   interpretationId: string
   interpretationVersion: number
@@ -48,12 +55,24 @@ export type AlgebraRegistry = Readonly<{
   resolve(reference: AlgebraReference): AlgebraResolution
   registerInterpretation(interpretation: AnyInterpretation): void
   resolveInterpretation(reference: InterpretationReference | null): InterpretationResolution
+  registerVisualizer(visualizer: VisualizerDescriptor): void
+  resolveVisualizer(visualizerId: string | null): VisualizerDescriptor | null
 }>
 
 export function createAlgebraRegistry(): AlgebraRegistry {
   const definitions = new Map<string, AlgebraDefinition>()
   const interpretations = new Map<string, AnyInterpretation>()
+  const visualizers = new Map<string, VisualizerDescriptor>()
   return {
+    registerVisualizer(visualizer) {
+      if (visualizers.has(visualizer.visualizerId)) {
+        throw new Error(`Visualizer “${visualizer.visualizerId}” is already registered.`)
+      }
+      visualizers.set(visualizer.visualizerId, visualizer)
+    },
+    resolveVisualizer(visualizerId) {
+      return visualizerId === null ? null : visualizers.get(visualizerId) ?? null
+    },
     registerInterpretation(interpretation) {
       if (interpretations.has(interpretation.interpretationId)) {
         throw new Error(`Interpretation “${interpretation.interpretationId}” is already registered.`)

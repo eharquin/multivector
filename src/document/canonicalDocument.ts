@@ -380,7 +380,17 @@ export type RestoredCanonicalDocument = Readonly<{
   recoveryDiagnostic: string | null
 }>
 
-export function fromCanonicalDocument(document: CanonicalDocument): RestoredCanonicalDocument {
+export type RestoreOptions = Readonly<{
+  /** Whether this runtime can display a visualizer; the registry answers in production. */
+  visualizerAvailable?: (visualizerId: string) => boolean
+}>
+
+export function fromCanonicalDocument(
+  document: CanonicalDocument,
+  options: RestoreOptions = {},
+): RestoredCanonicalDocument {
+  const visualizerAvailable = options.visualizerAvailable ??
+    ((visualizerId: string) => visualizerId === 'org.multivector.vga-2d')
   const items: ExpressionItem[] = document.items.map((item) => ({
     id: item.id, ...(item.kind === 'annotation' ? { kind: item.kind } : {}), source: item.source,
     ...(item.positionSource === null ? {} : { positionSource: item.positionSource }),
@@ -404,7 +414,8 @@ export function fromCanonicalDocument(document: CanonicalDocument): RestoredCano
     recoveryDiagnostic: document.view.viewport.kind === 'none' && document.view.visualizerId === null
       ? null
       : document.view.viewport.kind === 'two-dimensional' &&
-          document.view.visualizerId === 'org.multivector.vga-2d'
+          document.view.visualizerId !== null &&
+          visualizerAvailable(document.view.visualizerId)
         ? null
         : 'DOCUMENT_VIEW_UNSUPPORTED: The document was preserved, but its visualizer and viewport combination cannot be displayed by this runtime.',
   }
