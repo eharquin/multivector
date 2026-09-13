@@ -17,7 +17,7 @@ than promising dates or complete feature lists.
 
 ## 0.1 — Stable VGA(2) workflow
 
-Establish the first reusable release around vectorial geometric algebra in two
+Establish the first reusable release around vector geometric algebra in two
 dimensions:
 
 - stable expression, dependency, document, and persistence behavior;

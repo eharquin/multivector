@@ -1772,7 +1772,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(trigger)
 
     const dialog = screen.getByRole('dialog', {
-      name: 'Vectorial Geometric Algebra ℝ(2,0,0)',
+      name: 'Vector Geometric Algebra ℝ(2,0,0)',
     })
     expect(dialog).toHaveTextContent('Basis & metric')
     expect(dialog).toHaveTextContent('Cayley table')
@@ -1801,7 +1801,7 @@ describe('VGA 2D vertical slice', () => {
     const enabled = screen.getByRole('combobox', { name: 'Document algebra' })
     expect(enabled).toBeEnabled()
     expect(within(enabled).getAllByRole('option').map((option) => option.textContent))
-      .toEqual(['VGA · 2D — Vectorial Geometric Algebra'])
+      .toEqual(['VGA · 2D — Vector Geometric Algebra'])
     // Re-selecting the current algebra is a no-op: one undo returns to the
     // source edit, not to an intermediate selection.
     fireEvent.change(enabled, { target: { value: 'org.multivector.vga' } })
@@ -1814,7 +1814,7 @@ describe('VGA 2D vertical slice', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
     const dialog = screen.getByRole('dialog', {
-      name: 'Vectorial Geometric Algebra ℝ(2,0,0)',
+      name: 'Vector Geometric Algebra ℝ(2,0,0)',
     })
 
     expect(dialog).toHaveTextContent('Object colors')

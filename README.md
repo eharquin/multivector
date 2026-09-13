@@ -9,7 +9,7 @@ of PhD research and is intended for both geometric-algebra research and
 learning.
 
 > **Project status:** MultiVector is preparing its first `0.1.0` release. The
-> current implemented scope is a two-dimensional vectorial geometric algebra
+> current implemented scope is a two-dimensional vector geometric algebra
 > workflow, VGA(2). Other algebras are future work, and compatibility is not yet
 > guaranteed.
 
