@@ -1,4 +1,7 @@
-import type { OwnedMultivector } from '../domain/multivector'
+import { type AlgebraBasis } from '../domain/algebraBasis'
+import { ownedMultivector, type OwnedMultivector } from '../domain/multivector'
+import { bivectorToPrimitive, vectorToPrimitive } from '../visualization/primitives'
+import { type Interpretation } from './interpretation'
 import {
   classificationEpsilon,
   classificationScale,
@@ -128,3 +131,39 @@ export function interpretVga2(
 
   return Object.freeze({ kind: 'mixed-multivector' as const })
 }
+
+/**
+ * The standard VGA(2) interpretation, `org.multivector.vga-2d` version 1
+ * (VGA-INT-001 through VGA-INT-005, VGA-POS-001 through VGA-POS-007).
+ */
+export const VGA_2D_INTERPRETATION: Interpretation<StandardVga2Entity> = Object.freeze({
+  interpretationId: 'org.multivector.vga-2d',
+  interpretationVersion: 1,
+  interpret: (value) => interpretVga2(value),
+  describe: describeVga2Entity,
+  supportsPosition: supportsVga2Position,
+  supportsHead: (entity) => entity.kind === 'vector-2d',
+  // A position is a pure vector: no scalar and no bivector part (VGA-POS-004).
+  isPositionValue(value) {
+    const [scalar, , , bivector] = value.coefficients
+    return scalar === 0 && bivector === 0
+  },
+  positionOf: (value) => ({ x: value.coefficients[1], y: value.coefficients[2] }),
+  positionValue: (point, basis: AlgebraBasis) => ownedMultivector([0, point.x, point.y, 0], basis),
+  visualization(entity) {
+    if (entity.kind === 'vector-2d' || entity.kind === 'bivector-2d') return { status: 'available' }
+    if (entity.kind === 'scalar') return { status: 'non-spatial' }
+    return { status: 'unsupported', message: 'This VGA 2D object has no supported visualization.' }
+  },
+  defaultName: (entity, index) => `${entity.kind === 'bivector-2d' ? 'Bivector' : 'Vector'} ${index + 1}`,
+  toPrimitive(entity, { accessibleName, position, construction }) {
+    if (entity.kind === 'vector-2d') return vectorToPrimitive(entity, accessibleName, position)
+    if (entity.kind !== 'bivector-2d') return null
+    const sides = construction?.operator === '^' &&
+      construction.operands.length === 2 &&
+      construction.operands.every((operand) => operand.kind === 'vector-2d')
+      ? construction.operands as readonly [Vector2dEntity, Vector2dEntity]
+      : undefined
+    return bivectorToPrimitive(entity, accessibleName, position, sides)
+  },
+})

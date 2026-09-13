@@ -4,6 +4,20 @@ import {
   type AlgebraReference,
 } from './algebraDefinition'
 import { type AlgebraEngine } from './algebraEngine'
+import { type AnyInterpretation } from '../geometry/interpretation'
+
+export type InterpretationReference = Readonly<{
+  interpretationId: string
+  interpretationVersion: number
+}>
+
+export type InterpretationResolution =
+  | Readonly<{ status: 'resolved'; interpretation: AnyInterpretation }>
+  | Readonly<{
+      status: 'unavailable'
+      code: 'INT_UNKNOWN_INTERPRETATION' | 'INT_UNSUPPORTED_VERSION'
+      message: string
+    }>
 
 export type AlgebraResolution =
   | Readonly<{
@@ -32,11 +46,45 @@ export type AlgebraRegistry = Readonly<{
   register(definition: AlgebraDefinition): void
   definitions(): readonly AlgebraDefinition[]
   resolve(reference: AlgebraReference): AlgebraResolution
+  registerInterpretation(interpretation: AnyInterpretation): void
+  resolveInterpretation(reference: InterpretationReference | null): InterpretationResolution
 }>
 
 export function createAlgebraRegistry(): AlgebraRegistry {
   const definitions = new Map<string, AlgebraDefinition>()
+  const interpretations = new Map<string, AnyInterpretation>()
   return {
+    registerInterpretation(interpretation) {
+      if (interpretations.has(interpretation.interpretationId)) {
+        throw new Error(`Interpretation “${interpretation.interpretationId}” is already registered.`)
+      }
+      interpretations.set(interpretation.interpretationId, interpretation)
+    },
+    resolveInterpretation(reference) {
+      if (reference === null) {
+        return {
+          status: 'unavailable',
+          code: 'INT_UNKNOWN_INTERPRETATION',
+          message: 'The document names no interpretation.',
+        }
+      }
+      const interpretation = interpretations.get(reference.interpretationId)
+      if (!interpretation) {
+        return {
+          status: 'unavailable',
+          code: 'INT_UNKNOWN_INTERPRETATION',
+          message: `The interpretation “${reference.interpretationId}” is not available in this runtime.`,
+        }
+      }
+      if (interpretation.interpretationVersion !== reference.interpretationVersion) {
+        return {
+          status: 'unavailable',
+          code: 'INT_UNSUPPORTED_VERSION',
+          message: `Version ${reference.interpretationVersion} of “${reference.interpretationId}” is not available; this runtime provides version ${interpretation.interpretationVersion}.`,
+        }
+      }
+      return { status: 'resolved', interpretation }
+    },
     register(definition) {
       if (definitions.has(definition.algebraId)) {
         throw new Error(`Algebra “${definition.algebraId}” is already registered.`)
