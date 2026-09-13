@@ -7,6 +7,9 @@ on:
     branches: [main]
   release:
     types: [published]
+  # Manual deployment of a ref for testing; stable releases still deploy
+  # automatically from their tag.
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -31,17 +34,17 @@ jobs:
         run: npm run verify
 
       - name: Configure GitHub Pages
-        if: github.event_name == 'release' && github.event.release.prerelease == false
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false)
         uses: actions/configure-pages@v6
 
       - name: Upload GitHub Pages artifact
-        if: github.event_name == 'release' && github.event.release.prerelease == false
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false)
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
   deploy:
-    if: github.event_name == 'release' && github.event.release.prerelease == false
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false)
     needs: verify
     runs-on: ubuntu-latest
     concurrency:
