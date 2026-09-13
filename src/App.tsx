@@ -2324,7 +2324,8 @@ function App() {
               className={`canvas${viewportLocked ? ' is-viewport-locked' : ''}`}
               viewBox={`0 0 ${viewport.width} ${viewport.height}`}
               role="img"
-              aria-labelledby="canvas-title canvas-description"
+              aria-label="Two-dimensional VGA viewport"
+              aria-describedby="canvas-description"
               tabIndex={0}
               onPointerDown={beginViewportPan}
               onPointerMove={moveViewportPan}
@@ -2334,7 +2335,6 @@ function App() {
               onKeyDown={navigateViewportWithKeyboard}
               onDoubleClick={createVectorFromViewport}
             >
-              <title id="canvas-title">Two-dimensional VGA viewport</title>
               <desc id="canvas-description">{canvasDescription}</desc>
               {expressionDoc.view.display.gridVisible && <g aria-hidden="true">
                 {grid.vertical.map((line) => <line
