@@ -829,6 +829,44 @@ describe('VGA 2D vertical slice', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Redo document change' }))
     expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
+
+    fireEvent.keyDown(handleFor('C = 3'), { key: 'ArrowUp', altKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'C = 3', 'A = 1'])
+  })
+
+  it('moves the row of a focused expression with Alt+Arrow and keeps its caret', () => {
+    render(<App />)
+    for (const [index, value] of ['A = 1', 'B = 2', 'C = 3'].entries()) {
+      if (index > 0) fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+      fireEvent.change(screen.getByRole('textbox', { name: `Expression ${index + 1}` }), {
+        target: { value },
+      })
+    }
+    const sourceValues = () => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => (element as HTMLInputElement).value)
+    const editorOf = (value: string) => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .find((element) => (element as HTMLInputElement).value === value) as HTMLInputElement
+
+    const editor = editorOf('A = 1')
+    editor.focus()
+    editor.setSelectionRange(2, 2)
+    fireEvent.keyDown(editor, { key: 'ArrowDown', altKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
+    expect(editorOf('A = 1')).toHaveFocus()
+    expect(editorOf('A = 1').selectionStart).toBe(2)
+    expect(screen.getByText('Moved A to position 2 of 3.')).toBeInTheDocument()
+
+    fireEvent.keyDown(editorOf('A = 1'), { key: 'ArrowDown', altKey: true })
+    fireEvent.keyDown(editorOf('A = 1'), { key: 'ArrowDown', altKey: true }) // at the end: no-op
+    expect(sourceValues()).toEqual(['B = 2', 'C = 3', 'A = 1'])
+    fireEvent.keyDown(editorOf('A = 1'), { key: 'ArrowUp', altKey: true })
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
+    expect(editorOf('A = 1')).toHaveFocus()
+
+    // Plain arrows still move focus between fields.
+    fireEvent.keyDown(editorOf('A = 1'), { key: 'ArrowUp' })
+    expect(editorOf('B = 2')).toHaveFocus()
+    expect(sourceValues()).toEqual(['B = 2', 'A = 1', 'C = 3'])
   })
 
   it('moves a row via pointer drag onto another row, and cancels on pointercancel', () => {
