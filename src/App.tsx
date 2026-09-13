@@ -476,6 +476,12 @@ function App() {
   ) => {
     if (event.button !== 0) return
     event.stopPropagation()
+    // The native pointerdown action would start a text selection that grows
+    // with the gesture and, once present, can turn the next press into a
+    // selection drag; it is also what gives the handle focus, so focus is
+    // restored explicitly.
+    event.preventDefault()
+    event.currentTarget.focus({ preventScroll: true })
     event.currentTarget.setPointerCapture?.(event.pointerId)
     manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
     anchorValidityCache.current.clear()
