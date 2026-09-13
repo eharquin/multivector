@@ -1681,6 +1681,16 @@ body.canvas-gesture {
   user-select: none;
 }
 
+body.canvas-gesture-manipulate,
+body.canvas-gesture-manipulate .canvas {
+  cursor: crosshair;
+}
+
+body.canvas-gesture-pan,
+body.canvas-gesture-pan .canvas {
+  cursor: grabbing;
+}
+
 body.canvas-gesture .app-header,
 body.canvas-gesture .expression-panel {
   pointer-events: none;
