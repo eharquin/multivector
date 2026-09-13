@@ -1,3 +1,4 @@
+import { VGA_2D_BASIS } from '../algebra/vgaEngine'
 import { describe, expect, it } from 'vitest'
 import { ownedList } from '../domain/languageValue'
 import { ownedMultivector } from '../domain/multivector'
@@ -22,13 +23,13 @@ describe('numeric presentation', () => {
   it('formats multivectors without erasing small nonzero coefficients', () => {
     expect(formatDisplayMultivector(ownedMultivector([
       -1, 0, 0, 3.5897930298416118e-9,
-    ]), 4)).toBe('-1 + 3.5898E-9e12')
+    ], VGA_2D_BASIS), 4)).toBe('-1 + 3.5898E-9e12')
   })
 
   it('uses one formatter for list elements', () => {
     const value = ownedList([
-      { id: 'a', value: ownedMultivector([1 / 3, 0, 0, 0]) },
-      { id: 'b', value: ownedMultivector([0, 1.23456, 0, 0]) },
+      { id: 'a', value: ownedMultivector([1 / 3, 0, 0, 0], VGA_2D_BASIS) },
+      { id: 'b', value: ownedMultivector([0, 1.23456, 0, 0], VGA_2D_BASIS) },
     ])
     expect(formatDisplayValue(value, 3)).toBe('[0.333, 1.235e1]')
   })
@@ -39,30 +40,30 @@ describe('numeric presentation', () => {
       // leakage" case, which classifies this value as scalar -1, approximated.
       expect(formatDisplayMultivector(ownedMultivector([
         -1, 0, 0, 3.6e-9,
-      ]), 4, false)).toBe('-1')
+      ], VGA_2D_BASIS), 4, false)).toBe('-1')
     })
 
     it('keeps a standalone near-zero result, matching the same documented limitation', () => {
       expect(formatDisplayMultivector(ownedMultivector([
         0, 0, 0, 1.7e-9,
-      ]), 4, false)).toBe('1.7000E-9e12')
+      ], VGA_2D_BASIS), 4, false)).toBe('1.7000E-9e12')
     })
 
     it('reduces a bivector to its blade name when only its scalar leaks', () => {
       expect(formatDisplayMultivector(ownedMultivector([
         6.1232e-17, 0, 0, 1,
-      ]), 4, false)).toBe('e12')
+      ], VGA_2D_BASIS), 4, false)).toBe('e12')
     })
 
     it('defaults to showing residue when the argument is omitted', () => {
       expect(formatDisplayMultivector(ownedMultivector([
         -1, 0, 0, 3.6e-9,
-      ]), 4)).toBe('-1 + 3.6000E-9e12')
+      ], VGA_2D_BASIS), 4)).toBe('-1 + 3.6000E-9e12')
     })
 
     it('applies the same suppression to list elements via formatDisplayValue', () => {
       const value = ownedList([
-        { id: 'a', value: ownedMultivector([-1, 0, 0, 3.6e-9]) },
+        { id: 'a', value: ownedMultivector([-1, 0, 0, 3.6e-9], VGA_2D_BASIS) },
       ])
       expect(formatDisplayValue(value, 4, false)).toBe('[-1]')
     })

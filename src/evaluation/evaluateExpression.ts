@@ -1,4 +1,4 @@
-import { AlgebraOperationError, type VgaEngine } from '../algebra/vgaEngine'
+import { AlgebraOperationError, type AlgebraEngine } from '../algebra/algebraEngine'
 import type { OwnedMultivector } from '../domain/multivector'
 import {
   elementIdentity,
@@ -35,7 +35,7 @@ const MAX_EVALUATION_WORK = 10_000_000
  */
 export function evaluateExpression(
   expression: CoreExpressionNode,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
   resolveReference?: (
     name: string,
     property: 'position' | 'head' | null,
@@ -58,7 +58,7 @@ export function evaluateExpression(
 
 function evaluateExpressionUnchecked(
   expression: CoreExpressionNode,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
   resolveReference?: (
     name: string,
     property: 'position' | 'head' | null,
@@ -303,7 +303,7 @@ function binary(
 function evaluateRange(
   expression: Extract<CoreExpressionNode, { kind: 'range' }>,
   evaluate: (expression: CoreExpressionNode) => LanguageValue,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
   identityScope: string,
   budget: EvaluationBudget,
 ): LanguageValue {

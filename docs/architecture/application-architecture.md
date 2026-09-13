@@ -93,7 +93,7 @@ flowchart TD
     AST -->|"collect declarations<br/>and references"| GRAPH
     GRAPH -->|"valid dependency order"| CORE
     AST -->|"lowerExpression"| CORE
-    CORE -->|"evaluateExpression<br/>through VgaEngine"| VALUE
+    CORE -->|"evaluateExpression<br/>through AlgebraEngine"| VALUE
     VALUE --> RECORD
     GRAPH -->|"position node or origin fallback"| RECORD
     VALUE -->|"interpretVga2"| ENTITY

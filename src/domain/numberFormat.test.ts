@@ -1,3 +1,4 @@
+import { createAlgebraBasis } from './algebraBasis'
 import { describe, expect, it } from 'vitest'
 import { inspectLanguageValue } from './languageValue'
 import { inspectMultivector, ownedMultivector } from './multivector'
@@ -20,7 +21,7 @@ describe('round-trip number formatting', () => {
   })
 
   it('keeps scientific exponents distinct from lowercase blade names', () => {
-    const value = ownedMultivector([-1, 0, 0, 3.5897930298416118e-9])
+    const value = ownedMultivector([-1, 0, 0, 3.5897930298416118e-9], createAlgebraBasis([1, 2]))
     expect(inspectMultivector(value)).toBe('-1 + 3.5897930298416118E-9e12')
     expect(inspectLanguageValue(value)).toBe('-1 + 3.5897930298416118E-9e12')
   })

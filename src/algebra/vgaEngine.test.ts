@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createVga2Engine } from './vgaEngine'
+import { AlgebraOperationError } from './algebraEngine'
+import { createVga2Engine, VGA_2D_BASIS } from './vgaEngine'
 
 describe('VGA engine adapter', () => {
   it('constructs an independently known VGA(2) scalar value', () => {
     expect(createVga2Engine().scalar(12)).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [12, 0, 0, 0],
     })
   })
@@ -18,6 +20,7 @@ describe('VGA engine adapter', () => {
 
     expect(value).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 2, 1, 0],
     })
   })
@@ -29,13 +32,28 @@ describe('VGA engine adapter', () => {
       engine.multiply(engine.basisBlade('e1'), engine.basisBlade('e2')),
     ).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 1],
     })
+  })
+
+  it('exposes its basis and resolves grades and blades through it', () => {
+    const engine = createVga2Engine()
+    expect(engine.basis).toBe(VGA_2D_BASIS)
+    const value = engine.add(engine.add(engine.scalar(3), engine.basisBlade('e1')), engine.pseudoscalar())
+    expect(engine.grade(value, 0).coefficients).toEqual([3, 0, 0, 0])
+    expect(engine.grade(value, 1).coefficients).toEqual([0, 1, 0, 0])
+    expect(engine.grade(value, 2).coefficients).toEqual([0, 0, 0, 1])
+    expect(engine.coefficient(value, 'e12').coefficients).toEqual([1, 0, 0, 0])
+    expect(() => engine.basisBlade('e0')).toThrow(AlgebraOperationError)
+    expect(() => engine.coefficient(value, 'e012')).toThrow(AlgebraOperationError)
+    expect(() => engine.grade(value, 3)).toThrow(AlgebraOperationError)
   })
 
   it('provides the canonical VGA(2) pseudoscalar', () => {
     expect(createVga2Engine().pseudoscalar()).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 1],
     })
   })
@@ -49,10 +67,12 @@ describe('VGA engine adapter', () => {
 
     expect(engine.outer(v, w)).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 5],
     })
     expect(engine.inner(v, w)).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [5, 0, 0, 0],
     })
   })
@@ -64,6 +84,7 @@ describe('VGA engine adapter', () => {
       engine.regressive(engine.basisBlade('e1'), engine.basisBlade('e2')),
     ).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [-1, 0, 0, 0],
     })
   })

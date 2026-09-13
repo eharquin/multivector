@@ -1,58 +1,22 @@
 import Algebra from 'ganja.js'
+import { bladeIndex, createAlgebraBasis } from '../domain/algebraBasis'
 import { ownedMultivector, type OwnedMultivector } from '../domain/multivector'
+import {
+  AlgebraOperationError,
+  type AlgebraEngine,
+} from './algebraEngine'
+
+/** Canonical VGA(2) basis: `e, e1, e2, e12`. */
+export const VGA_2D_BASIS = createAlgebraBasis([1, 2])
 
 /**
  * The backend-independent algebra operations required by the VGA(2) evaluator.
  *
  * Implementations return owned values and must not expose backend objects.
  */
-export type VgaEngine = Readonly<{
-  scalar(value: number): OwnedMultivector
-  basisBlade(name: 'e1' | 'e2'): OwnedMultivector
-  pseudoscalar(): OwnedMultivector
-  add(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  multiply(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  outer(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  inner(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  regressive(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  negate(value: OwnedMultivector): OwnedMultivector
-  reverse(value: OwnedMultivector): OwnedMultivector
-  dual(value: OwnedMultivector): OwnedMultivector
-  gradeInvolution(value: OwnedMultivector): OwnedMultivector
-  grade(value: OwnedMultivector, grade: 0 | 1 | 2): OwnedMultivector
-  coefficient(
-    value: OwnedMultivector,
-    blade: 'e' | 'e1' | 'e2' | 'e12',
-  ): OwnedMultivector
-  divide(left: OwnedMultivector, right: OwnedMultivector): OwnedMultivector
-  power(value: OwnedMultivector, exponent: number): OwnedMultivector
-  inverse(value: OwnedMultivector): OwnedMultivector
-  sandwich(rotor: OwnedMultivector, value: OwnedMultivector): OwnedMultivector
-  norm(value: OwnedMultivector): OwnedMultivector
-  normalize(value: OwnedMultivector): NormalizationResult
-  exp(value: OwnedMultivector): OwnedMultivector
-  scalarFunction(
-    name: 'sin' | 'cos' | 'tan' | 'sinh' | 'cosh' | 'tanh',
-    value: OwnedMultivector,
-  ): OwnedMultivector
-}>
-
-export type NormalizationResult =
-  | Readonly<{ status: 'normalized'; value: OwnedMultivector }>
-  | Readonly<{ status: 'unavailable'; value: OwnedMultivector }>
-
-export class AlgebraOperationError extends Error {
-  readonly code: string
-
-  constructor(code: string, message: string) {
-    super(message)
-    this.code = code
-  }
-}
-
 function finiteOwned(coefficients: readonly number[]): OwnedMultivector {
   try {
-    return ownedMultivector(coefficients)
+    return ownedMultivector(coefficients, VGA_2D_BASIS)
   } catch (error) {
     if (error instanceof RangeError) {
       throw new AlgebraOperationError('ALG_NON_FINITE', 'The operation produced a non-finite coefficient.')
@@ -176,15 +140,27 @@ function normScalar(value: OwnedMultivector): number {
  *
  * Every result is copied out of ganja.js before it crosses this boundary.
  */
-export function createVga2Engine(): VgaEngine {
+export function createVga2Engine(): AlgebraEngine {
+  const basis = VGA_2D_BASIS
+  const indexOf = (blade: string): number => {
+    const index = bladeIndex(basis, blade)
+    if (index < 0) {
+      throw new AlgebraOperationError(
+        'ALG_UNKNOWN_BLADE',
+        `The blade “${blade}” does not exist in this algebra.`,
+      )
+    }
+    return index
+  }
+  const unit = (index: number): number[] =>
+    basis.blades.map((_, position) => (position === index ? 1 : 0))
   return {
+    basis,
     scalar(value) {
       return fromBackend(new Vga2([value, 0, 0, 0]))
     },
     basisBlade(name) {
-      return fromBackend(
-        new Vga2(name === 'e1' ? [0, 1, 0, 0] : [0, 0, 1, 0]),
-      )
+      return fromBackend(new Vga2(unit(indexOf(name))))
     },
     pseudoscalar() {
       return finiteOwned([0, 0, 0, 1])
@@ -226,14 +202,17 @@ export function createVga2Engine(): VgaEngine {
       return finiteOwned([scalar, -e1, -e2, e12])
     },
     grade(value, grade) {
-      const [scalar, e1, e2, e12] = value.coefficients
-      if (grade === 0) return finiteOwned([scalar, 0, 0, 0])
-      if (grade === 1) return finiteOwned([0, e1, e2, 0])
-      return finiteOwned([0, 0, 0, e12])
+      if (!Number.isInteger(grade) || grade < 0 || grade > basis.maxGrade) {
+        throw new AlgebraOperationError(
+          'ALG_UNKNOWN_GRADE',
+          `Grade ${grade} does not exist in this algebra.`,
+        )
+      }
+      return finiteOwned(value.coefficients.map((coefficient, index) =>
+        basis.blades[index].grade === grade ? coefficient : 0))
     },
     coefficient(value, blade) {
-      const index = { e: 0, e1: 1, e2: 2, e12: 3 }[blade]
-      return finiteOwned([value.coefficients[index], 0, 0, 0])
+      return finiteOwned([value.coefficients[indexOf(blade)], 0, 0, 0])
     },
     divide(left, right) {
       return multiplyOwned(left, inverseOwned(right))

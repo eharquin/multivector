@@ -1,4 +1,4 @@
-import type { VgaEngine } from '../algebra/vgaEngine'
+import type { AlgebraEngine } from '../algebra/algebraEngine'
 import type { ExpressionControl } from '../document/expressionDocument'
 import type { Diagnostic, SourceSpan } from '../domain/diagnostic'
 import type { LanguageValue } from '../domain/languageValue'
@@ -52,7 +52,7 @@ function declarationName(source: string): string | null {
 export function evaluateScalarControl(
   control: ExpressionControl,
   items: readonly EvaluatedDocumentItem[],
-  engine: VgaEngine,
+  engine: AlgebraEngine,
 ): ScalarControlEvaluation {
   const declarations = new Map<string, EvaluatedDocumentItem[]>()
   items.forEach((item) => {
