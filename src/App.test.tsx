@@ -400,8 +400,21 @@ describe('VGA 2D vertical slice', () => {
     for (const name of ['Move head of V', 'Move base of V']) {
       const handle = screen.getByRole('button', { name })
       expect(fireEvent.pointerDown(handle, { button: 0, pointerId: 9 })).toBe(true)
+      expect(document.body).toHaveClass('canvas-gesture')
       fireEvent.pointerUp(viewportCanvas(), { pointerId: 9 })
+      expect(document.body).not.toHaveClass('canvas-gesture')
     }
+  })
+
+  it('disables document selection while a pan is held', () => {
+    render(<App />)
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 3, clientX: 320, clientY: 240 })
+    expect(document.body).toHaveClass('canvas-gesture')
+    fireEvent.pointerCancel(canvas, { pointerId: 3 })
+    expect(document.body).not.toHaveClass('canvas-gesture')
   })
 
   it('renders the vector arrowhead with Studio screen-space geometry', () => {

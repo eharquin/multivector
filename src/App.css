@@ -1676,6 +1676,11 @@ body.resizing-panel {
   user-select: none;
 }
 
+body.canvas-gesture {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .info-overlay {
   position: fixed;
   z-index: 20;
