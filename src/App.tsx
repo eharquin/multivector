@@ -9,7 +9,6 @@ import {
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent,
 } from 'react'
 import { createVga2Engine } from './algebra/vgaEngine'
 import { evaluateDocument } from './application/evaluateDocument'
@@ -264,6 +263,7 @@ function App() {
   const expressionRowRefs = useRef(new Map<string, HTMLElement>())
   const appearanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const viewportSvgRef = useRef<SVGSVGElement>(null)
+  const viewportWheelHandler = useRef<((event: WheelEvent) => void) | null>(null)
   const canvasFrameRef = useRef<HTMLDivElement>(null)
   const workspaceRef = useRef<HTMLElement>(null)
   const viewportPan = useRef<Readonly<{
@@ -379,11 +379,23 @@ function App() {
   const resetViewport = () => updateViewport({
     ...viewport, centerX: 0, centerY: 0, pixelsPerUnit: DEFAULT_PIXELS_PER_UNIT,
   })
-  const handleViewportWheel = (event: WheelEvent<SVGSVGElement>) => {
+  const handleViewportWheel = (event: WheelEvent) => {
     event.preventDefault()
     if (viewportLocked) return
     zoomViewport(Math.exp(-event.deltaY * 0.0015), screenPoint(event.clientX, event.clientY))
   }
+  viewportWheelHandler.current = handleViewportWheel
+  // React registers wheel listeners as passive, which silently discards
+  // preventDefault and lets the browser page-zoom on Ctrl+wheel or pinch; the
+  // listener is attached natively so it can be non-passive.
+  const attachViewportSvg = useCallback((svg: SVGSVGElement | null) => {
+    viewportSvgRef.current = svg
+    if (!svg) return
+    const onWheel = (event: WheelEvent) =>
+      viewportWheelHandler.current?.(event)
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [])
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     setAppearanceItemId(null)
     if (viewportLocked || event.button !== 0 || event.target !== event.currentTarget) return
@@ -2261,13 +2273,12 @@ function App() {
               </div>
             </div>
             <svg
-              ref={viewportSvgRef}
+              ref={attachViewportSvg}
               className={`canvas${viewportLocked ? ' is-viewport-locked' : ''}`}
               viewBox={`0 0 ${viewport.width} ${viewport.height}`}
               role="img"
               aria-labelledby="canvas-title canvas-description"
               tabIndex={0}
-              onWheel={handleViewportWheel}
               onPointerDown={beginViewportPan}
               onPointerMove={moveViewportPan}
               onPointerUp={endViewportPan}

@@ -231,6 +231,19 @@ describe('VGA 2D vertical slice', () => {
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
   })
 
+  it('zooms on wheel through a listener that can cancel the page zoom', () => {
+    render(<App />)
+    const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
+
+    expect(fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 }))
+      .toBe(false)
+    expect(screen.queryByText('100%', { selector: 'output' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
+    expect(fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 }))
+      .toBe(false)
+  })
+
   it('navigates the persistent viewport without creating mathematical history', () => {
     const { container } = render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
