@@ -231,6 +231,35 @@ describe('VGA 2D vertical slice', () => {
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
   })
 
+  it('draws one SVG focus ring on the keyboard-focused handle only', () => {
+    const { container } = render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    sizeViewportCanvas(viewportCanvas())
+    const rings = () => container.querySelectorAll('.manipulation-focus-ring')
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+    const base = screen.getByRole('button', { name: 'Move base of V' })
+
+    // Pointer focus: no ring, and a later key press does not add one.
+    fireEvent.pointerDown(head, { button: 0, pointerId: 5 })
+    act(() => head.focus())
+    fireEvent.pointerUp(viewportCanvas(), { pointerId: 5 })
+    expect(rings()).toHaveLength(0)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(rings()).toHaveLength(0)
+
+    // Keyboard focus: exactly one ring, on the focused handle.
+    fireEvent.keyDown(window, { key: 'Tab' })
+    act(() => base.focus())
+    expect(rings()).toHaveLength(1)
+    expect(base.parentElement?.querySelector('.manipulation-focus-ring')).not.toBeNull()
+    act(() => head.focus())
+    expect(rings()).toHaveLength(1)
+    expect(head.parentElement?.querySelector('.manipulation-focus-ring')).not.toBeNull()
+    act(() => head.blur())
+    expect(rings()).toHaveLength(0)
+  })
+
   it('zooms on wheel through a listener that can cancel the page zoom', () => {
     render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })

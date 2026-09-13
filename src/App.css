@@ -1550,16 +1550,20 @@ code {
   cursor: crosshair;
 }
 
-/* Chrome outlines focused SVG elements on :focus, not only :focus-visible. */
+/* Chrome outlines focused SVG elements on :focus, and WebKit does not repaint
+   an SVG outline when focus moves; the keyboard focus ring is an SVG circle. */
 .manipulation-hit-target:focus,
-.manipulation-base-contour:focus {
+.manipulation-base-contour:focus,
+.manipulation-hit-target:focus-visible,
+.manipulation-base-contour:focus-visible {
   outline: none;
 }
 
-.manipulation-hit-target:focus-visible,
-.manipulation-base-contour:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+.manipulation-focus-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  pointer-events: none;
 }
 
 .vector-head-indicator {
