@@ -61,7 +61,7 @@ only in documentation prose.
 | Entity | Grade | Storage | Constructor |
 | --- | --- | --- | --- |
 | Line `a x + b y + c = 0` | 1 | `a e1 + b e2 + c e0` | `line(a, b, c)` |
-| Point with weight `w` at `(x/w, y/w)` | 2 | `w e12 - x e02 + y e01` | `point(x, y, w)`; `point(x, y) = point(x, y, 1)` |
+| Point with raw homogeneous coordinates, positioned at `(x/w, y/w)` | 2 | `w e12 - x e02 + y e01` | `point(x, y, w)`; `point(x, y) = point(x, y, 1)` |
 | Ideal point (direction `(x, y)`) | 2 | `-x e02 + y e01` | `ipoint(x, y) = point(x, y, 0)` |
 | Line at infinity | 1 | `c e0` | `line(0, 0, c)` |
 
@@ -144,8 +144,10 @@ values that represent the same geometric entity up to a non-zero scalar factor
 are *projectively equivalent*; that relation belongs to the interpretation and
 is reported through classification (D8) and descriptions, never through `==`.
 
-Worked example: `2 * point(1, 2)` has coordinates `w = 2, x = 2, y = 4` and is
-described as "point (1, 2), weight 2"; it is not `==` to `point(1, 2)`.
+Worked example: `2 * point(1, 2) = point(2, 4, 2)` has raw coordinates
+`w = 2, x = 2, y = 4`, is positioned at `(1, 2)`, and is described as
+"point (1, 2), weight 2"; it is not `==` to `point(1, 2)`. Likewise
+`-point(-1, 0) = point(1, 0, -1)` is the point `(-1, 0)` with weight `-1`.
 
 ## 9. Norms, classification, and normalization (D8)
 
@@ -167,7 +169,9 @@ specification records a different value:
   zero.
 
 Normalization divides by the Euclidean norm of a Euclidean entity (so that
-`w = 1` or `a^2 + b^2 = 1`) and by the ideal norm of an ideal entity. It never
+`abs(w) = 1` or `a^2 + b^2 = 1`) and by the ideal norm of an ideal entity.
+The norm is positive, so normalization preserves the sign of the weight and
+with it the orientation produced by odd versors (D9). It never
 divides by a quantity that the classification has placed below the tolerance,
 so no normalization can amplify floating-point leakage into a coordinate.
 
@@ -273,6 +277,11 @@ constructors (`point2D(x, y, w) = w e12 - x e02 + y e01`), and ganja's right
 complement as dual. Its documentation table for points (`e12 + x e01 + y e02`)
 does not match its code and is not followed. Studio's rotor sign convention is
 not adopted; the VGA-aligned `exp(-(theta/2) B)` is.
+
+ganja.js `Vee` returns the negation of the D6 join in `Cl(2,0,1)`; the
+reference fixtures compute the join through the explicit dual and record the
+difference. This is the first instance of the D11 rule that a library
+discrepancy is resolved by the specification.
 
 ## 14. Consequences for the architecture
 

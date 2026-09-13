@@ -3,10 +3,16 @@ declare module 'ganja.js' {
     Add(other: AlgebraElement): AlgebraElement
     Mul(other: AlgebraElement): AlgebraElement
     Scale(factor: number): AlgebraElement
+    Wedge(other: AlgebraElement): AlgebraElement
+    Vee(other: AlgebraElement): AlgebraElement
+    Exp(): AlgebraElement
+    readonly Dual: AlgebraElement
+    readonly Reverse: AlgebraElement
   }
 
   type AlgebraElementConstructor = {
     new (values: ArrayLike<number> | number): AlgebraElement
+    describe(): { basis: string[] }
   }
 
   type AlgebraOptions = {
