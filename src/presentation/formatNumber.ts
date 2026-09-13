@@ -1,8 +1,5 @@
 import type { LanguageValue } from '../domain/languageValue'
-import {
-  VGA_2D_BLADE_NAMES,
-  type OwnedMultivector,
-} from '../domain/multivector'
+import { type OwnedMultivector } from '../domain/multivector'
 import {
   classificationEpsilon,
   classificationScale,
@@ -58,7 +55,7 @@ export function formatDisplayMultivector(
     if (coefficient === 0 || Math.abs(coefficient) <= epsilon) return
     const magnitude = Math.abs(coefficient)
     const formatted = formatDisplayNumber(magnitude, decimalPlaces)
-    const blade = VGA_2D_BLADE_NAMES[index]
+    const blade = value.basis.blades[index].name
     const body = index === 0
       ? formatted
       : `${formatted === '1' ? '' : formatted}${blade}`

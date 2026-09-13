@@ -1,4 +1,4 @@
-import type { VgaEngine } from '../algebra/vgaEngine'
+import type { AlgebraEngine } from '../algebra/algebraEngine'
 import type { Diagnostic } from '../domain/diagnostic'
 import {
   inspectMultivector,
@@ -175,7 +175,7 @@ export function presentEvaluation(
  */
 export function evaluateSource(
   source: string,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
   accessibleName?: string,
 ): EvaluationState {
   const parsed = parseExpression(source)

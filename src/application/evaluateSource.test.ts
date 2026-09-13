@@ -1,3 +1,4 @@
+import { VGA_2D_BASIS } from '../algebra/vgaEngine'
 import { describe, expect, it } from 'vitest'
 import { createVga2Engine } from '../algebra/vgaEngine'
 import { evaluateSource } from './evaluateSource'
@@ -110,10 +111,12 @@ describe('source evaluation pipeline', () => {
   it('distinguishes blade notation from signed scientific notation', () => {
     expect(validValue('1e1')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 1, 0, 0],
     })
     expect(validValue('1e+1')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [10, 0, 0, 0],
     })
   })
@@ -121,6 +124,7 @@ describe('source evaluation pipeline', () => {
   it('canonicalizes negative zero after core evaluation', () => {
     expect(validValue('-0')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 0],
     })
   })
@@ -146,14 +150,17 @@ describe('source evaluation pipeline', () => {
   it('derives compact blade permutation signs through the geometric product', () => {
     expect(validValue('e12')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 1],
     })
     expect(validValue('e21')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, -1],
     })
     expect(validValue('e12 + e21')).toEqual({
       kind: 'multivector',
+      basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 0],
     })
     expect(evaluateSource('e21', engine)).toMatchObject({

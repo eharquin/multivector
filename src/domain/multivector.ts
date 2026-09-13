@@ -1,31 +1,37 @@
+import { type AlgebraBasis } from './algebraBasis'
 import { formatRoundTripNumber } from './numberFormat'
-
-export const VGA_2D_BLADE_NAMES = ['e', 'e1', 'e2', 'e12'] as const
 
 /**
  * A backend-independent multivector whose coefficients are owned by
- * MultiVector.
+ * MultiVector and stored in the canonical order of its basis.
  *
- * The current VGA(2) slice orders coefficients as `e`, `e1`, `e2`, `e12`.
  * Backend element instances must never be stored in this representation.
  */
 export type OwnedMultivector = Readonly<{
   kind: 'multivector'
+  basis: AlgebraBasis
   coefficients: readonly number[]
 }>
 
 /**
  * Copies coefficients into an immutable value safe to return across the
- * algebra-engine boundary.
+ * algebra-engine boundary. The coefficient count must match the basis.
  */
 export function ownedMultivector(
   coefficients: readonly number[],
+  basis: AlgebraBasis,
 ): OwnedMultivector {
+  if (coefficients.length !== basis.blades.length) {
+    throw new RangeError(
+      `Expected ${basis.blades.length} coefficients for this basis, received ${coefficients.length}.`,
+    )
+  }
   if (coefficients.some((coefficient) => !Number.isFinite(coefficient))) {
     throw new RangeError('Multivector coefficients must be finite.')
   }
   return Object.freeze({
     kind: 'multivector' as const,
+    basis,
     coefficients: Object.freeze(
       coefficients.map((coefficient) =>
         Object.is(coefficient, -0) ? 0 : coefficient,
@@ -34,7 +40,7 @@ export function ownedMultivector(
   })
 }
 
-/** Formats a VGA(2) owned value in canonical blade order for inspection. */
+/** Formats an owned value in the canonical blade order of its basis for inspection. */
 export function inspectMultivector(value: OwnedMultivector): string {
   const terms: string[] = []
 
@@ -42,7 +48,7 @@ export function inspectMultivector(value: OwnedMultivector): string {
     if (coefficient === 0) return
 
     const magnitude = Math.abs(coefficient)
-    const blade = VGA_2D_BLADE_NAMES[index]
+    const blade = value.basis.blades[index].name
     const body =
       index === 0
         ? formatRoundTripNumber(magnitude)

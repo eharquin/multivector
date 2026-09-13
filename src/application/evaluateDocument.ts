@@ -1,4 +1,4 @@
-import type { VgaEngine } from '../algebra/vgaEngine'
+import type { AlgebraEngine } from '../algebra/algebraEngine'
 import type {
   ExpressionDocument,
   ExpressionItem,
@@ -144,7 +144,7 @@ function supportsDirectPosition(
 function addPositionValues(
   value: LanguageValue,
   position: LanguageValue,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
 ): LanguageValue {
   if (value.kind === 'multivector' && position.kind === 'multivector') {
     return engine.add(position, value)
@@ -178,7 +178,7 @@ function addPositionValues(
  */
 export function evaluateDocument(
   document: ExpressionDocument,
-  engine: VgaEngine,
+  engine: AlgebraEngine,
 ): readonly EvaluatedDocumentItem[] {
   const nodes = new Map<string, ParsedNode>()
   const results = new Map<string, EvaluationState | null>()
@@ -461,7 +461,7 @@ export function evaluateDocument(
           return {
             id: element.id,
             sources: element.sources,
-            value: ownedMultivector([0, position.x, position.y, 0]),
+            value: ownedMultivector([0, position.x, position.y, 0], engine.basis),
           }
         }))
       }
@@ -728,7 +728,7 @@ export function evaluateDocument(
                 { x: 0, y: 0 }
               return {
                 id: element.id,
-                value: ownedMultivector([0, position.x, position.y, 0]),
+                value: ownedMultivector([0, position.x, position.y, 0], engine.basis),
               }
             }))
         headInspection = inspectLanguageValue(
@@ -800,7 +800,7 @@ export function evaluateDocument(
                   inheritedPosition.position?.x ?? 0,
                   inheritedPosition.position?.y ?? 0,
                   0,
-                ]),
+                ], engine.basis),
           ),
         ),
         evaluation: {
