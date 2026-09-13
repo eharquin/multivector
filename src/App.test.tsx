@@ -269,6 +269,38 @@ describe('VGA 2D vertical slice', () => {
     expect(rings()).toHaveLength(0)
   })
 
+  it('returns focus to the canvas when a pointer gesture ends', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+    const base = screen.getByRole('button', { name: 'Move base of V' })
+
+    fireEvent.pointerDown(head, { button: 0, pointerId: 8 })
+    act(() => head.focus())
+    fireEvent.pointerMove(canvas, { pointerId: 8, clientX: 536, clientY: 96 })
+    fireEvent.pointerUp(canvas, { pointerId: 8 })
+    expect(canvas).toHaveFocus()
+    expect(source).toHaveValue('V = vector(3, 2)')
+
+    fireEvent.pointerDown(base, { button: 0, pointerId: 9 })
+    act(() => base.focus())
+    fireEvent.pointerCancel(canvas, { pointerId: 9 })
+    expect(canvas).toHaveFocus()
+
+    fireEvent.pointerDown(head, { button: 0, pointerId: 10 })
+    act(() => head.focus())
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(canvas).toHaveFocus()
+
+    // Keyboard focus on a handle is untouched.
+    act(() => head.focus())
+    fireEvent.keyDown(head, { key: 'ArrowRight' })
+    expect(head).toHaveFocus()
+  })
+
   it('zooms on wheel through a listener that can cancel the page zoom', () => {
     render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })

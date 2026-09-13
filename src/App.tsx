@@ -754,6 +754,16 @@ function App() {
     }))
     viewportPan.current = { ...pan, lastX: event.clientX, lastY: event.clientY }
   }
+  // A pointer gesture leaves nothing selected: the handle gives focus back
+  // to the canvas so arrow keys pan and hover indicators stay pointer-only.
+  // Keyboard users reach handles with Tab as before.
+  const finishManipulation = (outcome: 'commit' | 'cancel') => {
+    manipulationDrag.current = null
+    anchorValidityCache.current.clear()
+    setAnchorPreview(null)
+    dispatchHistory({ type: outcome === 'commit' ? 'commit-transaction' : 'cancel-transaction' })
+    viewportSvgRef.current?.focus({ preventScroll: true })
+  }
   const endViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const manipulation = manipulationDrag.current
     if (manipulation?.pointerId === event.pointerId) {
@@ -780,29 +790,20 @@ function App() {
           )
         } else {
           setViewportAnnouncement('Anchor link refused because it would be invalid.')
-          manipulationDrag.current = null
-          anchorValidityCache.current.clear()
-          setAnchorPreview(null)
-          dispatchHistory({ type: 'cancel-transaction' })
+          finishManipulation('cancel')
           return
         }
       } else {
         setViewportAnnouncement('Object manipulation committed.')
       }
-      manipulationDrag.current = null
-      anchorValidityCache.current.clear()
-      setAnchorPreview(null)
-      dispatchHistory({ type: 'commit-transaction' })
+      finishManipulation('commit')
       return
     }
     if (viewportPan.current?.pointerId === event.pointerId) viewportPan.current = null
   }
   const cancelViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (manipulationDrag.current?.pointerId === event.pointerId) {
-      manipulationDrag.current = null
-      anchorValidityCache.current.clear()
-      setAnchorPreview(null)
-      dispatchHistory({ type: 'cancel-transaction' })
+      finishManipulation('cancel')
       setViewportAnnouncement('Object manipulation cancelled.')
       return
     }
@@ -813,10 +814,7 @@ function App() {
   }
   const loseViewportCapture = () => {
     if (manipulationDrag.current) {
-      manipulationDrag.current = null
-      anchorValidityCache.current.clear()
-      setAnchorPreview(null)
-      dispatchHistory({ type: 'cancel-transaction' })
+      finishManipulation('cancel')
       setViewportAnnouncement('Object manipulation cancelled.')
       return
     }
@@ -1017,6 +1015,7 @@ function App() {
       anchorValidityCache.current.clear()
       setAnchorPreview(null)
       dispatchHistory({ type: 'cancel-transaction' })
+      viewportSvgRef.current?.focus({ preventScroll: true })
       setViewportAnnouncement('Object manipulation cancelled.')
     }
     window.addEventListener('keydown', cancel)
