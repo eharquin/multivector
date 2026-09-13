@@ -152,4 +152,28 @@ describe('semantic document commands', () => {
       id: 'stable-document', items: [], appearance: {},
     }))
   })
+
+  it('selects an algebra with its interpretation and visualizer only on an empty document', () => {
+    const selection = {
+      kind: 'select-algebra' as const,
+      algebra: { algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: { dimension: 2 } },
+      interpretation: { interpretationId: 'org.multivector.pga-2d', interpretationVersion: 1 },
+      visualizerId: 'org.multivector.pga-2d',
+    }
+    const empty = expressionDocument([{ id: 'item-1', source: '' }, { id: 'item-2', source: '   ' }])
+    const applied = executeDocumentCommand(empty, selection)
+    expect(applied.status).toBe('applied')
+    expect(applied.document.algebra).toEqual(selection.algebra)
+    expect(applied.document.interpretation).toEqual(selection.interpretation)
+    expect(applied.document.view.visualizerId).toBe('org.multivector.pga-2d')
+    expect(applied.document.items).toHaveLength(2)
+
+    const withContent = expressionDocument([{ id: 'item-1', source: 'V = vector(1, 2)' }])
+    const refused = executeDocumentCommand(withContent, selection)
+    expect(refused.status).toBe('invalid')
+    expect(refused.document).toBe(withContent)
+
+    const withPosition = expressionDocument([{ id: 'item-1', source: '', positionSource: '(1, 2)' }])
+    expect(executeDocumentCommand(withPosition, selection).status).toBe('invalid')
+  })
 })

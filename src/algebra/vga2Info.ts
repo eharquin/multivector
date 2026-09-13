@@ -1,7 +1,7 @@
 import { type AlgebraInfo } from './algebraDefinition'
 
 export const VGA_2_INFO: AlgebraInfo = Object.freeze({
-  name: 'Vectorial Geometric Algebra',
+  name: 'Vector Geometric Algebra',
   signature: 'ℝ(2,0,0)',
   description:
     'Vector-based 2D geometry: scalars, vectors, bivectors (oriented areas), and rotors. No points or lines—only directions, areas, and rotations.',

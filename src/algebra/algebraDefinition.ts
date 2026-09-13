@@ -35,6 +35,8 @@ export type ParameterValidation =
  */
 export type AlgebraDefinition = Readonly<{
   algebraId: string
+  /** Short header label, such as `VGA · 2D`. */
+  badge: string
   definitionVersion: number
   conventionVersions: readonly number[]
   capabilities: ReadonlySet<string>
