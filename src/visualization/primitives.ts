@@ -30,9 +30,34 @@ export type OrientedAreaPrimitive = Readonly<{
   accessibleDescription: string
 }>
 
+/** A located point drawn as a marker (a Euclidean PGA point). */
+export type PointMarkerPrimitive = Readonly<{
+  kind: 'point-marker'
+  point: Point2d
+  accessibleName: string
+}>
+
+/** An unbounded straight line through `point` with direction `direction`. */
+export type UnboundedLinePrimitive = Readonly<{
+  kind: 'unbounded-line'
+  point: Point2d
+  direction: Point2d
+  accessibleName: string
+}>
+
+/** A direction without location (an ideal PGA point), drawn at the viewport edge. */
+export type DirectionMarkerPrimitive = Readonly<{
+  kind: 'direction-marker'
+  direction: Point2d
+  accessibleName: string
+}>
+
 export type VisualizationPrimitive =
   | OrientedSegmentPrimitive
   | OrientedAreaPrimitive
+  | PointMarkerPrimitive
+  | UnboundedLinePrimitive
+  | DirectionMarkerPrimitive
 
 export const MAX_RENDERED_LIST_ELEMENTS = 1_000
 

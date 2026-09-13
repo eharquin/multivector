@@ -1,22 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { createVga2Engine } from '../algebra/vgaEngine'
+import { VGA_2D_INTERPRETATION, type Vector2dEntity } from '../geometry/vga2Interpretation'
 import { expressionDocument } from '../document/expressionDocument'
 import type { ExpressionItem } from '../document/expressionDocument'
 import { evaluateDocument } from './evaluateDocument'
 
 const engine = createVga2Engine()
+const context = { engine, interpretation: VGA_2D_INTERPRETATION }
 
 function evaluate(...sources: string[]) {
   return evaluateDocument(
     expressionDocument(
       sources.map((source, index) => ({ id: `item-${index + 1}`, source })),
     ),
-    engine,
+    context,
   )
 }
 
 function evaluateItems(items: readonly ExpressionItem[]) {
-  return evaluateDocument(expressionDocument(items), engine)
+  return evaluateDocument(expressionDocument(items), context)
 }
 
 describe('document dependency evaluation', () => {
@@ -61,7 +63,7 @@ describe('document dependency evaluation', () => {
     const [vector] = evaluateDocument({
       ...document,
       view: { ...document.view, positionEnabled: false },
-    }, engine)
+    }, context)
 
     expect(vector.item.positionSource).toBe('(4, 5)')
     expect(vector.positionEvaluation).toBeNull()
@@ -525,7 +527,8 @@ describe('document dependency evaluation', () => {
     const vector = results[2].evaluation
     expect(vector).toMatchObject({ status: 'valid', entity: { kind: 'vector-2d' } })
     if (vector?.status !== 'valid' || vector.entity.kind !== 'vector-2d') return
-    expect(vector.entity.x).toBeCloseTo(0, 14)
-    expect(vector.entity.y).toBeCloseTo(1, 14)
+    const entity = vector.entity as Vector2dEntity
+    expect(entity.x).toBeCloseTo(0, 14)
+    expect(entity.y).toBeCloseTo(1, 14)
   })
 })

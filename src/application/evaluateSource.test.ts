@@ -1,6 +1,8 @@
 import { VGA_2D_BASIS } from '../algebra/vgaEngine'
 import { describe, expect, it } from 'vitest'
 import { createVga2Engine } from '../algebra/vgaEngine'
+import { VGA_2D_INTERPRETATION } from '../geometry/vga2Interpretation'
+import type { Vector2dEntity } from '../geometry/vga2Interpretation'
 import { evaluateSource } from './evaluateSource'
 import { ownedList, type LanguageValue } from '../domain/languageValue'
 import { evaluateExpression } from '../evaluation/evaluateExpression'
@@ -8,9 +10,10 @@ import { lowerExpression } from '../language/lowerExpression'
 import { parseExpression } from '../language/parseExpression'
 
 const engine = createVga2Engine()
+const context = { engine, interpretation: VGA_2D_INTERPRETATION }
 
 function validValue(source: string) {
-  const result = evaluateSource(source, engine)
+  const result = evaluateSource(source, context)
   if (result.status !== 'valid') throw new Error(result.diagnostic.message)
   if (result.valueType !== 'single') throw new Error('Expected one multivector')
   return result.value
@@ -18,8 +21,8 @@ function validValue(source: string) {
 
 describe('source evaluation pipeline', () => {
   it('evaluates heterogeneous lists with stable element identities and text', () => {
-    const first = evaluateSource('[1, e1, 2e12]', engine, 'L')
-    const second = evaluateSource('[1, e1, 2e12]', engine, 'L')
+    const first = evaluateSource('[1, e1, 2e12]', context, 'L')
+    const second = evaluateSource('[1, e1, 2e12]', context, 'L')
 
     expect(first).toMatchObject({
       status: 'valid',
@@ -45,58 +48,58 @@ describe('source evaluation pipeline', () => {
     ['[1,3...6]', '[1, 3, 5]'],
     ['[3,1...0]', '[3, 1]'],
   ])('evaluates arithmetic range %s', (source, inspection) => {
-    expect(evaluateSource(source, engine)).toMatchObject({
+    expect(evaluateSource(source, context)).toMatchObject({
       status: 'valid', valueType: 'list', inspection,
     })
   })
 
   it('broadcasts values and singleton lists without nesting', () => {
-    expect(evaluateSource('[e1, e2] + 2e1', engine)).toMatchObject({
+    expect(evaluateSource('[e1, e2] + 2e1', context)).toMatchObject({
       status: 'valid', inspection: '[3e1, 2e1 + e2]',
     })
-    expect(evaluateSource('[e1, e2] + [e2]', engine)).toMatchObject({
+    expect(evaluateSource('[e1, e2] + [e2]', context)).toMatchObject({
       status: 'valid', inspection: '[e1 + e2, 2e2]',
     })
-    expect(evaluateSource('[] + e1', engine)).toMatchObject({
+    expect(evaluateSource('[] + e1', context)).toMatchObject({
       status: 'valid', inspection: '[]',
     })
   })
 
   it('indexes lists and reports range, length, and nesting diagnostics', () => {
-    expect(evaluateSource('[e1, e2][1]', engine)).toMatchObject({
+    expect(evaluateSource('[e1, e2][1]', context)).toMatchObject({
       status: 'valid', valueType: 'single', inspection: 'e2',
     })
-    expect(evaluateSource('[e1, e2][2]', engine)).toMatchObject({
+    expect(evaluateSource('[e1, e2][2]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_INDEX_RANGE' },
     })
-    expect(evaluateSource('[e1, e2] + [e1, e2, e1]', engine)).toMatchObject({
+    expect(evaluateSource('[e1, e2] + [e1, e2, e1]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_LIST_LENGTH' },
     })
-    expect(evaluateSource('[e1, [e2]]', engine)).toMatchObject({
+    expect(evaluateSource('[e1, [e2]]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_NESTED_LIST' },
     })
-    expect(evaluateSource('[1,1...3]', engine)).toMatchObject({
+    expect(evaluateSource('[1,1...3]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_RANGE_DIRECTION' },
     })
-    expect(evaluateSource('[1,1...1]', engine)).toMatchObject({
+    expect(evaluateSource('[1,1...1]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_RANGE_DIRECTION' },
     })
-    expect(evaluateSource('[0...10000]', engine)).toMatchObject({
+    expect(evaluateSource('[0...10000]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LIMIT_GENERATED_VALUES' },
     })
-    expect(evaluateSource('[] + [e1]', engine)).toMatchObject({
+    expect(evaluateSource('[] + [e1]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_LIST_LENGTH' },
     })
-    expect(evaluateSource('[e1][-1]', engine)).toMatchObject({
+    expect(evaluateSource('[e1][-1]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_INDEX_DOMAIN' },
     })
-    expect(evaluateSource('[e1][0.5]', engine)).toMatchObject({
+    expect(evaluateSource('[e1][0.5]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_INDEX_DOMAIN' },
     })
-    expect(evaluateSource('e1[0]', engine)).toMatchObject({
+    expect(evaluateSource('e1[0]', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_INDEX_TYPE' },
     })
-    expect(evaluateSource('[1, 0].inverse', engine)).toMatchObject({
+    expect(evaluateSource('[1, 0].inverse', context)).toMatchObject({
       status: 'invalid',
       diagnostic: {
         code: 'ALG_SINGULAR',
@@ -134,7 +137,7 @@ describe('source evaluation pipeline', () => {
   })
 
   it('interprets a bivector and creates an accessible oriented-area primitive', () => {
-    const result = evaluateSource('e1 * e2', engine)
+    const result = evaluateSource('e1 * e2', context)
 
     expect(result).toMatchObject({
       status: 'valid',
@@ -167,7 +170,7 @@ describe('source evaluation pipeline', () => {
       basis: VGA_2D_BASIS,
       coefficients: [0, 0, 0, 0],
     })
-    expect(evaluateSource('e21', engine)).toMatchObject({
+    expect(evaluateSource('e21', context)).toMatchObject({
       status: 'valid',
       inspection: '-e12',
     })
@@ -178,7 +181,7 @@ describe('source evaluation pipeline', () => {
     ['vector(1, 1) + 12', '12 + e1 + e2'],
     ['12 + 2e1 + 80e12', '12 + 2e1 + 80e12'],
   ])('evaluates and interprets mixed expression %s', (source, inspection) => {
-    const result = evaluateSource(source, engine)
+    const result = evaluateSource(source, context)
 
     expect(result).toMatchObject({
       status: 'valid',
@@ -189,7 +192,7 @@ describe('source evaluation pipeline', () => {
   })
 
   it('distinguishes a rotor from a pure bivector', () => {
-    expect(evaluateSource('1 + e12', engine)).toMatchObject({
+    expect(evaluateSource('1 + e12', context)).toMatchObject({
       status: 'valid',
       entity: { kind: 'rotor-2d', scalar: 1, bivector: 1 },
       primitive: null,
@@ -208,7 +211,7 @@ describe('source evaluation pipeline', () => {
     ['(1 + 2e1 + 3e2 + 4e12).e12', '4', 'scalar'],
     ['(1 + 2e1 + 3e2 + 4e12).involution', '1 - 2e1 - 3e2 + 4e12', 'mixed-multivector'],
   ])('evaluates fundamental operation %s', (source, inspection, kind) => {
-    expect(evaluateSource(source, engine)).toMatchObject({
+    expect(evaluateSource(source, context)).toMatchObject({
       status: 'valid',
       inspection,
       entity: { kind },
@@ -221,18 +224,18 @@ describe('source evaluation pipeline', () => {
   })
 
   it('does not reserve abbreviated involution aliases', () => {
-    expect(evaluateSource('e1.rev', engine)).toMatchObject({
+    expect(evaluateSource('e1.rev', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
     })
-    expect(evaluateSource('e1.invo', engine)).toMatchObject({
+    expect(evaluateSource('e1.invo', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'LANG_UNSUPPORTED_PROPERTY' },
     })
   })
 
   it('reports an unknown property at its source span', () => {
-    expect(evaluateSource('(1 + e1).unknown', engine)).toEqual({
+    expect(evaluateSource('(1 + e1).unknown', context)).toEqual({
       status: 'invalid',
       diagnostic: {
         code: 'LANG_UNSUPPORTED_PROPERTY',
@@ -244,11 +247,12 @@ describe('source evaluation pipeline', () => {
   })
 
   it('evaluates a rotor quarter-turn through source syntax', () => {
-    const result = evaluateSource('exp(-(pi/4)e12) >>> e1', engine)
+    const result = evaluateSource('exp(-(pi/4)e12) >>> e1', context)
     expect(result).toMatchObject({ status: 'valid', entity: { kind: 'vector-2d' } })
     if (result.status !== 'valid' || result.entity.kind !== 'vector-2d') return
-    expect(result.entity.x).toBeCloseTo(0, 14)
-    expect(result.entity.y).toBeCloseTo(1, 14)
+    const vector = result.entity as Vector2dEntity
+    expect(vector.x).toBeCloseTo(0, 14)
+    expect(vector.y).toBeCloseTo(1, 14)
   })
 
   it.each([
@@ -262,19 +266,19 @@ describe('source evaluation pipeline', () => {
   })
 
   it('reports singular and scalar-domain failures with source spans', () => {
-    expect(evaluateSource('(1 + e1).inverse', engine)).toMatchObject({
+    expect(evaluateSource('(1 + e1).inverse', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'ALG_SINGULAR', span: { start: 0, end: 16 } },
     })
-    expect(evaluateSource('sin(e1)', engine)).toMatchObject({
+    expect(evaluateSource('sin(e1)', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'ALG_DOMAIN', span: { start: 0, end: 7 } },
     })
-    expect(evaluateSource('tan(pi/2)', engine)).toMatchObject({
+    expect(evaluateSource('tan(pi/2)', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'ALG_DOMAIN' },
     })
-    expect(evaluateSource('unknown(1)', engine)).toMatchObject({
+    expect(evaluateSource('unknown(1)', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' },
     })
@@ -282,47 +286,50 @@ describe('source evaluation pipeline', () => {
 
   it('resolves blades in any generator order against the active basis', () => {
     const engine = createVga2Engine()
-    expect(evaluateSource('e21', engine)).toMatchObject({
+    const context = { engine, interpretation: VGA_2D_INTERPRETATION }
+    expect(evaluateSource('e21', context)).toMatchObject({
       status: 'valid', value: { coefficients: [0, 0, 0, -1] },
     })
-    expect(evaluateSource('(e1 + 2 e12).e21', engine)).toMatchObject({
+    expect(evaluateSource('(e1 + 2 e12).e21', context)).toMatchObject({
       status: 'valid', value: { coefficients: [-2, 0, 0, 0] },
     })
-    expect(evaluateSource('(1 + e1 + e12).g2', engine)).toMatchObject({
+    expect(evaluateSource('(1 + e1 + e12).g2', context)).toMatchObject({
       status: 'valid', value: { coefficients: [0, 0, 0, 1] },
     })
   })
 
   it('reports blades and grades the active algebra does not have, with their spans', () => {
     const engine = createVga2Engine()
-    expect(evaluateSource('e1 + e0', engine)).toMatchObject({
+    const context = { engine, interpretation: VGA_2D_INTERPRETATION }
+    expect(evaluateSource('e1 + e0', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'ALG_UNKNOWN_BLADE', span: { start: 5, end: 7 } },
     })
-    expect(evaluateSource('e012', engine)).toMatchObject({
+    expect(evaluateSource('e012', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_BLADE' },
     })
-    expect(evaluateSource('(e1).e20', engine)).toMatchObject({
+    expect(evaluateSource('(e1).e20', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_BLADE' },
     })
-    expect(evaluateSource('(1 + e1).g3', engine)).toMatchObject({
+    expect(evaluateSource('(1 + e1).g3', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_GRADE' },
     })
   })
 
   it('dispatches calls through the registered functions of the active algebra', () => {
     const engine = createVga2Engine()
-    expect(evaluateSource('point(1, 2)', engine)).toMatchObject({
+    const context = { engine, interpretation: VGA_2D_INTERPRETATION }
+    expect(evaluateSource('point(1, 2)', context)).toMatchObject({
       status: 'invalid',
       diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION', span: { start: 0, end: 11 } },
     })
-    expect(evaluateSource('vector(1, 2, 3)', engine)).toMatchObject({
+    expect(evaluateSource('vector(1, 2, 3)', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
     })
-    expect(evaluateSource('exp(1, 2)', engine)).toMatchObject({
+    expect(evaluateSource('exp(1, 2)', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
     })
-    expect(evaluateSource('vector(e1, 2)', engine)).toMatchObject({
+    expect(evaluateSource('vector(e1, 2)', context)).toMatchObject({
       status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
     })
   })

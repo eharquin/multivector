@@ -22,10 +22,7 @@ import {
   type DisplaySettings,
 } from './components/DisplaySettingsMenu'
 import { resolveItemAppearance } from './components/appearancePalette'
-import {
-  describeVga2Entity,
-  supportsVga2Position,
-} from './geometry/vga2Interpretation'
+import { OPAQUE_INTERPRETATION } from './geometry/interpretation'
 import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
@@ -248,6 +245,16 @@ function App() {
     throw new Error(`${algebraResolution.code}: ${algebraResolution.message}`)
   }
   const { engine, definition: algebraDefinition } = algebraResolution
+  // The interpretation may be unavailable without blocking evaluation: values
+  // still evaluate and inspect, only geometry and visualization are withheld.
+  const interpretationResolution = useMemo(
+    () => algebraRegistry.resolveInterpretation(expressionDoc.interpretation),
+    [expressionDoc.interpretation],
+  )
+  const interpretation = interpretationResolution.status === 'resolved'
+    ? interpretationResolution.interpretation
+    : OPAQUE_INTERPRETATION
+  const evaluationContext = useMemo(() => ({ engine, interpretation }), [engine, interpretation])
   const executeCommand = useCallback((
     command: DocumentCommand,
     coalesceKey?: string,
@@ -383,7 +390,8 @@ function App() {
         pixelsPerUnit: clampZoom(expressionDoc.view.viewport.zoom),
       }
     : { ...defaultViewport, ...viewportSize }
-  const visualizerActive = expressionDoc.view.visualizerId === 'org.multivector.vga-2d' &&
+  const visualizerActive = interpretationResolution.status === 'resolved' &&
+    expressionDoc.view.visualizerId === algebraDefinition.standardVisualizerId &&
     expressionDoc.view.viewport.kind === 'two-dimensional'
   const grid = adaptiveGrid(viewport)
   const updateView = useCallback((view: typeof expressionDoc.view) => {
@@ -621,7 +629,7 @@ function App() {
             ? { ...entry, positionSource }
             : entry),
         }
-        return evaluateDocument(proposed, engine).find(
+        return evaluateDocument(proposed, evaluationContext).find(
           (result) => result.item.id === itemId,
         )?.positionEvaluation?.status === 'valid'
       })
@@ -692,12 +700,14 @@ function App() {
                 { property: 'position' as const, mathematical: primitive.start },
                 { property: 'head' as const, mathematical: primitive.end },
               ]
-            : [{
-                property: 'position' as const,
-                mathematical: primitive.shape.kind === 'loop'
-                  ? primitive.shape.center
-                  : primitive.shape.vertices[0],
-              }]
+            : primitive.kind === 'oriented-area'
+              ? [{
+                  property: 'position' as const,
+                  mathematical: primitive.shape.kind === 'loop'
+                    ? primitive.shape.center
+                    : primitive.shape.vertices[0],
+                }]
+              : []
           return anchors.map(({ property, mathematical }, order) => {
             const point = toScreen(viewport, mathematical)
             return {
@@ -726,7 +736,7 @@ function App() {
                 ? { ...item, positionSource }
                 : item),
             }
-            const valid = evaluateDocument(proposed, engine).find(
+            const valid = evaluateDocument(proposed, evaluationContext).find(
               (result) => result.item.id === manipulation.itemId,
             )?.positionEvaluation?.status === 'valid'
             anchorValidityCache.current.set(key, valid)
@@ -794,7 +804,7 @@ function App() {
             ? { ...item, positionSource }
             : item),
         }
-        const candidate = evaluateDocument(candidateDocument, engine).find(
+        const candidate = evaluateDocument(candidateDocument, evaluationContext).find(
           (result) => result.item.id === manipulation.itemId,
         )
         if (candidate?.positionEvaluation?.status === 'valid') {
@@ -930,7 +940,7 @@ function App() {
   }, [visualizerActive])
 
   const evaluatedItems = useMemo(
-    () => evaluateDocument(expressionDoc, engine),
+    () => evaluateDocument(expressionDoc, evaluationContext),
     [expressionDoc],
   )
   const scalarControlEvaluations = useMemo(
@@ -1042,7 +1052,7 @@ function App() {
       const kind = evaluation?.status === 'valid'
         ? evaluation.valueType === 'list'
           ? 'List'
-          : describeVga2Entity(evaluation.entity)
+          : interpretation.describe(evaluation.entity)
         : 'Object'
       return [item.id, resolveItemAppearance(expressionDoc.appearance[item.id], kind, declaredName(item.source)).styleId]
     })),
@@ -1094,7 +1104,7 @@ function App() {
     if (evaluated.evaluation?.status !== 'valid') return []
     const kind = evaluated.evaluation.valueType === 'list'
       ? `List (${evaluated.evaluation.value.elements.length})`
-      : describeVga2Entity(evaluated.evaluation.entity)
+      : interpretation.describe(evaluated.evaluation.entity)
     const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape } = resolveItemAppearance(
       expressionDoc.appearance[evaluated.item.id],
       kind,
@@ -1667,6 +1677,11 @@ function App() {
           {documentDiagnostic}
         </div>
       )}
+      {interpretationResolution.status === 'unavailable' && (
+        <div className="document-diagnostic" role="alert">
+          {interpretationResolution.code}: {interpretationResolution.message}
+        </div>
+      )}
 
       <main className="workspace" ref={workspaceRef}>
         <aside
@@ -1728,7 +1743,7 @@ function App() {
               const supportsPosition =
                 evaluation?.status === 'valid' &&
                 evaluation.valueType === 'single' &&
-                supportsVga2Position(evaluation.entity)
+                interpretation.supportsPosition(evaluation.entity)
               const supportsNormalization =
                 evaluation?.status === 'valid' &&
                 evaluation.valueType === 'single' &&
@@ -1743,7 +1758,7 @@ function App() {
               const kind = evaluation?.status === 'valid'
                 ? evaluation.valueType === 'list'
                   ? `List (${evaluation.value.elements.length})`
-                  : describeVga2Entity(evaluation.entity)
+                  : interpretation.describe(evaluation.entity)
                 : 'Object'
               const drawable = evaluation?.status === 'valid' &&
                 (evaluation.valueType === 'list'
@@ -2124,7 +2139,7 @@ function App() {
                                   {elementIndex}
                                 </span>
                                 <span className="list-element-kind">
-                                  {describeVga2Entity(element.entity)}
+                                  {interpretation.describe(element.entity)}
                                 </span>
                                 {element.entity.kind !== 'mixed-multivector' &&
                                   element.entity.approximated && (

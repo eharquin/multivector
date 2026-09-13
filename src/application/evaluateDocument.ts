@@ -21,10 +21,7 @@ import {
   ExpressionEvaluationError,
   type EvaluationBudget,
 } from '../evaluation/evaluateExpression'
-import {
-  supportsVga2Position,
-  type Vector2dEntity,
-} from '../geometry/vga2Interpretation'
+import { type AnyInterpretation, type InterpretedEntity, type PrimitiveConstruction } from '../geometry/interpretation'
 import type { SurfaceExpressionNode } from '../language/ast'
 import { lowerExpression } from '../language/lowerExpression'
 import {
@@ -33,11 +30,8 @@ import {
   type ParsedDocumentExpression,
 } from '../language/parseExpression'
 import {
-  bivectorToPrimitive,
-  vectorToPrimitive,
-} from '../visualization/primitives'
-import {
   presentEvaluation,
+  type EvaluationContext,
   type EvaluationState,
 } from './evaluateSource'
 
@@ -116,29 +110,26 @@ function collectReferences(expression: SurfaceExpressionNode): Reference[] {
   }
 }
 
-function isPositionMultivector(value: OwnedMultivector): boolean {
-  const [scalar, , , bivector] = value.coefficients
-  return scalar === 0 && bivector === 0
-}
-
-function isPositionValue(value: LanguageValue): boolean {
+function isPositionValue(interpretation: AnyInterpretation, value: LanguageValue): boolean {
   return value.kind === 'multivector'
-    ? isPositionMultivector(value)
-    : value.elements.every((element) => isPositionMultivector(element.value))
+    ? interpretation.isPositionValue(value)
+    : value.elements.every((element) => interpretation.isPositionValue(element.value))
 }
 
 function supportsEvaluationPosition(
+  interpretation: AnyInterpretation,
   evaluation: Extract<EvaluationState, { status: 'valid' }>,
 ): boolean {
   return evaluation.valueType === 'list'
-    ? evaluation.elements.every((element) => supportsVga2Position(element.entity))
-    : supportsVga2Position(evaluation.entity)
+    ? evaluation.elements.every((element) => interpretation.supportsPosition(element.entity))
+    : interpretation.supportsPosition(evaluation.entity)
 }
 
 function supportsDirectPosition(
+  interpretation: AnyInterpretation,
   evaluation: Extract<EvaluationState, { status: 'valid' }>,
 ): boolean {
-  return evaluation.valueType === 'single' && supportsVga2Position(evaluation.entity)
+  return evaluation.valueType === 'single' && interpretation.supportsPosition(evaluation.entity)
 }
 
 function addPositionValues(
@@ -178,8 +169,9 @@ function addPositionValues(
  */
 export function evaluateDocument(
   document: ExpressionDocument,
-  engine: AlgebraEngine,
+  context: EvaluationContext,
 ): readonly EvaluatedDocumentItem[] {
+  const { engine, interpretation } = context
   const nodes = new Map<string, ParsedNode>()
   const results = new Map<string, EvaluationState | null>()
   const evaluationBudget: EvaluationBudget = { work: 0, generatedValues: 0 }
@@ -347,7 +339,7 @@ export function evaluateDocument(
 
       if (
         reference.property === 'position' &&
-        !supportsEvaluationPosition(valueResult)
+        !supportsEvaluationPosition(interpretation, valueResult)
       ) {
         const invalid = diagnostic(
           'LANG_UNSUPPORTED_PROPERTY',
@@ -361,8 +353,8 @@ export function evaluateDocument(
       if (
         reference.property === 'head' &&
         (valueResult.valueType === 'list'
-          ? valueResult.elements.some((element) => element.entity.kind !== 'vector-2d')
-          : valueResult.entity.kind !== 'vector-2d')
+          ? valueResult.elements.some((element) => !interpretation.supportsHead(element.entity))
+          : !interpretation.supportsHead(valueResult.entity))
       ) {
         const invalid = diagnostic(
           'LANG_UNSUPPORTED_PROPERTY',
@@ -373,7 +365,7 @@ export function evaluateDocument(
         return invalid
       }
 
-      const positionNode = supportsDirectPosition(valueResult)
+      const positionNode = supportsDirectPosition(interpretation, valueResult)
         ? nodes.get(nodeKey(target.item.id, 'position'))
         : undefined
       let positionValue: LanguageValue = valueResult.valueType === 'list'
@@ -391,7 +383,7 @@ export function evaluateDocument(
           if (candidate.property !== 'position') continue
           const candidateValue = results.get(nodeKey(candidate.item.id, 'value'))
           if (candidateValue?.status === 'valid' &&
-              supportsDirectPosition(candidateValue)) {
+              supportsDirectPosition(interpretation, candidateValue)) {
             evaluateNode(candidate)
           }
         }
@@ -409,10 +401,8 @@ export function evaluateDocument(
           if (candidatePosition?.status !== 'valid') continue
           if (candidateValue.valueType === 'single') {
             if (candidateValue.elementId && candidatePosition.value.kind === 'multivector') {
-              localPositions.set(candidateValue.elementId, {
-                x: candidatePosition.value.coefficients[1],
-                y: candidatePosition.value.coefficients[2],
-              })
+              localPositions.set(candidateValue.elementId,
+                interpretation.positionOf(candidatePosition.value))
             }
             continue
           }
@@ -422,9 +412,7 @@ export function evaluateDocument(
                   candidatePosition.value.elements.length === 1 ? 0 : elementIndex
                 ]?.value
               : candidatePosition.value
-            if (position) localPositions.set(element.id, {
-              x: position.coefficients[1], y: position.coefficients[2],
-            })
+            if (position) localPositions.set(element.id, interpretation.positionOf(position))
           })
         }
         const resolvePosition = (
@@ -530,7 +518,7 @@ export function evaluateDocument(
     ) {
       value = engine.normalize(value).value
     }
-    if (node.property === 'position' && !isPositionValue(value)) {
+    if (node.property === 'position' && !isPositionValue(interpretation, value)) {
       const invalid = diagnostic(
         'GEOM_INVALID_POSITION',
         'A position must evaluate to a VGA 2D vector or zero.',
@@ -545,6 +533,7 @@ export function evaluateDocument(
     }
     const presented = presentEvaluation(
       value,
+      interpretation,
       node.declaration?.name ?? `Vector ${node.position}`,
     )
     results.set(node.key, presented)
@@ -559,7 +548,7 @@ export function evaluateDocument(
     const valueResult = results.get(nodeKey(node.item.id, 'value'))
     if (
       valueResult?.status === 'valid' &&
-      supportsDirectPosition(valueResult)
+      supportsDirectPosition(interpretation, valueResult)
     ) {
       evaluateNode(node)
     }
@@ -581,10 +570,7 @@ export function evaluateDocument(
     if (positionResult?.status !== 'valid') continue
     if (valueResult.valueType === 'single') {
       if (valueResult.elementId && positionResult.value.kind === 'multivector') {
-        explicitPositions.set(valueResult.elementId, {
-          x: positionResult.value.coefficients[1],
-          y: positionResult.value.coefficients[2],
-        })
+        explicitPositions.set(valueResult.elementId, interpretation.positionOf(positionResult.value))
       }
       continue
     }
@@ -594,10 +580,7 @@ export function evaluateDocument(
         ? positionValue.elements[positionValue.elements.length === 1 ? 0 : elementIndex]?.value
         : positionValue
       if (!position) return
-      explicitPositions.set(element.id, {
-        x: position.coefficients[1],
-        y: position.coefficients[2],
-      })
+      explicitPositions.set(element.id, interpretation.positionOf(position))
     })
   }
 
@@ -622,9 +605,9 @@ export function evaluateDocument(
     return { position: conflict ? null : first, conflict }
   }
 
-  const directOuterProductSides = (
+  const directOuterProductConstruction = (
     item: ExpressionItem,
-  ): readonly [Vector2dEntity, Vector2dEntity] | undefined => {
+  ): PrimitiveConstruction<InterpretedEntity> | undefined => {
     const node = nodes.get(nodeKey(item.id, 'value'))
     if (
       node?.expression.kind !== 'binary-expression' ||
@@ -641,12 +624,10 @@ export function evaluateDocument(
     const leftResult = results.get(left[0].key)
     const rightResult = results.get(right[0].key)
     if (
-      leftResult?.status !== 'valid' ||
-      leftResult.entity.kind !== 'vector-2d' ||
-      rightResult?.status !== 'valid' ||
-      rightResult.entity.kind !== 'vector-2d'
+      leftResult?.status !== 'valid' || leftResult.valueType !== 'single' ||
+      rightResult?.status !== 'valid' || rightResult.valueType !== 'single'
     ) return undefined
-    return [leftResult.entity, rightResult.entity]
+    return { operator: '^', operands: [leftResult.entity, rightResult.entity] }
   }
 
   return document.items.map((item, index) => {
@@ -695,9 +676,7 @@ export function evaluateDocument(
           ? positionValue.elements[positionValue.elements.length === 1 ? 0 : elementIndex]?.value
           : positionValue
         return {
-          position: multivector
-            ? { x: multivector.coefficients[1], y: multivector.coefficients[2] }
-            : null,
+          position: multivector ? interpretation.positionOf(multivector) : null,
           conflict: false,
         }
       }
@@ -711,14 +690,10 @@ export function evaluateDocument(
           ...element,
           position: positionState.position,
           positionConflict: positionState.conflict,
-          primitive: element.entity.kind === 'vector-2d'
-            ? vectorToPrimitive(element.entity, name, position)
-            : element.entity.kind === 'bivector-2d'
-              ? bivectorToPrimitive(element.entity, name, position)
-              : null,
+          primitive: interpretation.toPrimitive(element.entity, { accessibleName: name, position }),
         }
       })
-      const allVectors = elements.every((element) => element.entity.kind === 'vector-2d')
+      const allVectors = elements.every((element) => interpretation.supportsHead(element.entity))
       let headInspection: string | null = null
       if (allVectors) {
         const positions = positionEvaluation?.status === 'valid'
@@ -728,7 +703,7 @@ export function evaluateDocument(
                 { x: 0, y: 0 }
               return {
                 id: element.id,
-                value: ownedMultivector([0, position.x, position.y, 0], engine.basis),
+                value: interpretation.positionValue(position, engine.basis),
               }
             }))
         headInspection = inspectLanguageValue(
@@ -747,8 +722,7 @@ export function evaluateDocument(
     if (
       valueEvaluation?.status === 'valid' &&
       valueEvaluation.valueType === 'single' &&
-      (valueEvaluation.entity.kind === 'vector-2d' ||
-        valueEvaluation.entity.kind === 'bivector-2d')
+      interpretation.supportsPosition(valueEvaluation.entity)
     ) {
       const positionEvaluation =
         results.get(nodeKey(item.id, 'position')) ?? null
@@ -763,54 +737,37 @@ export function evaluateDocument(
               nodes.get(nodeKey(item.id, 'value'))?.expression.span ?? { start: 0, end: 0 },
             )
           : null)
-      const positionEntity =
+      const positionPoint =
         positionEvaluation?.status === 'valid' &&
-        positionEvaluation.entity?.kind === 'vector-2d'
-          ? positionEvaluation.entity
+        positionEvaluation.valueType === 'single' &&
+        interpretation.isPositionValue(positionEvaluation.value)
+          ? interpretation.positionOf(positionEvaluation.value)
           : inheritedPosition.position ?? { x: 0, y: 0 }
-      if (valueEvaluation.entity.kind === 'bivector-2d') {
-        return {
-          item,
-          position: index + 1,
-          evaluation: {
-            ...valueEvaluation,
-            primitive: bivectorToPrimitive(
-              valueEvaluation.entity,
-              nodes.get(nodeKey(item.id, 'value'))?.declaration?.name ??
-                `Bivector ${index + 1}`,
-              positionEntity,
-              directOuterProductSides(item),
+      const accessibleName =
+        nodes.get(nodeKey(item.id, 'value'))?.declaration?.name ??
+        interpretation.defaultName(valueEvaluation.entity, index)
+      const headInspection = interpretation.supportsHead(valueEvaluation.entity)
+        ? inspectMultivector(
+            engine.add(
+              valueEvaluation.value,
+              positionEvaluation?.status === 'valid' && positionEvaluation.valueType === 'single'
+                ? positionEvaluation.value
+                : interpretation.positionValue(inheritedPosition.position ?? { x: 0, y: 0 }, engine.basis),
             ),
-          },
-          positionEvaluation: effectivePositionEvaluation,
-          headInspection: null,
-        }
-      }
+          )
+        : null
       return {
         item,
         position: index + 1,
         positionEvaluation: effectivePositionEvaluation,
-        headInspection: inspectMultivector(
-          engine.add(
-            valueEvaluation.value,
-            positionEvaluation?.status === 'valid' && positionEvaluation.valueType === 'single'
-              ? positionEvaluation.value
-              : ownedMultivector([
-                  0,
-                  inheritedPosition.position?.x ?? 0,
-                  inheritedPosition.position?.y ?? 0,
-                  0,
-                ], engine.basis),
-          ),
-        ),
+        headInspection,
         evaluation: {
           ...valueEvaluation,
-          primitive: vectorToPrimitive(
-            valueEvaluation.entity,
-            valueEvaluation.primitive?.accessibleName ??
-              `Vector ${index + 1}`,
-            positionEntity,
-          ),
+          primitive: interpretation.toPrimitive(valueEvaluation.entity, {
+            accessibleName,
+            position: positionPoint,
+            construction: directOuterProductConstruction(item),
+          }),
         },
       }
     }

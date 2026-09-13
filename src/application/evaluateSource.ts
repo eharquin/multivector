@@ -15,15 +15,14 @@ import {
   ExpressionEvaluationError,
 } from '../evaluation/evaluateExpression'
 import {
-  interpretVga2,
-  type StandardVga2Entity,
-} from '../geometry/vga2Interpretation'
+  type AnyInterpretation,
+  type InterpretedEntity,
+  type VisualizationSupport,
+} from '../geometry/interpretation'
 import { lowerExpression } from '../language/lowerExpression'
 import { parseExpression } from '../language/parseExpression'
 import type { SurfaceExpressionNode } from '../language/ast'
 import {
-  bivectorToPrimitive,
-  vectorToPrimitive,
   type VisualizationPrimitive,
 } from '../visualization/primitives'
 
@@ -37,14 +36,11 @@ export type EvaluationState =
       valueType: 'single'
       value: OwnedMultivector
       inspection: string
-      entity: StandardVga2Entity
+      entity: InterpretedEntity
       primitive: VisualizationPrimitive | null
       elements: null
       elementId: string | null
-      visualization:
-        | Readonly<{ status: 'available' }>
-        | Readonly<{ status: 'non-spatial' }>
-        | Readonly<{ status: 'unsupported'; message: string }>
+      visualization: VisualizationSupport
     }>
   | Readonly<{
       status: 'valid'
@@ -58,7 +54,7 @@ export type EvaluationState =
         id: string
         value: OwnedMultivector
         inspection: string
-        entity: StandardVga2Entity
+        entity: InterpretedEntity
         primitive: VisualizationPrimitive | null
         position: Readonly<{ x: number; y: number }> | null
         positionConflict: boolean
@@ -107,9 +103,16 @@ function firstReference(
   }
 }
 
+/** The engine and interpretation a document resolves to (ALG-004). */
+export type EvaluationContext = Readonly<{
+  engine: AlgebraEngine
+  interpretation: AnyInterpretation
+}>
+
 /** Builds presentation state from an already evaluated owned value. */
 export function presentEvaluation(
   value: LanguageValue,
+  interpretation: AnyInterpretation,
   accessibleName?: string,
 ): EvaluationState {
   if (value.kind === 'list') {
@@ -122,7 +125,7 @@ export function presentEvaluation(
       primitive: null,
       elementId: null,
       elements: Object.freeze(value.elements.map((element, index) => {
-        const entity = interpretVga2(element.value)
+        const entity = interpretation.interpret(element.value)
         const name = `${accessibleName ?? 'List 1'}[${index}]`
         return Object.freeze({
           id: element.id,
@@ -131,41 +134,28 @@ export function presentEvaluation(
           entity,
           position: null,
           positionConflict: false,
-          primitive: entity.kind === 'vector-2d'
-            ? vectorToPrimitive(entity, name)
-            : entity.kind === 'bivector-2d'
-              ? bivectorToPrimitive(entity, name)
-              : null,
+          primitive: interpretation.toPrimitive(entity, {
+            accessibleName: name, position: { x: 0, y: 0 },
+          }),
         })
       })),
       visualization: { status: 'available' },
     }
   }
-  const entity = interpretVga2(value)
-  const name = accessibleName ??
-    (entity.kind === 'bivector-2d' ? 'Bivector 1' : 'Vector 1')
+  const entity = interpretation.interpret(value)
+  const name = accessibleName ?? interpretation.defaultName(entity, 0)
   return {
     status: 'valid',
     valueType: 'single',
     value,
     inspection: inspectMultivector(value),
     entity,
-    primitive: entity.kind === 'vector-2d'
-      ? vectorToPrimitive(entity, name)
-      : entity.kind === 'bivector-2d'
-        ? bivectorToPrimitive(entity, name)
-        : null,
+    primitive: interpretation.toPrimitive(entity, {
+      accessibleName: name, position: { x: 0, y: 0 },
+    }),
     elements: null,
     elementId: elementIdentity(value),
-    visualization:
-      entity.kind === 'vector-2d' || entity.kind === 'bivector-2d'
-        ? { status: 'available' }
-        : entity.kind === 'scalar'
-          ? { status: 'non-spatial' }
-          : {
-              status: 'unsupported',
-              message: 'This VGA 2D object has no supported visualization.',
-            },
+    visualization: interpretation.visualization(entity),
   }
 }
 
@@ -175,7 +165,7 @@ export function presentEvaluation(
  */
 export function evaluateSource(
   source: string,
-  engine: AlgebraEngine,
+  context: EvaluationContext,
   accessibleName?: string,
 ): EvaluationState {
   const parsed = parseExpression(source)
@@ -198,8 +188,8 @@ export function evaluateSource(
 
   const coreExpression = lowerExpression(parsed.expression)
   try {
-    const value = evaluateExpression(coreExpression, engine)
-    return presentEvaluation(value, accessibleName)
+    const value = evaluateExpression(coreExpression, context.engine)
+    return presentEvaluation(value, context.interpretation, accessibleName)
   } catch (error) {
     if (error instanceof ExpressionEvaluationError) {
       return {
