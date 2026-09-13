@@ -984,17 +984,23 @@ body.reordering-items .reorder-handle {
 }
 
 .display-settings-button {
-  min-width: 26px;
-  min-height: 26px;
-  padding: 4px 8px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  font-size: 0.85rem;
-  line-height: 1;
   cursor: pointer;
   transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.display-settings-button svg circle,
+.display-settings-button svg path {
+  stroke: currentColor;
+  stroke-width: 1.5;
 }
 
 .display-settings-button:hover,
