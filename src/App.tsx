@@ -401,9 +401,14 @@ function App() {
   // user-select, so while a button is held the class also removes the
   // panels from hit-testing and any selection start is cancelled. Released
   // on pointerup or pointercancel anywhere.
-  const guardGestureSelection = () => document.body.classList.add('canvas-gesture')
+  // The gesture kind also fixes the cursor: browsers that hit-test under the
+  // pointer during capture would otherwise show the arrow over the panels.
+  const guardGestureSelection = (kind: 'manipulate' | 'pan') =>
+    document.body.classList.add('canvas-gesture', `canvas-gesture-${kind}`)
   useEffect(() => {
-    const release = () => document.body.classList.remove('canvas-gesture')
+    const release = () => document.body.classList.remove(
+      'canvas-gesture', 'canvas-gesture-manipulate', 'canvas-gesture-pan',
+    )
     const cancelSelection = (event: Event) => {
       if (document.body.classList.contains('canvas-gesture')) event.preventDefault()
     }
@@ -421,7 +426,7 @@ function App() {
     setAppearanceItemId(null)
     if (viewportLocked || event.button !== 0 || event.target !== event.currentTarget) return
     event.currentTarget.focus({ preventScroll: true })
-    guardGestureSelection()
+    guardGestureSelection('pan')
     viewportPan.current = {
       pointerId: event.pointerId,
       lastX: event.clientX,
@@ -514,7 +519,7 @@ function App() {
     // treat the resulting focus as pointer-driven and withhold the focus
     // ring. Selection is prevented by user-select on the canvas instead.
     event.currentTarget.setPointerCapture?.(event.pointerId)
-    guardGestureSelection()
+    guardGestureSelection('manipulate')
     manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
     anchorValidityCache.current.clear()
     dispatchHistory({ type: 'boundary' })
