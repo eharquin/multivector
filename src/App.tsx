@@ -396,10 +396,25 @@ function App() {
     svg.addEventListener('wheel', onWheel, { passive: false })
     return () => svg.removeEventListener('wheel', onWheel)
   }, [])
+  // Safari extends a selection started on the canvas into any selectable
+  // text the pointer crosses, so selection is disabled document-wide while a
+  // button is held. Released on pointerup or pointercancel anywhere.
+  const guardGestureSelection = () => document.body.classList.add('canvas-gesture')
+  useEffect(() => {
+    const release = () => document.body.classList.remove('canvas-gesture')
+    window.addEventListener('pointerup', release)
+    window.addEventListener('pointercancel', release)
+    return () => {
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      release()
+    }
+  }, [])
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     setAppearanceItemId(null)
     if (viewportLocked || event.button !== 0 || event.target !== event.currentTarget) return
     event.currentTarget.focus({ preventScroll: true })
+    guardGestureSelection()
     viewportPan.current = {
       pointerId: event.pointerId,
       lastX: event.clientX,
@@ -492,6 +507,7 @@ function App() {
     // treat the resulting focus as pointer-driven and withhold the focus
     // ring. Selection is prevented by user-select on the canvas instead.
     event.currentTarget.setPointerCapture?.(event.pointerId)
+    guardGestureSelection()
     manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
     anchorValidityCache.current.clear()
     dispatchHistory({ type: 'boundary' })
