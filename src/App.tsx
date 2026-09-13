@@ -30,7 +30,7 @@ import {
   type ExpressionControl,
   type ExpressionItem,
 } from './document/expressionDocument'
-import { type DocumentCommand } from './document/documentCommands'
+import { hasContent, type DocumentCommand } from './document/documentCommands'
 import {
   createDocumentHistory,
   documentHistoryReducer,
@@ -1357,6 +1357,25 @@ function App() {
     }
   }
 
+  /** Applies a registered definition with its standard interpretation and visualizer (ALG-004). */
+  const selectAlgebra = (algebraId: string) => {
+    const definition = algebraRegistry.definitions().find((candidate) => candidate.algebraId === algebraId)
+    if (!definition || definition.algebraId === expressionDoc.algebra.algebraId) return
+    const conventionVersion = definition.conventionVersions[definition.conventionVersions.length - 1]
+    setAppearanceItemId(null)
+    executeCommand({
+      kind: 'select-algebra',
+      algebra: {
+        algebraId: definition.algebraId,
+        definitionVersion: definition.definitionVersion,
+        conventionVersion,
+        parameters: {},
+      },
+      interpretation: { interpretationId: definition.standardInterpretationId, interpretationVersion: 1 },
+      visualizerId: definition.standardVisualizerId,
+    })
+  }
+
   const clearAllExpressions = () => {
     if (activePlayback) stopPlayback()
     setAppearanceItemId(null)
@@ -1459,7 +1478,7 @@ function App() {
           aria-haspopup="dialog"
           onClick={() => setInfoDialog('algebra')}
         >
-          VGA · 2D
+          {algebraDefinition.badge}
         </button>
         <input
           ref={importInputRef}
@@ -2294,6 +2313,14 @@ function App() {
       {infoDialog === 'algebra' && (
         <AlgebraInfoDialog
           info={algebraDefinition.info(algebraResolution.parameters)}
+          choices={algebraRegistry.definitions().map((definition) => ({
+            algebraId: definition.algebraId,
+            badge: definition.badge,
+            name: definition.info({}).name,
+          }))}
+          selectedAlgebraId={algebraDefinition.algebraId}
+          canSelect={!hasContent(expressionDoc)}
+          onSelect={selectAlgebra}
           returnFocusRef={algebraInfoButtonRef}
           onClose={closeInfoDialog}
         />

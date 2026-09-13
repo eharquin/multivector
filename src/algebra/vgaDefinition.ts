@@ -9,6 +9,7 @@ import { createVga2Engine } from './vgaEngine'
  */
 export const VGA_DEFINITION: AlgebraDefinition = Object.freeze({
   algebraId: 'org.multivector.vga',
+  badge: 'VGA · 2D',
   definitionVersion: 1,
   conventionVersions: [1],
   capabilities: new Set([

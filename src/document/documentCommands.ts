@@ -20,12 +20,24 @@ export type DocumentCommand =
   | Readonly<{ kind: 'set-scalar-value'; itemId: string; value: number }>
   | Readonly<{ kind: 'update-algebra'; algebra: ExpressionDocument['algebra']; interpretation: ExpressionDocument['interpretation'] }>
   | Readonly<{
+      /** Selects an algebra with its standard interpretation and visualizer; only on a document without content. */
+      kind: 'select-algebra'
+      algebra: ExpressionDocument['algebra']
+      interpretation: ExpressionDocument['interpretation']
+      visualizerId: string | null
+    }>
+  | Readonly<{
       kind: 'rewrite-source-literal'
       itemId: string
       property: 'source' | 'positionSource'
       span: Readonly<{ start: number; end: number }>
       replacement: string
     }>
+
+/** A document has content once any item carries source text (EDIT); empty rows do not count. */
+export function hasContent(document: ExpressionDocument): boolean {
+  return document.items.some((item) => item.source.trim() !== '' || (item.positionSource?.trim() ?? '') !== '')
+}
 
 export type CommandResult =
   | Readonly<{ status: 'applied'; document: ExpressionDocument }>
@@ -96,6 +108,21 @@ export function executeDocumentCommand(
     return {
       status: 'applied',
       document: { ...document, algebra: command.algebra, interpretation: command.interpretation },
+    }
+  }
+
+  if (command.kind === 'select-algebra') {
+    if (hasContent(document)) {
+      return invalid(document, 'The algebra of a document with content cannot be changed.')
+    }
+    return {
+      status: 'applied',
+      document: {
+        ...document,
+        algebra: command.algebra,
+        interpretation: command.interpretation,
+        view: { ...document.view, visualizerId: command.visualizerId },
+      },
     }
   }
 

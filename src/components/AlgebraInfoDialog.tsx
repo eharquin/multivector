@@ -4,8 +4,15 @@ import { DEFAULT_OBJECT_STYLES, paletteEntry } from './appearancePalette'
 import { DefinitionTable } from './DefinitionTable'
 import { InfoDialog } from './InfoDialog'
 
+export type AlgebraChoice = Readonly<{ algebraId: string; badge: string; name: string }>
+
 type AlgebraInfoDialogProps = Readonly<{
   info: AlgebraInfo
+  choices: readonly AlgebraChoice[]
+  selectedAlgebraId: string
+  /** Selection is only offered while the document has no content. */
+  canSelect: boolean
+  onSelect: (algebraId: string) => void
   returnFocusRef: RefObject<HTMLButtonElement | null>
   onClose: () => void
 }>
@@ -42,6 +49,10 @@ function ObjectColorTable() {
 
 export function AlgebraInfoDialog({
   info,
+  choices,
+  selectedAlgebraId,
+  canSelect,
+  onSelect,
   returnFocusRef,
   onClose,
 }: AlgebraInfoDialogProps) {
@@ -53,6 +64,31 @@ export function AlgebraInfoDialog({
       onClose={onClose}
     >
       <p className="info-description">{info.description}</p>
+
+      <section className="info-section">
+        <h3>Document algebra</h3>
+        <label className="settings-row">
+          <span className="settings-row-label">Algebra</span>
+          <select
+            className="settings-select"
+            aria-label="Document algebra"
+            value={selectedAlgebraId}
+            disabled={!canSelect}
+            onChange={(event) => onSelect(event.target.value)}
+          >
+            {choices.map((choice) => (
+              <option key={choice.algebraId} value={choice.algebraId}>
+                {choice.badge} — {choice.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="info-footnote">
+          {canSelect
+            ? 'Selecting an algebra applies its standard interpretation and visualizer to this empty document.'
+            : 'The algebra of a document with content cannot be changed; clear the document to select another one.'}
+        </p>
+      </section>
 
       <section className="info-section">
         <h3>Basis &amp; metric</h3>
