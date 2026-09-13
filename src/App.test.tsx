@@ -389,7 +389,9 @@ describe('VGA 2D vertical slice', () => {
     expect(source).toHaveValue('V = vector(2, 1)')
   })
 
-  it('suppresses the native selection gesture while focusing a pressed handle', () => {
+  // Cancelling pointerdown would force a scripted focus, which browsers paint
+  // with a focus ring; selection is prevented by the canvas stylesheet instead.
+  it('keeps the native pointerdown action on a pressed handle', () => {
     render(<App />)
     const source = screen.getByRole('textbox', { name: 'Expression 1' })
     fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
@@ -397,8 +399,7 @@ describe('VGA 2D vertical slice', () => {
 
     for (const name of ['Move head of V', 'Move base of V']) {
       const handle = screen.getByRole('button', { name })
-      expect(fireEvent.pointerDown(handle, { button: 0, pointerId: 9 })).toBe(false)
-      expect(handle).toHaveFocus()
+      expect(fireEvent.pointerDown(handle, { button: 0, pointerId: 9 })).toBe(true)
       fireEvent.pointerUp(viewportCanvas(), { pointerId: 9 })
     }
   })
