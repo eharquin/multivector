@@ -863,6 +863,60 @@ describe('VGA 2D vertical slice', () => {
     expect(sourceValues()).toEqual(['B = 2', 'A = 1'])
   })
 
+  it('drops a dragged row exactly where the indicator was shown', () => {
+    render(<App />)
+    for (const [index, value] of ['A = 1', 'B = 2', 'C = 3', 'D = 4'].entries()) {
+      if (index > 0) fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+      fireEvent.change(screen.getByRole('textbox', { name: `Expression ${index + 1}` }), {
+        target: { value },
+      })
+    }
+    const sourceValues = () => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => (element as HTMLInputElement).value)
+    const layoutRows = () => screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+      .map((element) => element.closest('.expression-item') as HTMLElement)
+      .forEach((row, index) => {
+        row.getBoundingClientRect = () =>
+          ({ top: index * 40, bottom: index * 40 + 40, height: 40 }) as DOMRect
+      })
+    const handleFor = (value: string) => within(
+      (screen.getAllByRole('textbox', { name: /^Expression \d+$/ })
+        .find((element) => (element as HTMLInputElement).value === value) as HTMLElement)
+        .closest('.expression-item') as HTMLElement,
+    ).getByRole('button', { name: /^Reorder / })
+
+    // Downward: the indicator sits above D (insertion index 3), so A lands before D.
+    layoutRows()
+    fireEvent.pointerDown(handleFor('A = 1'), { pointerId: 1 })
+    fireEvent.pointerMove(window, { clientY: 125 })
+    expect(screen.getAllByRole('textbox', { name: /^Expression \d+$/ })[3]
+      .closest('.expression-item')).toHaveClass('drop-before')
+    fireEvent.pointerUp(window, { pointerId: 1 })
+    expect(sourceValues()).toEqual(['B = 2', 'C = 3', 'A = 1', 'D = 4'])
+
+    // Upward: the indicator sits above B (insertion index 0), so D lands first.
+    layoutRows()
+    fireEvent.pointerDown(handleFor('D = 4'), { pointerId: 1 })
+    fireEvent.pointerMove(window, { clientY: 5 })
+    fireEvent.pointerUp(window, { pointerId: 1 })
+    expect(sourceValues()).toEqual(['D = 4', 'B = 2', 'C = 3', 'A = 1'])
+
+    // Dropping on its own slot is a no-op that adds no history entry, so the
+    // redo stack survives it.
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    const redo = screen.getByRole('button', { name: 'Redo document change' })
+    fireEvent.click(undo)
+    fireEvent.click(undo)
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2', 'C = 3', 'D = 4'])
+    expect(redo).toBeEnabled()
+    layoutRows()
+    fireEvent.pointerDown(handleFor('B = 2'), { pointerId: 1 })
+    fireEvent.pointerMove(window, { clientY: 85 })
+    fireEvent.pointerUp(window, { pointerId: 1 })
+    expect(sourceValues()).toEqual(['A = 1', 'B = 2', 'C = 3', 'D = 4'])
+    expect(redo).toBeEnabled()
+  })
+
   it('preserves unsupported or out-of-range scalar source without clamping', () => {
     render(<App />)
     const source = screen.getByRole('textbox', { name: 'Expression 1' })

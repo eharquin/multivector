@@ -258,6 +258,7 @@ function App() {
   const reorderDrag = useRef<Readonly<{
     itemId: string
     pointerId: number
+    fromIndex: number
     targetIndex: number
   }> | null>(null)
   const expressionRowRefs = useRef(new Map<string, HTMLElement>())
@@ -1322,7 +1323,13 @@ function App() {
       setDropTargetIndex(null)
       if (!drag) return
       if (commit) {
-        moveItemToIndex(drag.itemId, drag.targetIndex)
+        // The pointer target is an insertion index in the list that still
+        // holds the dragged row; past its own slot that is one final index
+        // too far.
+        moveItemToIndex(
+          drag.itemId,
+          drag.targetIndex > drag.fromIndex ? drag.targetIndex - 1 : drag.targetIndex,
+        )
         dispatchHistory({ type: 'commit-transaction' })
       } else {
         dispatchHistory({ type: 'cancel-transaction' })
@@ -1347,7 +1354,9 @@ function App() {
     itemId: string,
   ) => {
     const index = expressionDoc.items.findIndex((item) => item.id === itemId)
-    reorderDrag.current = { itemId, pointerId: event.pointerId, targetIndex: index }
+    reorderDrag.current = {
+      itemId, pointerId: event.pointerId, fromIndex: index, targetIndex: index,
+    }
     dispatchHistory({ type: 'begin-transaction' })
     document.body.classList.add('reordering-items')
     event.currentTarget.setPointerCapture?.(event.pointerId)
