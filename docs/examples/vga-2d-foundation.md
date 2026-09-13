@@ -20,7 +20,8 @@ saved document remains authoritative and is never replaced by the example.
 5. Enter `H = V1.head`.
 
 `Enter` creates the next expression below from either an expression or a
-position field. `Shift+Enter` creates it above.
+position field. `Shift+Enter` creates it above. `Alt+↑` and `Alt+↓` move the
+current expression up or down without leaving its field.
 
 The panel should report:
 

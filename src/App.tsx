@@ -1358,7 +1358,7 @@ function App() {
     event: KeyboardEvent<HTMLButtonElement>,
     itemId: string,
   ) => {
-    if (!event.shiftKey) return
+    if (!event.shiftKey && !event.altKey) return
     const from = expressionDoc.items.findIndex((item) => item.id === itemId)
     if (from < 0) return
     let target = from
@@ -1495,6 +1495,17 @@ function App() {
     requestAnimationFrame(() => addButtonRef.current?.focus())
   }
 
+  /** Moves the row of a focused editor and restores its caret afterwards. */
+  const moveItemFromEditor = (
+    editor: HTMLInputElement,
+    itemId: string,
+    target: number,
+  ) => {
+    rememberEditorFocus(editor)
+    pendingHistoryFocus.current = lastEditorFocus.current
+    moveItemToIndex(itemId, target)
+  }
+
   const handleItemKeyDown = (
     event: KeyboardEvent<HTMLInputElement>,
     item: ExpressionItem,
@@ -1508,13 +1519,15 @@ function App() {
       removeExpression(item.id)
     } else if (event.key === 'ArrowUp' && index > 0) {
       event.preventDefault()
-      inputRefs.current.get(expressionDoc.items[index - 1].id)?.focus()
+      if (event.altKey) moveItemFromEditor(event.currentTarget, item.id, index - 1)
+      else inputRefs.current.get(expressionDoc.items[index - 1].id)?.focus()
     } else if (
       event.key === 'ArrowDown' &&
       index < expressionDoc.items.length - 1
     ) {
       event.preventDefault()
-      inputRefs.current.get(expressionDoc.items[index + 1].id)?.focus()
+      if (event.altKey) moveItemFromEditor(event.currentTarget, item.id, index + 1)
+      else inputRefs.current.get(expressionDoc.items[index + 1].id)?.focus()
     }
   }
 
@@ -1750,7 +1763,7 @@ function App() {
                   <button
                     type="button"
                     className="reorder-handle"
-                    aria-label={`Reorder ${objectName}. Shift plus arrow keys to move.`}
+                    aria-label={`Reorder ${objectName}. Alt plus arrow keys to move.`}
                     onPointerDown={(event) => beginRowReorder(event, item.id)}
                     onKeyDown={(event) => reorderRowWithKeyboard(event, item.id)}
                   >
