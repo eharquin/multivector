@@ -1681,6 +1681,11 @@ body.canvas-gesture {
   user-select: none;
 }
 
+body.canvas-gesture .app-header,
+body.canvas-gesture .expression-panel {
+  pointer-events: none;
+}
+
 .info-overlay {
   position: fixed;
   z-index: 20;

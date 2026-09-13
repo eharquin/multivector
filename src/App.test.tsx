@@ -417,6 +417,24 @@ describe('VGA 2D vertical slice', () => {
     expect(document.body).not.toHaveClass('canvas-gesture')
   })
 
+  it('cancels a selection starting in the panel only while a gesture is held', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const selectStart = () => {
+      const event = new Event('selectstart', { bubbles: true, cancelable: true })
+      source.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    expect(selectStart()).toBe(false)
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 3, clientX: 320, clientY: 240 })
+    expect(selectStart()).toBe(true)
+    fireEvent.pointerUp(canvas, { pointerId: 3 })
+    expect(selectStart()).toBe(false)
+  })
+
   it('renders the vector arrowhead with Studio screen-space geometry', () => {
     const { container } = render(<App />)
     const vector = screen.getByLabelText('Vector 1')
