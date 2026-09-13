@@ -42,7 +42,7 @@ defines the supported syntax and operations.
 
 ### Prerequisites
 
-- Node.js `^22.13.0` or `>=24.0.0`;
+- Node.js `^22.22.2`, `^24.15.0`, or `>=26.0.0`;
 - npm, included with Node.js;
 - a modern desktop browser.
 
@@ -77,10 +77,12 @@ may also deploy a chosen ref by hand, for browser testing before a release.
 
 ## Release status
 
-The initial [VGA 2D Foundation](docs/acceptance/vga-2d-foundation.md) is
-accepted. The
+Release `0.1.0` is the first stable VGA(2) release. The
+[VGA 2D Foundation](docs/acceptance/vga-2d-foundation.md) is accepted and the
 [VGA 2D Visual Workflow acceptance record](docs/acceptance/vga-2d-visual-workflow.md)
-tracks the remaining manual and release evidence for `0.1.0`.
+holds the browser matrix and release evidence. The
+[0.1.0 release notes](docs/releases/0.1.0.md) summarize the scope, supported
+browsers, and known limitations.
 
 The keyboard-only
 [VGA 2D Foundation example](docs/examples/vga-2d-foundation.md) is loaded for a
