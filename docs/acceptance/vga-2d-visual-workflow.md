@@ -99,8 +99,10 @@ touch input, and mobile browsers are not claimed.
 
 ### Preparation
 
-- [ ] Resolve or explicitly disposition every open issue that affects the
-  claimed VGA(2) workflow.
+- [x] Resolve or explicitly disposition every open issue that affects the
+  claimed VGA(2) workflow: #99, #101, #104, #106, #109, #111, #113, #122,
+  #124, #126, and #130 fixed; #90 closed as not reproducible; #100, #115,
+  #118, and #120 documented as limitations below and in the release notes.
 - [x] Record the supported-browser boundary and complete issue
   [#89](https://github.com/eharquin/multivector/issues/89).
 - [x] Add explicit installation, local verification, and browser-target
@@ -108,11 +110,12 @@ touch input, and mobile browsers are not claimed.
 - [x] Set the package and lockfile version to `0.1.0`.
 - [x] Draft the `0.1.0` release notes with the intended scope and known
   limitations.
-- [ ] Move the release changes from `Unreleased` to a dated `0.1.0` changelog
+- [x] Move the release changes from `Unreleased` to a dated `0.1.0` changelog
   section and leave a new empty `Unreleased` section.
 - [x] Add the release version to citation metadata.
-- [ ] Add the final release date to citation metadata.
-- [ ] Run `npm ci` and `npm run verify` against the exact release commit.
+- [x] Add the final release date to citation metadata.
+- [x] Run `npm ci` and `npm run verify` against the exact release commit
+  (25 files, 326 tests, production build; repeated by the release workflow).
 - [ ] Change this record and the milestone status to `Accepted` only after all
   required evidence is present.
 
@@ -143,6 +146,13 @@ derived or list-contained bivector constructions. Their mathematical values
 remain evaluable and their fallback visualization remains available; broader
 construction-preserving behavior requires an explicit product decision before
 it can become accepted behavior.
+
+Issues [#115](https://github.com/eharquin/multivector/issues/115) (focus
+target after undoing a viewport gesture), [#118](https://github.com/eharquin/multivector/issues/118)
+(keyboard handle steps not scaled with the zoom), and
+[#120](https://github.com/eharquin/multivector/issues/120) (touchscreen pinch)
+are documented limitations with pointer or Shift-stepped workarounds; they do
+not affect the claimed pointer and keyboard workflows on the supported browsers.
 
 Issue [#100](https://github.com/eharquin/multivector/issues/100) also remains
 outside the 0.1 acceptance claim. When several objects share a base point, the
