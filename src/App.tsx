@@ -1789,7 +1789,14 @@ function App() {
                           onClick={() => isPlaying
                             ? stopPlayback()
                             : startPlayback(item, playbackParameters!, scalarEdit!.value)}
-                        ><span aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span></button>
+                        >{isPlaying
+                          ? <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                              <rect x="1.5" y="1" width="2.5" height="8" />
+                              <rect x="6" y="1" width="2.5" height="8" />
+                            </svg>
+                          : <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                              <path d="M2.5 1.2 8.5 5 2.5 8.8z" />
+                            </svg>}</button>
                       ) : drawable && valid && (
                           <button
                             type="button"
