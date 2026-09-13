@@ -108,12 +108,7 @@ export function tokenize(source: string): TokenizeResult {
           text,
           span: { start: offset, end },
         })
-      } else if (
-        text === 'e1' ||
-        text === 'e2' ||
-        text === 'e12' ||
-        text === 'e21'
-      ) {
+      } else if (/^e\d+$/.test(text)) {
         tokens.push({
           kind: 'blade',
           text,

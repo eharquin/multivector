@@ -11,6 +11,10 @@ import { type OwnedMultivector } from '../domain/multivector'
  */
 export type AlgebraEngine = Readonly<{
   basis: AlgebraBasis
+  /** Registered function and constructor names with their arity (ALG-028). */
+  functions: ReadonlyMap<string, number>
+  /** Applies a registered function; the caller has checked name and arity. */
+  call(name: string, args: readonly OwnedMultivector[]): OwnedMultivector
   scalar(value: number): OwnedMultivector
   basisBlade(name: string): OwnedMultivector
   pseudoscalar(): OwnedMultivector

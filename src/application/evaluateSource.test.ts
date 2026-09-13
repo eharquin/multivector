@@ -2,6 +2,10 @@ import { VGA_2D_BASIS } from '../algebra/vgaEngine'
 import { describe, expect, it } from 'vitest'
 import { createVga2Engine } from '../algebra/vgaEngine'
 import { evaluateSource } from './evaluateSource'
+import { ownedList, type LanguageValue } from '../domain/languageValue'
+import { evaluateExpression } from '../evaluation/evaluateExpression'
+import { lowerExpression } from '../language/lowerExpression'
+import { parseExpression } from '../language/parseExpression'
 
 const engine = createVga2Engine()
 
@@ -274,5 +278,73 @@ describe('source evaluation pipeline', () => {
       status: 'invalid',
       diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' },
     })
+  })
+
+  it('resolves blades in any generator order against the active basis', () => {
+    const engine = createVga2Engine()
+    expect(evaluateSource('e21', engine)).toMatchObject({
+      status: 'valid', value: { coefficients: [0, 0, 0, -1] },
+    })
+    expect(evaluateSource('(e1 + 2 e12).e21', engine)).toMatchObject({
+      status: 'valid', value: { coefficients: [-2, 0, 0, 0] },
+    })
+    expect(evaluateSource('(1 + e1 + e12).g2', engine)).toMatchObject({
+      status: 'valid', value: { coefficients: [0, 0, 0, 1] },
+    })
+  })
+
+  it('reports blades and grades the active algebra does not have, with their spans', () => {
+    const engine = createVga2Engine()
+    expect(evaluateSource('e1 + e0', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'ALG_UNKNOWN_BLADE', span: { start: 5, end: 7 } },
+    })
+    expect(evaluateSource('e012', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_BLADE' },
+    })
+    expect(evaluateSource('(e1).e20', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_BLADE' },
+    })
+    expect(evaluateSource('(1 + e1).g3', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'ALG_UNKNOWN_GRADE' },
+    })
+  })
+
+  it('dispatches calls through the registered functions of the active algebra', () => {
+    const engine = createVga2Engine()
+    expect(evaluateSource('point(1, 2)', engine)).toMatchObject({
+      status: 'invalid',
+      diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION', span: { start: 0, end: 11 } },
+    })
+    expect(evaluateSource('vector(1, 2, 3)', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
+    })
+    expect(evaluateSource('exp(1, 2)', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
+    })
+    expect(evaluateSource('vector(e1, 2)', engine)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
+    })
+  })
+
+  it('broadcasts constructor calls over list arguments', () => {
+    const engine = createVga2Engine()
+    const lists: Record<string, LanguageValue> = {
+      a: ownedList([1, 2].map((x) => ({ id: `a${x}`, value: engine.scalar(x), sources: [] }))),
+      b: ownedList([3, 4, 5].map((x) => ({ id: `b${x}`, value: engine.scalar(x), sources: [] }))),
+    }
+    const evaluate = (source: string) => {
+      const parsed = parseExpression(source)
+      if (!parsed.ok) throw new Error(parsed.diagnostic.message)
+      return evaluateExpression(lowerExpression(parsed.expression), engine, (name) => lists[name])
+    }
+    expect(evaluate('vector(a, 3)')).toMatchObject({
+      kind: 'list',
+      elements: [
+        { value: { coefficients: [0, 1, 3, 0] }, sources: ['a1'] },
+        { value: { coefficients: [0, 2, 3, 0] }, sources: ['a2'] },
+      ],
+    })
+    expect(() => evaluate('vector(a, b)')).toThrow(/List lengths/)
   })
 })

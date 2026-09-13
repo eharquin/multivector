@@ -27,13 +27,23 @@ describe('expression tokenizer', () => {
   })
 
   it('retains user identifiers for document-level name resolution', () => {
-    expect(tokenize('V1 = e3')).toMatchObject({
+    expect(tokenize('V1 = ex')).toMatchObject({
       ok: true,
       tokens: [
         { kind: 'identifier', text: 'V1', span: { start: 0, end: 2 } },
         { kind: 'equals', text: '=', span: { start: 3, end: 4 } },
-        { kind: 'identifier', text: 'e3', span: { start: 5, end: 7 } },
+        { kind: 'identifier', text: 'ex', span: { start: 5, end: 7 } },
         { kind: 'end' },
+      ],
+    })
+  })
+
+  it('tokenizes every e-digit name as a blade for the active basis to judge', () => {
+    expect(tokenize('e3 + e0 + e012')).toMatchObject({
+      ok: true,
+      tokens: [
+        { kind: 'blade', text: 'e3' }, { kind: 'plus' }, { kind: 'blade', text: 'e0' },
+        { kind: 'plus' }, { kind: 'blade', text: 'e012' }, { kind: 'end' },
       ],
     })
   })

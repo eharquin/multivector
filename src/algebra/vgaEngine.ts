@@ -154,8 +154,26 @@ export function createVga2Engine(): AlgebraEngine {
   }
   const unit = (index: number): number[] =>
     basis.blades.map((_, position) => (position === index ? 1 : 0))
+  const scalarArgument = (value: OwnedMultivector, label: string): number => {
+    if (value.coefficients.slice(1).some((coefficient) => coefficient !== 0)) {
+      throw new AlgebraOperationError('ALG_DOMAIN', `${label} must be scalar.`)
+    }
+    return value.coefficients[0]
+  }
   return {
     basis,
+    functions: new Map([['vector', 2]]),
+    call(name, args) {
+      if (name !== 'vector') {
+        throw new AlgebraOperationError('ALG_UNSUPPORTED_FUNCTION', `The function “${name}” is not provided by this algebra.`)
+      }
+      return finiteOwned([
+        0,
+        scalarArgument(args[0], 'A vector component'),
+        scalarArgument(args[1], 'A vector component'),
+        0,
+      ])
+    },
     scalar(value) {
       return fromBackend(new Vga2([value, 0, 0, 0]))
     },

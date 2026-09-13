@@ -73,13 +73,10 @@ function isScalarExpression(expression: SurfaceExpressionNode): boolean {
     case 'call-expression':
       return expression.callee === 'exp'
         ? isScalarExpression(expression.arguments[0])
-        : true
+        : RESERVED_FUNCTION_NAMES.has(expression.callee)
     case 'property-expression':
       return (
-        expression.property === 'e' ||
-        expression.property === 'e1' ||
-        expression.property === 'e2' ||
-        expression.property === 'e12' ||
+        /^e\d*$/.test(expression.property) ||
         expression.property === 'g0'
       )
     case 'reference':
@@ -623,15 +620,28 @@ class Parser {
 
   private parseCall(callee: Token): NodeResult {
     this.consume('left-parenthesis')
-    const argument = this.parseAdditive()
-    if (!argument.ok) return argument
+    const argumentNodes: SurfaceExpressionNode[] = []
+    do {
+      const argument = this.parseAdditive()
+      if (!argument.ok) return argument
+      argumentNodes.push(argument.node)
+    } while (this.consume('comma'))
     const rightParenthesis = this.consume('right-parenthesis')
     if (!rightParenthesis) {
       return {
         ok: false,
         diagnostic: syntaxDiagnostic(
-          `Expected “)” after the argument to “${callee.text}”.`,
+          `Expected “)” after the ${argumentNodes.length === 1 ? 'argument' : 'arguments'} to “${callee.text}”.`,
           insertionAt(this.current()),
+        ),
+      }
+    }
+    if (RESERVED_FUNCTION_NAMES.has(callee.text) && argumentNodes.length !== 1) {
+      return {
+        ok: false,
+        diagnostic: syntaxDiagnostic(
+          `“${callee.text}” takes exactly one argument.`,
+          { start: callee.span.start, end: rightParenthesis.span.end },
         ),
       }
     }
@@ -639,7 +649,7 @@ class Parser {
       ok: true,
       node: {
         kind: 'call-expression', callee: callee.text,
-        arguments: [argument.node],
+        arguments: argumentNodes,
         span: { start: callee.span.start, end: rightParenthesis.span.end },
       },
     }
