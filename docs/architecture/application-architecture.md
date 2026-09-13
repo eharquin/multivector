@@ -6,6 +6,10 @@
 
 ## Purpose
 
+The planned evolution of these boundaries toward a registered multi-algebra
+composition is recorded in the
+[multi-algebra registration delta](multi-algebra-registration-delta.md).
+
 This document explains how the application code is separated today, which
 layer owns each responsibility, and which dependencies may cross those
 boundaries. It records implementation direction rather than a normative public
