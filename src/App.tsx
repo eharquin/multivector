@@ -10,7 +10,8 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { createVga2Engine } from './algebra/vgaEngine'
+import { type AlgebraEngine } from './algebra/algebraEngine'
+import { createBuiltinAlgebraRegistry } from './algebra/builtinAlgebras'
 import { evaluateDocument } from './application/evaluateDocument'
 import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
@@ -54,6 +55,7 @@ import {
   vectorCreationSource,
 } from './visualization/viewportCreation'
 import { limitRenderedListElements } from './visualization/primitives'
+import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
   fromCanonicalDocument,
@@ -85,13 +87,16 @@ import {
 } from './application/scalarPlayback'
 import './App.css'
 
-const engine = createVga2Engine()
+// Composition root: the runtime's registered definitions. A document's
+// algebra record is resolved against it whenever a document is restored,
+// imported, or evaluated (ALG-004, ALG-005).
+const algebraRegistry = createBuiltinAlgebraRegistry()
 const MIN_PANEL_WIDTH = 240
 const UNIT_NORM_TOLERANCE = 1e-10
 /** Keeps the `.panel-resize` separator reachable at any panel width. */
 const PANEL_RESIZE_WIDTH = 6
 
-function isUnitNaturalNorm(value: Parameters<typeof engine.norm>[0]): boolean {
+function isUnitNaturalNorm(engine: AlgebraEngine, value: Parameters<AlgebraEngine['norm']>[0]): boolean {
   try {
     return Math.abs(engine.norm(value).coefficients[0] - 1) <= UNIT_NORM_TOLERANCE
   } catch {
@@ -216,6 +221,7 @@ function App() {
       const stored = persistence.load()
       if (stored === null) return fallback
       const restored = fromCanonicalDocument(stored)
+      requireAvailableAlgebra(algebraRegistry, restored.document.algebra)
       return { ...restored, diagnostic: restored.recoveryDiagnostic }
     } catch (error) {
       return {
@@ -232,6 +238,16 @@ function App() {
     createDocumentHistory,
   )
   const expressionDoc = history.present
+  // Documents entering the history are checked at restore and import, so a
+  // failed resolution here is a programming error, not a user-facing state.
+  const algebraResolution = useMemo(
+    () => algebraRegistry.resolve(expressionDoc.algebra),
+    [expressionDoc.algebra],
+  )
+  if (algebraResolution.status !== 'resolved') {
+    throw new Error(`${algebraResolution.code}: ${algebraResolution.message}`)
+  }
+  const { engine, definition: algebraDefinition } = algebraResolution
   const executeCommand = useCallback((
     command: DocumentCommand,
     coalesceKey?: string,
@@ -1459,6 +1475,7 @@ function App() {
       const imported = fromCanonicalDocument(
         resolveCanonicalImport(expressionDoc.id, parsed, choice),
       )
+      requireAvailableAlgebra(algebraRegistry, imported.document.algebra)
       dispatchHistory({ type: 'replace', document: imported.document })
       setTheme(imported.theme)
       setAppearanceItemId(null)
@@ -1722,7 +1739,7 @@ function App() {
                 engine.normalize(evaluation.value).status === 'unavailable'
               const hasUnitNaturalNorm =
                 supportsNormalization &&
-                isUnitNaturalNorm(evaluation.value)
+                isUnitNaturalNorm(engine, evaluation.value)
               const kind = evaluation?.status === 'valid'
                 ? evaluation.valueType === 'list'
                   ? `List (${evaluation.value.elements.length})`
@@ -2565,6 +2582,7 @@ function App() {
       </main>
       {infoDialog === 'algebra' && (
         <AlgebraInfoDialog
+          info={algebraDefinition.info(algebraResolution.parameters)}
           returnFocusRef={algebraInfoButtonRef}
           onClose={closeInfoDialog}
         />
