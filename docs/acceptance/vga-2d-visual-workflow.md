@@ -116,3 +116,10 @@ derived or list-contained bivector constructions. Their mathematical values
 remain evaluable and their fallback visualization remains available; broader
 construction-preserving behavior requires an explicit product decision before
 it can become accepted behavior.
+
+Issue [#100](https://github.com/eharquin/multivector/issues/100) also remains
+outside the 0.1 acceptance claim. When several objects share a base point, the
+topmost handle receives the press and the anchor snap zone re-attaches objects
+released within 22 px. Disambiguation and snap rules require an explicit
+product decision; until then the behavior is a documented limitation, not a
+browser defect.
