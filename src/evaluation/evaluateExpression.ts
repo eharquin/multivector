@@ -79,18 +79,19 @@ function evaluateExpressionUnchecked(
       return resolved.sign < 0 ? engine.negate(value) : value
     }
     case 'call': {
-      const arity = engine.functions.get(expression.name)
-      if (arity === undefined) {
+      const arities = engine.functions.get(expression.name)
+      if (arities === undefined) {
         throw new ExpressionEvaluationError(
           'LANG_UNSUPPORTED_FUNCTION',
           `The function “${expression.name}” is not supported by the active algebra.`,
           expression.origin,
         )
       }
-      if (expression.arguments.length !== arity) {
+      if (!arities.includes(expression.arguments.length)) {
+        const expected = arities.join(' or ')
         throw new ExpressionEvaluationError(
           'LANG_ARITY',
-          `“${expression.name}” takes ${arity} ${arity === 1 ? 'argument' : 'arguments'}, received ${expression.arguments.length}.`,
+          `“${expression.name}” takes ${expected} ${arities.length === 1 && arities[0] === 1 ? 'argument' : 'arguments'}, received ${expression.arguments.length}.`,
           expression.origin,
         )
       }

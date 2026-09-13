@@ -162,7 +162,7 @@ export function createVga2Engine(): AlgebraEngine {
   }
   return {
     basis,
-    functions: new Map([['vector', 2]]),
+    functions: new Map([['vector', [2]]]),
     call(name, args) {
       if (name !== 'vector') {
         throw new AlgebraOperationError('ALG_UNSUPPORTED_FUNCTION', `The function “${name}” is not provided by this algebra.`)

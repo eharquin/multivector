@@ -16,7 +16,7 @@ describe('algebra availability gate', () => {
     let error: unknown
     try {
       requireAvailableAlgebra(registry, {
-        algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: { dimension: 2 },
+        algebraId: 'org.example.cga', definitionVersion: 1, conventionVersion: 1, parameters: {},
       })
     } catch (caught) { error = caught }
     expect(error).toBeInstanceOf(DocumentFormatError)
