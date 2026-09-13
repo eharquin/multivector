@@ -42,6 +42,9 @@ available for reuse.
 | `VEC` | VGA vector construction and dimension changes | `docs/requirements/algebras/vga.md` |
 | `VGA-INT` | Standard VGA geometry interpretation | `docs/requirements/algebras/vga.md` |
 | `VGA-POS` | Position semantics for interpreted VGA entities | `docs/requirements/algebras/vga.md` |
+| `PGA` | PGA-family definition, registration, and mathematical behavior | `docs/requirements/algebras/pga.md` |
+| `PGA-INT` | Standard plane-based PGA geometry interpretation | `docs/requirements/algebras/pga.md` |
+| `PGA-VIZ` | Two-dimensional PGA visualization and manipulation scope | `docs/requirements/algebras/pga.md` |
 | `VIZ2D` | Rendering shared by two-dimensional visualizers | `docs/requirements/visualization/2d.md` |
 | `VIEW2D` | Two-dimensional viewport behavior | `docs/requirements/visualization/2d.md` |
 | `INTERACT2D` | Two-dimensional selection and manipulation | `docs/requirements/visualization/2d.md` |
@@ -49,3 +52,4 @@ available for reuse.
 | `VGAC` | Acceptance criteria for the VGA Core milestone | `docs/requirements/milestones/vga-core.md` |
 | `F2D` | Acceptance criteria for the VGA 2D foundation milestone | `docs/requirements/milestones/vga-2d-foundation.md` |
 | `M2D` | Acceptance criteria for the VGA 2D visual workflow milestone | `docs/requirements/milestones/vga-2d-visual-workflow.md` |
+| `P2D` | Acceptance criteria for the PGA 2D foundation milestone | `docs/requirements/milestones/pga-2d-foundation.md` |

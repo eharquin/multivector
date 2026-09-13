@@ -99,6 +99,7 @@ work, and the [changelog](CHANGELOG.md) for user-visible changes.
 - [Expression language](docs/specifications/language.md)
 - [Canonical document format](docs/specifications/document-format.md)
 - [VGA convention version 1](docs/specifications/vga-conventions.md)
+- [PGA convention version 1](docs/specifications/pga-conventions.md)
 - [Limits and interaction constants](docs/specifications/limits-and-constants.md)
 - [Project workflow](docs/project-workflow.md)
 - [JOSS readiness](docs/publication/joss-readiness.md)

@@ -200,6 +200,9 @@ The initial VGA definition is specified in
 [VGA requirements](requirements/algebras/vga.md).
 Its initial mathematical and numerical conventions are specified in
 [VGA convention version 1](specifications/vga-conventions.md).
+The second definition, PGA, is specified in
+[PGA requirements](requirements/algebras/pga.md) with its conventions in
+[PGA convention version 1](specifications/pga-conventions.md).
 
 ## 7. Document model
 
@@ -526,6 +529,9 @@ only to milestones that deliver a public application:
   a planned interactive product milestone whose capability profile will be
   selected from foundation evidence and the shared
   [2D visualization requirements](requirements/visualization/2d.md).
+- [PGA 2D Foundation](requirements/milestones/pga-2d-foundation.md) is the
+  planned product milestone that introduces the second algebra through the
+  registered-algebra boundary.
 
 Later product milestones add VGA 3D, PGA 2D and 3D, and CGA 2D and 3D visual
 workflows. A VGA 1D visualizer and 1D workflows for other algebra families are
@@ -571,6 +577,8 @@ The current prefixes, their scope, and their normative owner are listed in the
   by algebra definitions and interpretations.
 - `requirements/algebras/vga.md` owns mathematical behavior and conventions
   specific to VGA(n).
+- `requirements/algebras/pga.md` owns mathematical behavior, interpretation,
+  and visualization scope specific to PGA(n).
 - `requirements/visualization/2d.md` owns the initial rendering and interaction
   guarantees shared by two-dimensional visualizers.
 - `requirements/milestones/*.md` own the composed capability profiles and
