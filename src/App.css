@@ -1468,6 +1468,7 @@ code {
   vector-effect: non-scaling-stroke;
 }
 
+/* Decorations must not capture presses: a pan starts only on the canvas. */
 .grid-line,
 .axis,
 .origin,
@@ -1475,6 +1476,7 @@ code {
 .graduation-label,
 .axis-name,
 .object-label {
+  pointer-events: none;
 }
 
 .grid-line.is-major {
