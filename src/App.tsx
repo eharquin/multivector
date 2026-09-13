@@ -296,12 +296,17 @@ function App() {
       window.removeEventListener('keydown', keyboard, true)
     }
   }, [])
+  // A handle that holds focus is the active object: it keeps the hover
+  // indicator after the pointer leaves, so arrow keys visibly apply to it.
+  const [focusedHandleKey, setFocusedHandleKey] = useState<string | null>(null)
+  const handleActive = (key: string) =>
+    hoveredManipulation === key || focusedHandleKey === key
   const focusHandle = (key: string) => {
-    setHoveredManipulation(key)
+    setFocusedHandleKey(key)
     setFocusRingKey(inputModality.current === 'keyboard' ? key : null)
   }
   const blurHandle = (key: string) => {
-    setHoveredManipulation((current) => current === key ? null : current)
+    setFocusedHandleKey((current) => current === key ? null : current)
     setFocusRingKey((current) => current === key ? null : current)
   }
   const [panelWidth, setPanelWidth] = useState(340)
@@ -2411,7 +2416,7 @@ function App() {
                 const headKey = `${id}:head`
                 return <g key={id} style={{ color }}>
                   <line
-                    className={`vector${hoveredManipulation === headKey ? ' is-head-hovered' : ''}`}
+                    className={`vector${handleActive(headKey) ? ' is-head-hovered' : ''}`}
                     x1={start.x}
                     y1={start.y}
                     x2={shaftEnd.x}
@@ -2436,7 +2441,7 @@ function App() {
                       cx={end.x} cy={end.y} r={14 * objectRenderScale}
                       aria-hidden="true"
                     />}
-                    {arrowPoints && hoveredManipulation === headKey && <circle
+                    {arrowPoints && handleActive(headKey) && <circle
                       className="vector-head-indicator"
                       cx={end.x} cy={end.y} r={5 * objectRenderScale}
                       aria-hidden="true"
@@ -2480,7 +2485,7 @@ function App() {
                     ) : undefined}
                   />
                   <circle
-                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
+                    className={`manipulation-base-point${handleActive(baseKey) ? ' is-hovered' : ''}`}
                     cx={start.x} cy={start.y} r={4.5 * objectRenderScale}
                     aria-hidden="true"
                   />
@@ -2534,7 +2539,7 @@ function App() {
                     ) : undefined}
                   />
                   <circle
-                    className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
+                    className={`manipulation-base-point${handleActive(baseKey) ? ' is-hovered' : ''}`}
                     cx={base.x} cy={base.y} r={4.5 * objectRenderScale}
                     aria-hidden="true"
                   />

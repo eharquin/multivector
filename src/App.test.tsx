@@ -260,6 +260,36 @@ describe('VGA 2D vertical slice', () => {
     expect(rings()).toHaveLength(0)
   })
 
+  it('keeps the active indicator on a focused handle after the pointer leaves', () => {
+    const { container } = render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    sizeViewportCanvas(viewportCanvas())
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+    const base = screen.getByRole('button', { name: 'Move base of V' })
+    const indicator = () => container.querySelector('.vector-head-indicator')
+    const basePoint = () => container.querySelector('.manipulation-base-point')
+
+    fireEvent.pointerEnter(head)
+    expect(indicator()).not.toBeNull()
+    fireEvent.pointerLeave(head)
+    expect(indicator()).toBeNull()
+
+    fireEvent.pointerEnter(head)
+    fireEvent.pointerDown(head, { button: 0, pointerId: 6 })
+    act(() => head.focus())
+    fireEvent.pointerUp(viewportCanvas(), { pointerId: 6 })
+    fireEvent.pointerLeave(head)
+    expect(indicator()).not.toBeNull()
+    expect(container.querySelectorAll('.manipulation-focus-ring')).toHaveLength(0)
+
+    act(() => base.focus())
+    expect(indicator()).toBeNull()
+    expect(basePoint()).toHaveClass('is-hovered')
+    act(() => base.blur())
+    expect(basePoint()).not.toHaveClass('is-hovered')
+  })
+
   it('zooms on wheel through a listener that can cancel the page zoom', () => {
     render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
