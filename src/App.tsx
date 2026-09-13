@@ -280,6 +280,30 @@ function App() {
   }> | null>(null)
   const anchorValidityCache = useRef(new Map<string, boolean>())
   const [hoveredManipulation, setHoveredManipulation] = useState<string | null>(null)
+  // Keyboard focus on a handle is drawn as an SVG ring rather than a CSS
+  // outline, which WebKit fails to repaint when focus moves between SVG
+  // elements. The ring follows the input modality at the moment of focus,
+  // so a later key press does not turn pointer focus into a ring either.
+  const [focusRingKey, setFocusRingKey] = useState<string | null>(null)
+  const inputModality = useRef<'pointer' | 'keyboard'>('pointer')
+  useEffect(() => {
+    const pointer = () => { inputModality.current = 'pointer' }
+    const keyboard = () => { inputModality.current = 'keyboard' }
+    window.addEventListener('pointerdown', pointer, true)
+    window.addEventListener('keydown', keyboard, true)
+    return () => {
+      window.removeEventListener('pointerdown', pointer, true)
+      window.removeEventListener('keydown', keyboard, true)
+    }
+  }, [])
+  const focusHandle = (key: string) => {
+    setHoveredManipulation(key)
+    setFocusRingKey(inputModality.current === 'keyboard' ? key : null)
+  }
+  const blurHandle = (key: string) => {
+    setHoveredManipulation((current) => current === key ? null : current)
+    setFocusRingKey((current) => current === key ? null : current)
+  }
   const [panelWidth, setPanelWidth] = useState(340)
   const [workspaceWidth, setWorkspaceWidth] = useState(0)
   const maximumPanelWidth = Math.max(
@@ -2414,6 +2438,11 @@ function App() {
                       r={1.25 * objectRenderScale}
                       aria-hidden="true"
                     />
+                    {focusRingKey === headKey && <circle
+                      className="manipulation-focus-ring"
+                      cx={end.x} cy={end.y} r={14 * objectRenderScale}
+                      aria-hidden="true"
+                    />}
                     {arrowPoints && hoveredManipulation === headKey && <circle
                       className="vector-head-indicator"
                       cx={end.x} cy={end.y} r={5 * objectRenderScale}
@@ -2427,8 +2456,8 @@ function App() {
                       aria-label={`Move head of ${primitive.accessibleName}`}
                       onPointerEnter={() => setHoveredManipulation(headKey)}
                       onPointerLeave={() => setHoveredManipulation((current) => current === headKey ? null : current)}
-                      onFocus={() => setHoveredManipulation(headKey)}
-                      onBlur={() => setHoveredManipulation((current) => current === headKey ? null : current)}
+                      onFocus={() => focusHandle(headKey)}
+                      onBlur={() => blurHandle(headKey)}
                       onPointerDown={(event) => beginManipulation(event, id, 'head')}
                       onKeyDown={(event) => manipulateWithKeyboard(
                         event, id, 'head', primitive.end,
@@ -2450,8 +2479,8 @@ function App() {
                     aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
                     onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
                     onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
-                    onFocus={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
-                    onBlur={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onFocus={baseMovable ? () => focusHandle(baseKey) : undefined}
+                    onBlur={baseMovable ? () => blurHandle(baseKey) : undefined}
                     onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
                     onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
                       event, id, 'base', primitive.start,
@@ -2461,7 +2490,12 @@ function App() {
                     className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
                     cx={start.x} cy={start.y} r={4.5 * objectRenderScale}
                     aria-hidden="true"
-                  /></>}
+                  />
+                  {focusRingKey === baseKey && <circle
+                    className="manipulation-focus-ring"
+                    cx={start.x} cy={start.y} r={14 * objectRenderScale}
+                    aria-hidden="true"
+                  />}</>}
                   {label && <text className="object-label" x={end.x + 8} y={end.y - 8}>{label}</text>}
                 </g>
               })}
@@ -2497,8 +2531,8 @@ function App() {
                     aria-label={baseMovable ? `Move base of ${primitive.accessibleName}` : undefined}
                     onPointerEnter={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
                     onPointerLeave={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
-                    onFocus={baseMovable ? () => setHoveredManipulation(baseKey) : undefined}
-                    onBlur={baseMovable ? () => setHoveredManipulation((current) => current === baseKey ? null : current) : undefined}
+                    onFocus={baseMovable ? () => focusHandle(baseKey) : undefined}
+                    onBlur={baseMovable ? () => blurHandle(baseKey) : undefined}
                     onPointerDown={baseMovable ? (event) => beginManipulation(event, id, 'base') : undefined}
                     onKeyDown={baseMovable ? (event) => manipulateWithKeyboard(
                       event, id, 'base', primitive.shape.kind === 'loop'
@@ -2510,7 +2544,12 @@ function App() {
                     className={`manipulation-base-point${hoveredManipulation === baseKey ? ' is-hovered' : ''}`}
                     cx={base.x} cy={base.y} r={4.5 * objectRenderScale}
                     aria-hidden="true"
-                  /></>}
+                  />
+                  {focusRingKey === baseKey && <circle
+                    className="manipulation-focus-ring"
+                    cx={base.x} cy={base.y} r={14 * objectRenderScale}
+                    aria-hidden="true"
+                  />}</>}
                   {label && <text className="object-label" x={labelPoint.x + 8} y={labelPoint.y - 8}>{label}</text>}
                 </g>
               })}
