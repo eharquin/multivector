@@ -231,6 +231,15 @@ describe('VGA 2D vertical slice', () => {
     ).toHaveTextContent('Vector 1 runs from the origin to 2, 1.')
   })
 
+  it('names the canvas without an SVG title that browsers show as a tooltip', () => {
+    const { container } = render(<App />)
+    const canvas = screen.getByRole('img', { name: 'Two-dimensional VGA viewport' })
+
+    expect(canvas.querySelector('title')).toBeNull()
+    expect(canvas).toHaveAccessibleDescription(/Vector 1 runs from the origin/)
+    expect(container.querySelectorAll('svg.canvas title')).toHaveLength(0)
+  })
+
   it('zooms on wheel through a listener that can cancel the page zoom', () => {
     render(<App />)
     const canvas = screen.getByRole('img', { name: /Two-dimensional VGA viewport/ })
