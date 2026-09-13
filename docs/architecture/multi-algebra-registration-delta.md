@@ -69,9 +69,10 @@ flowchart LR
 
 ## 4. Ordered steps
 
-Each step is one engineering issue and one pull request, mergeable alone.
+Each step is one engineering issue and one pull request, mergeable alone; the
+parent issue #145 tracks their order.
 
-### Step 1 — Basis-driven owned values and engine contract
+### Step 1 — Basis-driven owned values and engine contract (#137)
 
 Introduce `AlgebraBasis` and attach it to owned values; replace the nominal
 `VgaEngine` by `AlgebraEngine` whose `basisBlade`, `grade`, `coefficient`, and
@@ -79,7 +80,7 @@ Introduce `AlgebraBasis` and attach it to owned values; replace the nominal
 The VGA(2) adapter implements the contract; grade and blade fixtures move to
 basis-driven assertions.
 
-### Step 2 — Algebra registry and composition root
+### Step 2 — Algebra registry and composition root (#138)
 
 Add `src/algebra/registry.ts` with `registerDefinition` and
 `resolveAlgebra(document.algebra)`; register VGA; make `App.tsx`,
@@ -88,7 +89,7 @@ identifiers and engines through the registry; an unknown definition or
 version yields the ALG-005 diagnostic and keeps the source. Algebra
 information comes from the definition.
 
-### Step 3 — Basis-aware language and capability-gated functions
+### Step 3 — Basis-aware language and capability-gated functions (#139)
 
 Tokenize any `e` followed by digits as a blade token and validate it against
 the active basis at evaluation (permuted names carry the permutation sign, as
@@ -99,7 +100,7 @@ dispatch that `point`, `ipoint`, `line`, `norm`, and `inorm` will use; take
 documents; a constructor absent from the active algebra yields the common
 capability diagnostic.
 
-### Step 4 — Interpretation boundary
+### Step 4 — Interpretation boundary (#140)
 
 Define the `Interpretation` contract (`interpret`, `describe`,
 `supportsPosition`, `toPrimitives`, entity identifiers) in `src/geometry`;
@@ -109,7 +110,7 @@ contract; move VGA-POS position eligibility behind the VGA interpretation. Add
 the primitive kinds PGA will need — point marker, unbounded line, direction
 marker — as types only.
 
-### Step 5 — Viewport rendering and gestures by primitive
+### Step 5 — Viewport rendering and gestures by primitive (#141)
 
 Extract the SVG rendering of oriented segments and areas, and the head, base,
 anchoring, and cancellation gestures, from `App.tsx` into `src/visualization`
@@ -118,21 +119,21 @@ Generalize `directVectorEdit` into constructor-literal rewriting parameterized
 by constructor name and arity so that `vector(x, y)` and, later, `point(x, y)`
 share one path. `App.tsx` no longer knows which primitive kinds exist.
 
-### Step 6 — Algebra selection in the document workflow
+### Step 6 — Algebra selection in the document workflow (#142)
 
 Allow a new or empty document to select a registered algebra and
 interpretation (command, history, persistence, canonical validation through
 the registry); make the algebra dialog render the definition's information;
 keep 0.1.0 documents loading unchanged.
 
-### Step 7 — PGA(2) definition and engine
+### Step 7 — PGA(2) definition and engine (#143)
 
 Register `org.multivector.pga` with the basis, capabilities, and ganja.js
 `Cl(2,0,1)` adapter; replay `pga2ReferenceFixtures.ts` through the engine;
 add PGA-004 parameterization cases. No interpretation or visualizer yet:
 values evaluate and inspect textually.
 
-### Step 8 — PGA(2) interpretation and visualizer
+### Step 8 — PGA(2) interpretation and visualizer (#144)
 
 Implement `org.multivector.pga-2d` (PGA-INT) and the PGA primitive renderers
 and literal point dragging (PGA-VIZ); documented example; acceptance record
