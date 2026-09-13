@@ -1,6 +1,6 @@
 # VGA 2D Visual Workflow Milestone
 
-**Status:** Draft for review
+**Status:** Accepted
 **Kind:** Product milestone
 **Depends on:** VGA 2D Foundation
 **Acceptance:** [VGA 2D Visual Workflow Acceptance Record](../../acceptance/vga-2d-visual-workflow.md)
