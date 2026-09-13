@@ -3,7 +3,7 @@
 - **Issue:** [#94](https://github.com/eharquin/multivector/issues/94)
 - **Release:** 0.1.0
 - **Milestone:** [VGA 2D Visual Workflow](../requirements/milestones/vga-2d-visual-workflow.md)
-- **Status:** In progress
+- **Status:** Accepted
 
 This record tracks the evidence required to accept the first stable VGA(2)
 workflow. Automated coverage may be recorded before the release candidate is
@@ -19,13 +19,13 @@ foundation evidence.
 
 | Criterion | Current evidence | Remaining evidence | Status |
 | --- | --- | --- | --- |
-| M2D-001 — Commands and history | Command, bounded-history, cancellation, focus-recovery, and application fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx) | Run the complete suite against the release commit | Automated evidence ready |
-| M2D-002 — Scalar controls | Scalar-control evaluation, direct scalar rewriting, canonical persistence, undo, and application fixtures in [`src/application`](../../src/application), [`src/language`](../../src/language), and [`src/document`](../../src/document) | Complete the manual scalar workflow in every supported browser | Automated evidence ready |
-| M2D-003 — Viewport creation | Coordinate conversion and collision-free creation fixtures in [`viewportCreation.test.ts`](../../src/visualization/viewportCreation.test.ts) and [`App.test.tsx`](../../src/App.test.tsx) | Confirm pointer and keyboard behavior in the supported-browser matrix | Automated evidence ready |
-| M2D-004 — Positioned-vector manipulation | Direct vector rewriting, gesture history, anchoring, cancellation, keyboard movement, and application fixtures in [`directVectorEdit.test.ts`](../../src/language/directVectorEdit.test.ts) and [`App.test.tsx`](../../src/App.test.tsx); manual matrix below; [#90](https://github.com/eharquin/multivector/issues/90) closed as not reproducible | Repeat on the stable release artifact | Manual evidence recorded |
-| M2D-005 — Scalar playback | Deterministic once, loop, ping-pong, pause, cancellation, endpoint, and numerical fixtures in [`scalarPlayback.test.ts`](../../src/application/scalarPlayback.test.ts) and [`App.test.tsx`](../../src/App.test.tsx) | Confirm visible behavior and reduced-motion handling in every supported browser | Automated evidence ready |
-| M2D-006 — Persistence and accessibility | Canonical document, failed-write retention, storage, semantic control, focus, keyboard, and reduced-motion fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx); manual checklist below | Repeat on the stable release artifact | Manual evidence recorded |
-| M2D-007 — Release and feedback | Canonical `npm run verify`, release-only Pages workflow, roadmap, and this acceptance record | Complete release preparation, deploy the stable release artifact, smoke-test it, and record the evidence below | Pending release |
+| M2D-001 — Commands and history | Command, bounded-history, cancellation, focus-recovery, and application fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx); complete suite run on the release commit | — | Accepted |
+| M2D-002 — Scalar controls | Scalar-control evaluation, direct scalar rewriting, canonical persistence, undo, and application fixtures in [`src/application`](../../src/application), [`src/language`](../../src/language), and [`src/document`](../../src/document); manual scalar workflow in every supported browser | — | Accepted |
+| M2D-003 — Viewport creation | Coordinate conversion and collision-free creation fixtures in [`viewportCreation.test.ts`](../../src/visualization/viewportCreation.test.ts) and [`App.test.tsx`](../../src/App.test.tsx); pointer and keyboard behavior in the supported-browser matrix | — | Accepted |
+| M2D-004 — Positioned-vector manipulation | Direct vector rewriting, gesture history, anchoring, cancellation, keyboard movement, and application fixtures in [`directVectorEdit.test.ts`](../../src/language/directVectorEdit.test.ts) and [`App.test.tsx`](../../src/App.test.tsx); manual matrix below; [#90](https://github.com/eharquin/multivector/issues/90) closed as not reproducible; repeated on the stable release artifact | — | Accepted |
+| M2D-005 — Scalar playback | Deterministic once, loop, ping-pong, pause, cancellation, endpoint, and numerical fixtures in [`scalarPlayback.test.ts`](../../src/application/scalarPlayback.test.ts) and [`App.test.tsx`](../../src/App.test.tsx); visible behavior and reduced-motion handling in every supported browser | — | Accepted |
+| M2D-006 — Persistence and accessibility | Canonical document, failed-write retention, storage, semantic control, focus, keyboard, and reduced-motion fixtures in [`src/document`](../../src/document) and [`App.test.tsx`](../../src/App.test.tsx); manual checklist below; repeated on the stable release artifact | — | Accepted |
+| M2D-007 — Release and feedback | Canonical `npm run verify`, release-only Pages workflow, roadmap, this acceptance record, and the published `v0.1.0` release with its deployed and smoke-tested artifact recorded below | — | Accepted |
 
 ## Supported-browser and environment record
 
@@ -116,25 +116,32 @@ touch input, and mobile browsers are not claimed.
 - [x] Add the final release date to citation metadata.
 - [x] Run `npm ci` and `npm run verify` against the exact release commit
   (25 files, 326 tests, production build; repeated by the release workflow).
-- [ ] Change this record and the milestone status to `Accepted` only after all
+- [x] Change this record and the milestone status to `Accepted` only after all
   required evidence is present.
 
 ### Publication and deployment
 
-- [ ] Confirm that the release commit is merged to `main` and its verification
-  workflow passed.
-- [ ] Create tag `v0.1.0` and publish a non-prerelease GitHub release linked to
-  this record and the changelog.
-- [ ] Confirm that the release workflow deploys the artifact produced from the
-  release tag and that its automatic HTTP smoke test passes.
-- [ ] Complete the documented workflow, reload, export, and import checks on the
+- [x] Confirm that the release commit is merged to `main` and its verification
+  workflow passed
+  ([run 34775562169](https://github.com/eharquin/multivector/actions/runs/34775562169)).
+- [x] Create tag `v0.1.0` and publish a non-prerelease GitHub release linked to
+  this record and the changelog
+  ([release](https://github.com/eharquin/multivector/releases/tag/v0.1.0)).
+- [x] Confirm that the release workflow deploys the artifact produced from the
+  release tag and that its automatic HTTP smoke test passes. The first
+  attempt failed before its first step because the `github-pages`
+  environment only allowed deployments from `main`; a `v*` tag deployment
+  policy was added to the environment and the job was rerun successfully.
+- [x] Complete the documented workflow, reload, export, and import checks on the
   deployed application.
-- [ ] Record the workflow run, deployed URL, revision, tester, and date below.
+- [x] Record the workflow run, deployed URL, revision, tester, and date below.
 
-- Workflow: Pending
+- Workflow:
+  [run 34775615844](https://github.com/eharquin/multivector/actions/runs/34775615844)
+  (`verify` and `deploy` succeeded, smoke test passed)
 - Deployed URL: <https://eharquin.github.io/multivector/>
-- Revision: Pending
-- Tester and date: Pending
+- Revision: `6ac2166` (tag `v0.1.0`), bundle `index-BGQcVXKi.js`
+- Tester and date: Enzo Harquin, 2026-09-13
 
 ## Explicitly deferred design questions
 
