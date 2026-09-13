@@ -106,7 +106,15 @@ export function DisplaySettingsMenu({
           return !current
         })}
       >
-        <span aria-hidden="true">⚙</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.25" fill="none" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.42 1.42M11.18 11.18l1.42 1.42M3.4 12.6l1.42-1.42M11.18 4.82l1.42-1.42"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <circle cx="8" cy="8" r="4.75" fill="none" />
+        </svg>
       </button>
       {open && (
         <div
