@@ -1,6 +1,6 @@
 # PGA(2) Convention Decisions
 
-**Status:** Proposed for review
+**Status:** Accepted 2026-09-13
 **Issue:** #98
 **Date:** 2026-09-13
 **Decision owner:** Algebra-definition and interpretation architecture
@@ -171,9 +171,8 @@ Normalization divides by the Euclidean norm of a Euclidean entity (so that
 divides by a quantity that the classification has placed below the tolerance,
 so no normalization can amplify floating-point leakage into a coordinate.
 
-`norm(X)` in the language is the Euclidean norm; the ideal norm is reached
-through the interpretation and a dedicated function to be named in the
-specification.
+`norm(X)` in the language is the Euclidean norm and `inorm(X)` the ideal
+norm; both are exposed by the PGA definition as scalar-valued capabilities.
 
 ## 10. Versors: rotations, translations, reflections (D9)
 
@@ -293,12 +292,12 @@ Recorded here so the architecture delta of #98 can be written against them:
 
 ## 15. Review checklist
 
-- [ ] D1 identity and plane-based declaration
-- [ ] D2 basis order and `e02` display
-- [ ] D3 constructors `point(x, y, w)`, `ipoint`, `line`
-- [ ] D4–D6 incidence, meet, dual, join
-- [ ] D7 equality versus projective equivalence
-- [ ] D8 norms, classification, normalization
-- [ ] D9 versor action, even and odd, weight sign of reflections
-- [ ] D10 milestone scope
-- [ ] D11 fixture plan
+- [x] D1 identity and plane-based declaration
+- [x] D2 basis order and `e02` display
+- [x] D3 constructors `point(x, y, w)`, `ipoint`, `line`
+- [x] D4–D6 incidence, meet, dual, join
+- [x] D7 equality versus projective equivalence
+- [x] D8 norms, classification, normalization, `norm` and `inorm`
+- [x] D9 versor action, even and odd, weight sign of reflections
+- [x] D10 milestone scope
+- [x] D11 fixture plan
