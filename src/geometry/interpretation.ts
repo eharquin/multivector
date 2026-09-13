@@ -34,11 +34,25 @@ export type VisualizationSupport =
  * renderer-independent primitives; it never sees backend values and never
  * decides how primitives are drawn.
  */
+/** How the viewport creates a new located object by double-click (INTERACT2D-001). */
+export type ViewportCreation = Readonly<{
+  constructor: string
+  namePrefix: string
+  objectName: string
+}>
+
+/** Which declared constructor literal a drag rewrites when entities carry their own location. */
+export type LiteralEdit = Readonly<{ constructor: string; arity: number }>
+
 export type Interpretation<E extends InterpretedEntity = InterpretedEntity> = Readonly<{
   interpretationId: string
   interpretationVersion: number
+  /** Geometric model, when the algebra admits several readings (for example plane-based PGA). */
+  model?: string
   interpret(value: OwnedMultivector): E
   describe(entity: E): string
+  /** A short projective or numeric reading shown next to the kind, or `null`. */
+  detail(entity: E): string | null
   /** Entities with a primitive but no intrinsic location accept a position (VGA-POS-007). */
   supportsPosition(entity: E): boolean
   /** Entities whose `head` is position plus value (VGA-POS-003). */
@@ -49,6 +63,8 @@ export type Interpretation<E extends InterpretedEntity = InterpretedEntity> = Re
   positionValue(point: Point2d, basis: AlgebraBasis): OwnedMultivector
   visualization(entity: E): VisualizationSupport
   defaultName(entity: E, index: number): string
+  creation: ViewportCreation
+  literalEdit: LiteralEdit | null
   toPrimitive(entity: E, options: PrimitiveOptions<E>): VisualizationPrimitive | null
 }>
 
@@ -60,6 +76,7 @@ export const OPAQUE_INTERPRETATION: AnyInterpretation = Object.freeze<AnyInterpr
   interpretationVersion: 1,
   interpret: () => Object.freeze({ kind: 'uninterpreted' }),
   describe: () => 'Uninterpreted value',
+  detail: () => null,
   supportsPosition: () => false,
   supportsHead: () => false,
   isPositionValue: () => false,
@@ -72,5 +89,7 @@ export const OPAQUE_INTERPRETATION: AnyInterpretation = Object.freeze<AnyInterpr
     message: 'The document’s interpretation is not available in this runtime.',
   }),
   defaultName: (_entity, index) => `Value ${index + 1}`,
+  creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Object' },
+  literalEdit: null,
   toPrimitive: () => null,
 })

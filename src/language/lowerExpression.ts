@@ -177,6 +177,9 @@ export function lowerExpression(
           origin: expression.span,
         }
       }
+      if (expression.property === 'inorm') {
+        return { kind: 'call', name: 'inorm', arguments: [operand], origin: expression.span }
+      }
       if (/^g\d+$/.test(expression.property)) {
         return {
           kind: 'grade',

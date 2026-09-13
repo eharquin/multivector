@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { executeDocumentCommand } from './documentCommands'
 import { expressionDocument } from './expressionDocument'
 import {
   fromCanonicalDocument,
@@ -242,5 +243,27 @@ describe('canonical document format', () => {
     expect(duplicated.appearance['new-item']).toEqual(original.appearance.v)
     expect(duplicated.appearance.v).toBeUndefined()
     expect(resolveCanonicalImport('doc-1', original, 'replace')).toBe(original)
+  })
+
+  it('round-trips a PGA document with its algebra, interpretation, and visualizer', () => {
+    const selected = executeDocumentCommand(expressionDocument([{ id: 'p', source: '' }]), {
+      kind: 'select-algebra',
+      algebra: { algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: { dimension: 2 } },
+      interpretation: { interpretationId: 'org.multivector.pga-2d', interpretationVersion: 1 },
+      visualizerId: 'org.multivector.pga-2d',
+    })
+    expect(selected.status).toBe('applied')
+    const withPoint = executeDocumentCommand(selected.document, { kind: 'update-source', itemId: 'p', source: 'P = point(1, 2)' })
+    const restored = fromCanonicalDocument(
+      parseCanonicalDocument(serializeCanonicalDocument(toCanonicalDocument(withPoint.document, 'system'))),
+      { visualizerAvailable: (visualizerId) => visualizerId === 'org.multivector.pga-2d' },
+    )
+    expect(restored.document.algebra).toEqual({
+      algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: { dimension: 2 },
+    })
+    expect(restored.document.interpretation).toEqual({ interpretationId: 'org.multivector.pga-2d', interpretationVersion: 1 })
+    expect(restored.document.view.visualizerId).toBe('org.multivector.pga-2d')
+    expect(restored.document.items[0].source).toBe('P = point(1, 2)')
+    expect(restored.recoveryDiagnostic).toBeNull()
   })
 })

@@ -52,6 +52,13 @@ export const DEFAULT_OBJECT_STYLES: readonly (readonly [string, string])[] =
     ['Rotor', 'blue-3'],
     ['Mixed multivector', 'blue-4'],
     ['List', 'green-3'],
+    ['Point', 'blue-4'],
+    ['Ideal point', 'yellow-4'],
+    ['Line', 'red-4'],
+    ['Line at infinity', 'neutral-4'],
+    ['Translator', 'blue-3'],
+    ['Motor', 'yellow-5'],
+    ['Reflection', 'red-5'],
   ] as const)
 
 export function paletteEntry(style: string): PaletteEntry | undefined {

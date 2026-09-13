@@ -1933,3 +1933,28 @@ body.canvas-gesture .expression-panel {
     padding: 14px;
   }
 }
+
+.object-detail {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.point-marker {
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.unbounded-line {
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+
+.direction-marker {
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+
+.direction-marker-head {
+  fill: currentColor;
+}

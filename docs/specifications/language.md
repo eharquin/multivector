@@ -222,6 +222,17 @@ vector(1, 2, 3) == (1, 2, 3)
 
 `(1)` is a parenthesized scalar; the trailing comma makes `(1,)` a vector.
 `vector()` and an empty tuple are invalid. Components are scalar expressions.
+
+`vector` is the constructor registered by the VGA definition. Every other
+constructor is a registered function of the active definition and uses the
+ordinary call syntax with one or more comma-separated scalar arguments; the
+PGA definition registers `point(x, y)`, `point(x, y, w)`, `ipoint(x, y)`, and
+`line(a, b, c)` as specified by the
+[PGA convention](pga-conventions.md#9-constructors). A constructor the active
+algebra does not register produces the common unsupported-function diagnostic
+at the call's span, and a call with an unregistered number of arguments an
+arity diagnostic. Constructor calls broadcast over list arguments with the
+rules of section 11.
 Missing components are zero-filled in higher dimensions. Excess components and
 their sources remain stored but inactive in lower dimensions.
 
@@ -307,7 +318,8 @@ multivector grade or algebraic-domain classification.
 
 `A.norm` denotes the primary norm defined by the active algebra's versioned
 conventions. `A.inorm` is available only for an algebra that explicitly defines
-an ideal norm. Norm-bar syntax is not part of language version 1, avoiding
+an ideal norm; such an algebra also registers `norm(A)` and `inorm(A)` as
+functions, and `A.inorm` is equivalent to `inorm(A)`. Norm-bar syntax is not part of language version 1, avoiding
 ambiguity with the infix `|` inner product. The evaluator shall not select a
 different norm using a visual or geometric-classification heuristic. An
 undefined norm produces a diagnostic.
