@@ -7,22 +7,11 @@ function scalar(value: number, origin: SurfaceExpressionNode['span']): CoreExpre
   return { kind: 'scalar', value, origin }
 }
 
-function blade(
-  name: 'e1' | 'e2',
+function lowerBlade(
+  name: string,
   origin: SurfaceExpressionNode['span'],
 ): CoreExpressionNode {
   return { kind: 'basis-blade', name, origin }
-}
-
-function lowerBlade(
-  name: 'e1' | 'e2' | 'e12' | 'e21',
-  origin: SurfaceExpressionNode['span'],
-): CoreExpressionNode {
-  if (name === 'e1' || name === 'e2') return blade(name, origin)
-
-  return name === 'e12'
-    ? multiply(blade('e1', origin), blade('e2', origin), origin)
-    : multiply(blade('e2', origin), blade('e1', origin), origin)
 }
 
 function multiply(
@@ -138,39 +127,35 @@ export function lowerExpression(
             expression.span,
           )
     }
-    case 'vector-constructor': {
-      const [x, y] = expression.components
-      return add(
-        multiply(
-          lowerExpression(x),
-          blade('e1', expression.span),
-          expression.span,
-        ),
-        multiply(
-          lowerExpression(y),
-          blade('e2', expression.span),
-          expression.span,
-        ),
-        expression.span,
-      )
-    }
-    case 'call-expression': {
-      const operand = lowerExpression(expression.arguments[0])
-      if (expression.callee === 'exp') {
-        return { kind: 'exp', operand, origin: expression.span }
+    case 'vector-constructor':
+      return {
+        kind: 'call',
+        name: 'vector',
+        arguments: expression.components.map(lowerExpression),
+        origin: expression.span,
       }
+    case 'call-expression': {
       const scalarFunctions = ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'] as const
-      if (scalarFunctions.some((name) => name === expression.callee)) {
-        return {
-          kind: 'scalar-function',
-          name: expression.callee as (typeof scalarFunctions)[number],
-          operand,
-          origin: expression.span,
+      if (expression.arguments.length === 1) {
+        const operand = lowerExpression(expression.arguments[0])
+        if (expression.callee === 'exp') {
+          return { kind: 'exp', operand, origin: expression.span }
+        }
+        if (scalarFunctions.some((name) => name === expression.callee)) {
+          return {
+            kind: 'scalar-function',
+            name: expression.callee as (typeof scalarFunctions)[number],
+            operand,
+            origin: expression.span,
+          }
         }
       }
+      // Every other call resolves against the active algebra's registered
+      // functions at evaluation (ALG-029).
       return {
-        kind: 'unsupported-function',
+        kind: 'call',
         name: expression.callee,
+        arguments: expression.arguments.map(lowerExpression),
         origin: expression.span,
       }
     }
@@ -192,21 +177,15 @@ export function lowerExpression(
           origin: expression.span,
         }
       }
-      const grades = { g0: 0, g1: 1, g2: 2 } as const
-      if (expression.property in grades) {
+      if (/^g\d+$/.test(expression.property)) {
         return {
           kind: 'grade',
           operand,
-          grade: grades[expression.property as keyof typeof grades],
+          grade: Number(expression.property.slice(1)),
           origin: expression.span,
         }
       }
-      if (
-        expression.property === 'e' ||
-        expression.property === 'e1' ||
-        expression.property === 'e2' ||
-        expression.property === 'e12'
-      ) {
+      if (/^e\d*$/.test(expression.property)) {
         return {
           kind: 'coefficient',
           operand,

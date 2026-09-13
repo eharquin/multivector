@@ -1,4 +1,5 @@
 import { AlgebraOperationError, type AlgebraEngine } from '../algebra/algebraEngine'
+import { permutedBlade } from '../domain/algebraBasis'
 import type { OwnedMultivector } from '../domain/multivector'
 import {
   elementIdentity,
@@ -72,8 +73,30 @@ function evaluateExpressionUnchecked(
   switch (expression.kind) {
     case 'scalar':
       return engine.scalar(expression.value)
-    case 'basis-blade':
-      return engine.basisBlade(expression.name)
+    case 'basis-blade': {
+      const resolved = resolveBlade(engine, expression.name, expression)
+      const value = engine.basisBlade(engine.basis.blades[resolved.index].name)
+      return resolved.sign < 0 ? engine.negate(value) : value
+    }
+    case 'call': {
+      const arity = engine.functions.get(expression.name)
+      if (arity === undefined) {
+        throw new ExpressionEvaluationError(
+          'LANG_UNSUPPORTED_FUNCTION',
+          `The function “${expression.name}” is not supported by the active algebra.`,
+          expression.origin,
+        )
+      }
+      if (expression.arguments.length !== arity) {
+        throw new ExpressionEvaluationError(
+          'LANG_ARITY',
+          `“${expression.name}” takes ${arity} ${arity === 1 ? 'argument' : 'arguments'}, received ${expression.arguments.length}.`,
+          expression.origin,
+        )
+      }
+      return nary(expression, expression.arguments.map(evaluate),
+        (args) => engine.call(expression.name, args), budget)
+    }
     case 'pseudoscalar':
       return engine.pseudoscalar()
     case 'reference':
@@ -166,22 +189,38 @@ function evaluateExpressionUnchecked(
     case 'grade':
       return unary(expression, evaluate(expression.operand),
         (value) => engine.grade(value, expression.grade), budget)
-    case 'coefficient':
-      return unary(expression, evaluate(expression.operand),
-        (value) => engine.coefficient(value, expression.blade), budget)
+    case 'coefficient': {
+      const resolved = resolveBlade(engine, expression.blade, expression)
+      const canonical = engine.basis.blades[resolved.index].name
+      return unary(expression, evaluate(expression.operand), (value) => {
+        const coefficient = engine.coefficient(value, canonical)
+        return resolved.sign < 0 ? engine.negate(coefficient) : coefficient
+      }, budget)
+    }
     case 'unsupported-property':
       throw new ExpressionEvaluationError(
         'LANG_UNSUPPORTED_PROPERTY',
         `The property “${expression.property}” is not supported.`,
         expression.propertyOrigin,
       )
-    case 'unsupported-function':
-      throw new ExpressionEvaluationError(
-        'LANG_UNSUPPORTED_FUNCTION',
-        `The function “${expression.name}” is not supported.`,
-        expression.origin,
-      )
   }
+}
+
+/** Resolves a blade name in any generator order against the engine's basis. */
+function resolveBlade(
+  engine: AlgebraEngine,
+  name: string,
+  expression: CoreExpressionNode,
+): Readonly<{ index: number; sign: 1 | -1 }> {
+  const resolved = permutedBlade(engine.basis, name)
+  if (!resolved) {
+    throw new ExpressionEvaluationError(
+      'ALG_UNKNOWN_BLADE',
+      `The blade “${name}” does not exist in the active algebra.`,
+      expression.origin,
+    )
+  }
+  return resolved
 }
 
 function scalarMultivectorBoundary(
@@ -230,6 +269,61 @@ function unary(
       throw error
     }
   }))
+}
+
+/**
+ * Applies an n-ary operation with the list broadcasting rules of `binary`:
+ * every list argument has the common length or length one.
+ */
+function nary(
+  expression: CoreExpressionNode,
+  values: readonly LanguageValue[],
+  operation: (args: readonly OwnedMultivector[]) => OwnedMultivector,
+  budget: EvaluationBudget,
+): LanguageValue {
+  const lists = values.map((value) => (value.kind === 'list' ? value.elements : null))
+  if (lists.every((elements) => elements === null)) {
+    return operation(values as OwnedMultivector[])
+  }
+  const lengths = lists.flatMap((elements) => (elements ? [elements.length] : []))
+  if (lengths.some((length) => length === 0)) {
+    if (lengths.every((length) => length === 0)) return ownedList([])
+    throw new ExpressionEvaluationError(
+      'LANG_LIST_LENGTH', 'An empty list is incompatible with a non-empty list.', expression.origin,
+    )
+  }
+  const length = Math.max(...lengths)
+  if (lengths.some((candidate) => candidate !== 1 && candidate !== length)) {
+    throw new ExpressionEvaluationError(
+      'LANG_LIST_LENGTH',
+      `List lengths ${[...new Set(lengths)].join(' and ')} are incompatible.`,
+      expression.origin,
+    )
+  }
+  chargeElements(budget, length, expression)
+  const elements: ListElement[] = []
+  for (let index = 0; index < length; index += 1) {
+    const picked = lists.map((candidates) =>
+      candidates ? candidates[candidates.length === 1 ? 0 : index] : null)
+    try {
+      const result = operation(picked.map((element, position) =>
+        element?.value ?? values[position] as OwnedMultivector))
+      const participating = picked.map((element) => element?.id).filter(Boolean).join(':')
+      elements.push({
+        id: `${expression.origin.start}:${expression.origin.end}:${participating}`,
+        value: result,
+        sources: [...new Set(picked.flatMap((element) => (element ? [element.id] : [])))],
+      })
+    } catch (error) {
+      if (error instanceof AlgebraOperationError) {
+        throw new ExpressionEvaluationError(
+          error.code, `List element ${index}: ${error.message}`, expression.origin,
+        )
+      }
+      throw error
+    }
+  }
+  return ownedList(elements)
 }
 
 function binary(

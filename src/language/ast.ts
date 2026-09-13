@@ -6,9 +6,10 @@ export type ScalarLiteralNode = Readonly<{
   span: SourceSpan
 }>
 
+/** A blade written with any generator order, resolved against the active basis at evaluation. */
 export type BasisBladeNode = Readonly<{
   kind: 'basis-blade'
-  name: 'e1' | 'e2' | 'e12' | 'e21'
+  name: string
   span: SourceSpan
 }>
 
@@ -127,7 +128,13 @@ export type CoreExpressionNode =
   | (CoreNodeBase &
       Readonly<{
         kind: 'basis-blade'
-        name: 'e1' | 'e2'
+        name: string
+      }>)
+  | (CoreNodeBase &
+      Readonly<{
+        kind: 'call'
+        name: string
+        arguments: readonly CoreExpressionNode[]
       }>)
   | (CoreNodeBase &
       Readonly<{
@@ -176,13 +183,13 @@ export type CoreExpressionNode =
       Readonly<{
         kind: 'grade'
         operand: CoreExpressionNode
-        grade: 0 | 1 | 2
+        grade: number
       }>)
   | (CoreNodeBase &
       Readonly<{
         kind: 'coefficient'
         operand: CoreExpressionNode
-        blade: 'e' | 'e1' | 'e2' | 'e12'
+        blade: string
       }>)
   | (CoreNodeBase &
       Readonly<{
@@ -191,8 +198,4 @@ export type CoreExpressionNode =
         property: string
         propertyOrigin: SourceSpan
       }>)
-  | (CoreNodeBase &
-      Readonly<{
-        kind: 'unsupported-function'
-        name: string
-      }>)
+

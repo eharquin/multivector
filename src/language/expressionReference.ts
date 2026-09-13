@@ -7,7 +7,7 @@ export const EXPRESSION_REFERENCE = Object.freeze([
         'e1, e2, e12',
         'canonical VGA(2) basis-blade notation; valid index permutations are also accepted with the sign induced by reordering',
       ],
-      ['ps', 'canonical pseudoscalar e12'],
+      ['ps', 'canonical pseudoscalar of the active algebra'],
       ['V = (2, 1)', 'named vector declaration using concise tuple syntax'],
       ['vector(2, 1)', 'explicit vector constructor'],
       ['V', 'case-sensitive reference to a named expression'],
