@@ -1768,7 +1768,7 @@ describe('VGA 2D vertical slice', () => {
   it('opens the VGA algebra information and restores focus on Escape', () => {
     render(<App />)
 
-    const trigger = screen.getByRole('button', { name: 'VGA · 2D' })
+    const trigger = screen.getByRole('button', { name: 'Algebra information' })
     fireEvent.click(trigger)
 
     const dialog = screen.getByRole('dialog', {
@@ -1787,32 +1787,70 @@ describe('VGA 2D vertical slice', () => {
     expect(trigger).toHaveFocus()
   })
 
-  it('offers the algebra selection only while the document has no content', () => {
+  it('switches algebra from the capsule menu, clearing content only after confirmation', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
-    const select = screen.getByRole('combobox', { name: 'Document algebra' })
-    expect(select).toBeDisabled()
-    expect(select).toHaveValue('org.multivector.vga')
-    expect(screen.getByRole('dialog')).toHaveTextContent('cannot be changed')
-    fireEvent.keyDown(document, { key: 'Escape' })
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    expect(source).toHaveValue('vector(2, 1)')
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: '' } })
-    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
-    const enabled = screen.getByRole('combobox', { name: 'Document algebra' })
-    expect(enabled).toBeEnabled()
-    expect(within(enabled).getAllByRole('option').map((option) => option.textContent))
-      .toEqual(['VGA · 2D — Vector Geometric Algebra', 'PGA · 2D — Projective Geometric Algebra'])
-    // Re-selecting the current algebra is a no-op: one undo returns to the
-    // source edit, not to an intermediate selection.
-    fireEvent.change(enabled, { target: { value: 'org.multivector.vga' } })
-    fireEvent.keyDown(document, { key: 'Escape' })
+    const badge = screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })
+    fireEvent.click(badge)
+    const menu = screen.getByRole('menu', { name: 'Document algebra' })
+    const items = within(menu).getAllByRole('menuitemradio')
+    expect(items.map((item) => item.textContent)).toEqual([
+      'VGA · 2DVector Geometric Algebra', 'PGA · 2DProjective Geometric Algebra',
+    ])
+    expect(items[0]).toHaveAttribute('aria-checked', 'true')
+    expect(items[0]).toHaveFocus()
+
+    // Declining keeps the document and the algebra.
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    fireEvent.click(items[1])
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(confirm.mock.calls[0][0]).toMatch(/clears every expression/)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(source).toHaveValue('vector(2, 1)')
+    expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toHaveFocus()
+
+    // Accepting clears and switches in one history entry.
+    confirm.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' }))
+    fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[1])
+    expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Expression 1' })).not.toBeInTheDocument()
+    expect(screen.getByText('PGA · 2D selected; the document was cleared.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveValue('vector(2, 1)')
+
+    // Re-selecting the current algebra asks nothing and changes nothing.
+    confirm.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' }))
+    fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[0])
+    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toBeInTheDocument()
+    confirm.mockRestore()
+  })
+
+  it('navigates the algebra menu by keyboard and closes it with Escape', () => {
+    render(<App />)
+    const badge = screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })
+    fireEvent.click(badge)
+    const menu = screen.getByRole('menu', { name: 'Document algebra' })
+    const items = within(menu).getAllByRole('menuitemradio')
+    fireEvent.keyDown(menu, { key: 'ArrowDown' })
+    expect(items[1]).toHaveFocus()
+    fireEvent.keyDown(menu, { key: 'ArrowDown' })
+    expect(items[0]).toHaveFocus()
+    fireEvent.keyDown(menu, { key: 'End' })
+    expect(items[1]).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(badge).toHaveFocus()
   })
 
   it('names every default object color in text, not only as a swatch', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Algebra information' }))
     const dialog = screen.getByRole('dialog', {
       name: 'Vector Geometric Algebra ℝ(2,0,0)',
     })
@@ -1917,12 +1955,9 @@ describe('PGA 2D foundation workflow', () => {
   function selectPga() {
     render(<App />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: '' } })
-    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D' }))
-    fireEvent.change(screen.getByRole('combobox', { name: 'Document algebra' }), {
-      target: { value: 'org.multivector.pga' },
-    })
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.getByRole('button', { name: 'PGA · 2D' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' }))
+    fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[1])
+    expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   }
 

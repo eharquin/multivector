@@ -1958,3 +1958,104 @@ body.canvas-gesture .expression-panel {
 .direction-marker-head {
   fill: currentColor;
 }
+
+/* Algebra capsule: the badge segment opens the algebra menu, the info segment the dialog. */
+.algebra-capsule {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.algebra-capsule .algebra-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.algebra-badge-select {
+  border-radius: 999px 0 0 999px;
+  border-right: 0;
+}
+
+.algebra-badge-info {
+  padding-inline: 8px 10px;
+  border-radius: 0 999px 999px 0;
+  border-left: 1px solid var(--accent-border);
+  font-style: italic;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.algebra-badge-select.is-open {
+  background: color-mix(in srgb, var(--accent-soft) 65%, var(--surface));
+}
+
+.algebra-badge-chevron path {
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.algebra-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 15;
+  min-width: 300px;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow-modal);
+}
+
+.algebra-menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font: 0.8rem var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.algebra-menu-item:hover,
+.algebra-menu-item:focus-visible {
+  background: var(--surface-hover);
+  outline: none;
+}
+
+.algebra-menu-item[aria-checked='true'] {
+  color: var(--accent);
+}
+
+.algebra-menu-item[aria-checked='true']::before {
+  content: '✓';
+  margin-right: 2px;
+}
+
+.algebra-menu-item:not([aria-checked='true'])::before {
+  content: '';
+  display: inline-block;
+  width: 0.7em;
+  margin-right: 2px;
+}
+
+.algebra-menu-badge {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.algebra-menu-name {
+  color: var(--muted);
+}
