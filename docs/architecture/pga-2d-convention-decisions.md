@@ -235,7 +235,8 @@ V >>> X = V * X * ~V
 
 The logarithm of a motor and fractional powers `exp(t * log(M))`, present in
 Studio, are deferred to a later milestone; they need the principal-branch
-decision recorded separately.
+decision recorded separately (see the
+[motor logarithm and square root decisions](pga-2d-motor-logarithm-decisions.md)).
 
 ## 11. First milestone scope (D10)
 
