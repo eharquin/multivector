@@ -1,5 +1,6 @@
 import { bladeIndex, type AlgebraBasis } from '../domain/algebraBasis'
 import { type OwnedMultivector } from '../domain/multivector'
+import { SCALAR_FUNCTIONS, type ScalarFunctionName } from '../domain/scalarFunctions'
 import { AlgebraOperationError } from './algebraEngine'
 
 /*
@@ -91,23 +92,23 @@ export function integerPower(
   return result
 }
 
-const SCALAR_FUNCTIONS = {
-  sin: Math.sin, cos: Math.cos, tan: Math.tan, sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
-} as const
-
-export type ScalarFunctionName = keyof typeof SCALAR_FUNCTIONS
-
-/** The common scalar boundary for elementary functions, with the tangent pole rule. */
-export function scalarFunctionValue(name: ScalarFunctionName, value: OwnedMultivector): number {
-  const scalar = scalarOf(value, `The argument of “${name}”`)
-  if (name === 'tan') {
-    const nearestPole = Math.PI / 2 + Math.round((scalar - Math.PI / 2) / Math.PI) * Math.PI
-    const tolerance = 64 * Number.EPSILON * Math.max(1, Math.abs(scalar), Math.abs(nearestPole))
-    if (Math.abs(scalar - nearestPole) <= tolerance) {
-      throw new AlgebraOperationError('ALG_DOMAIN', 'The tangent is undefined at this scalar value.')
-    }
+/**
+ * The common scalar boundary for the built-in scalar functions: every argument
+ * must be scalar and the function's domain rule must admit the values.
+ */
+export function scalarFunctionValue(name: ScalarFunctionName, args: readonly OwnedMultivector[]): number {
+  const definition = SCALAR_FUNCTIONS[name]
+  if (args.length !== definition.arity) {
+    throw new AlgebraOperationError(
+      'ALG_DOMAIN',
+      `“${name}” takes ${definition.arity} ${definition.arity === 1 ? 'argument' : 'arguments'}.`,
+    )
   }
-  return SCALAR_FUNCTIONS[name](scalar)
+  const scalars = args.map((value, index) =>
+    scalarOf(value, definition.arity === 1 ? `The argument of “${name}”` : `Argument ${index + 1} of “${name}”`))
+  const domainError = definition.domainError(scalars)
+  if (domainError !== null) throw new AlgebraOperationError('ALG_DOMAIN', domainError)
+  return definition.apply(scalars)
 }
 
 /**

@@ -58,7 +58,9 @@ export const EXPRESSION_REFERENCE = Object.freeze([
     entries: [
       ['exp(A)', 'scalar or supported closed-form multivector exponential'],
       ['sin(a), cos(a), tan(a)', 'scalar trigonometric functions'],
+      ['asin(a), acos(a), atan(a), atan2(y, x)', 'scalar inverse trigonometric functions'],
       ['sinh(a), cosh(a), tanh(a)', 'scalar hyperbolic functions'],
+      ['abs(a), sqrt(a), log(a), min(a, b), max(a, b)', 'scalar functions'],
       ['pi, tau', 'predefined scalar constants'],
     ],
   },

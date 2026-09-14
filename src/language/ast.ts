@@ -1,4 +1,5 @@
 import type { SourceSpan } from '../domain/diagnostic'
+import type { ScalarFunctionName } from '../domain/scalarFunctions'
 
 export type ScalarLiteralNode = Readonly<{
   kind: 'scalar-literal'
@@ -176,8 +177,8 @@ export type CoreExpressionNode =
   | (CoreNodeBase &
       Readonly<{
         kind: 'scalar-function'
-        name: 'sin' | 'cos' | 'tan' | 'sinh' | 'cosh' | 'tanh'
-        operand: CoreExpressionNode
+        name: ScalarFunctionName
+        arguments: readonly CoreExpressionNode[]
       }>)
   | (CoreNodeBase &
       Readonly<{

@@ -49,6 +49,24 @@ Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
    then `Q = L ^ L`: a Scalar zero, since a line meets itself nowhere.
 5. Write `e20` anywhere: it is accepted and displayed as `-e02`.
 
+## Read distances and angles
+
+The metric read-outs are products and norms; only the scalar functions turn
+them into numbers. With unit points and lines (`A`, `B`, and `M` are unit; a
+join or a meet is not, divide by its norm first):
+
+1. `d = norm(A & B)`: the distance between `A` and `B`, `4.12311` — the join's
+   Euclidean norm is the distance times the two weights.
+2. `Lu = L / L.norm`, then `c = Lu | M`: the cosine of the angle between the two
+   lines, and `a = acos(c)` the angle in radians.
+3. `s = (Lu ^ M).e12`: the sine of the oriented angle from `Lu` to `M` (the
+   meet's weight), so `phi = atan2(s, c)` is the oriented angle in
+   `(-pi, pi]`; swapping the lines negates it.
+4. `h = (M ^ A).e012`: the signed distance from `M` to `A`, `-3` (negative on
+   the side opposite the line's normal); `inorm(M ^ A)` is its absolute value.
+
+Multiply by `180 / pi` for degrees.
+
 ## Ideal points and the line at infinity
 
 1. Add `I = e0`: the line at infinity is drawn as the dashed ellipse inscribed

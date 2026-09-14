@@ -244,8 +244,8 @@ export function createPga2Engine(): AlgebraEngine {
       }
       return closed
     },
-    scalarFunction(name, value) {
-      return scalar(scalarFunctionValue(name, value))
+    scalarFunction(name, args) {
+      return scalar(scalarFunctionValue(name, args))
     },
   }
 }

@@ -19,6 +19,14 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   optional marker on the line at infinity, and the line at infinity drawn as
   the ellipse inscribed in the viewport.
 
+- Implemented the scalar functions of language section 10 — `abs`, `sqrt`,
+  `log`, `asin`, `acos`, `atan`, `min`, `max` — and added `atan2(y, x)` as a
+  compatible extension. Their names are reserved, arity is checked at parse
+  time, values outside the real domain report a domain diagnostic, and the
+  functions broadcast over lists. The PGA example shows the distance and angle
+  read-outs they enable (`norm(A & B)`, `acos(Lu | M)`,
+  `atan2((Lu ^ M).e12, Lu | M)`, `(M ^ A).e012`).
+
 ### Document and convention changes
 
 - Canonical format version 5 adds `Appearance.idealPointDisplay` (`vector`,
