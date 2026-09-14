@@ -292,11 +292,11 @@ export function PointMarkerGlyph({
 }
 
 export type LineSelection = Readonly<{
-  /** The anchor on the line, where the unit normal is drawn from (screen space). */
+  /** The anchor on the line, where the normal handle is drawn from (screen space). */
   anchor: Point2d
   /** The mathematical anchor, passed to keyboard handlers. */
   mathematicalAnchor: Point2d
-  /** The tip of the unit normal (screen space). */
+  /** The tip of the normal handle (screen space). */
   normalTip: Point2d
   arrowPoints: string
 }>
@@ -374,15 +374,21 @@ export function UnboundedLineGlyph({
       aria-hidden="true"
     />}
     {selection && <g className="line-normal">
-      <circle className="line-anchor" cx={selection.anchor.x} cy={selection.anchor.y} r={3.5 * scale} aria-hidden="true" />
+      <circle
+        className="line-anchor"
+        cx={selection.anchor.x} cy={selection.anchor.y} r={3.5 * scale}
+        strokeWidth={1.5 * scale}
+        aria-hidden="true"
+      />
       <line
         className="line-normal-shaft"
         x1={selection.anchor.x} y1={selection.anchor.y}
         x2={selection.normalTip.x} y2={selection.normalTip.y}
-        strokeWidth={2.5 * scale}
+        strokeWidth={2 * scale}
+        strokeDasharray={`${4 * scale} ${4 * scale}`}
         aria-hidden="true"
       />
-      <polygon className="vector-arrowhead" points={selection.arrowPoints} aria-hidden="true" />
+      <polygon className="line-normal-head" points={selection.arrowPoints} aria-hidden="true" />
       {controller.focusRingKey === normalKey && <circle
         className="manipulation-focus-ring"
         cx={selection.normalTip.x} cy={selection.normalTip.y} r={14 * scale}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutUnboundedLine, lineOrientationTicks } from './layout'
+import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutUnboundedLine, lineOrientationTicks } from './layout'
 import type { Viewport2d } from './viewport'
 
 const viewport: Viewport2d = { width: 800, height: 600, centerX: 0, centerY: 0, pixelsPerUnit: 50 }
@@ -36,6 +36,18 @@ describe('PGA primitive layouts', () => {
     const narrow = tickStarts({ ...viewport, width: 700 })
     expect(narrow).toContainEqual({ x: 400, y: 200 })
     expect(narrow.every((tick) => tick.y === 200 && (tick.x - 400) % 48 === 0)).toBe(true)
+  })
+
+  it('draws the normal handle with a fixed screen length whatever the zoom', () => {
+    const primitive = { kind: 'unbounded-line', point: { x: 0, y: 0 }, direction: { x: 1, y: 0 }, normal: { x: 0, y: 1 }, scale: 3, accessibleName: 'L' } as const
+    for (const pixelsPerUnit of [20, 50, 200]) {
+      const selection = layoutLineSelection(primitive, { x: 2, y: 5 }, { ...viewport, pixelsPerUnit }, 1.5)
+      expect(selection.mathematicalAnchor).toEqual({ x: 2, y: 0 })
+      expect(selection.anchor).toEqual({ x: 400 + 2 * pixelsPerUnit, y: 300 })
+      // Screen y is flipped: the handle points up, 56 × 1.5 pixels long.
+      expect(selection.normalTip.x).toBeCloseTo(selection.anchor.x, 10)
+      expect(selection.anchor.y - selection.normalTip.y).toBeCloseTo(84, 10)
+    }
   })
 
   it('returns null for a line outside the viewport', () => {

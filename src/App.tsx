@@ -56,7 +56,7 @@ import {
 } from './visualization/viewportCreation'
 import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
-import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine, lineOrientationTicks } from './visualization/layout'
+import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine, lineNormalLength, lineOrientationTicks } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -268,8 +268,12 @@ function App() {
     pointerId: number
   }> | null>(null)
   /** Where a line translation started, so each move is measured from the press. */
-  const lineDragOrigin = useRef<Readonly<{ point: Point2d; coefficients: readonly [number, number, number] }> | null>(null)
-  /** The selected line and the anchor its unit normal is drawn from. */
+  const lineDragOrigin = useRef<Readonly<{
+    point: Point2d
+    anchor: Point2d
+    coefficients: readonly [number, number, number]
+  }> | null>(null)
+  /** The selected line and the anchor its normal handle is drawn from. */
   const [selectedLine, setSelectedLine] = useState<Readonly<{ itemId: string; anchor: Point2d }> | null>(null)
   const anchorValidityCache = useRef(new Map<string, boolean>())
   const [hoveredManipulation, setHoveredManipulation] = useState<string | null>(null)
@@ -481,13 +485,23 @@ function App() {
       let values: readonly [number, number, number]
       if (kind === 'line') {
         // Translating changes only c; motion along the line has no effect.
+        // The selection anchor travels with the line so that a later rotation
+        // pivots about the translated line, not the pressed one.
         const origin = lineDragOrigin.current
         if (!origin) return
         const [a, b, c] = origin.coefficients
-        values = [a, b, c - a * (target.x - origin.point.x) - b * (target.y - origin.point.y)]
+        const shift = { x: target.x - origin.point.x, y: target.y - origin.point.y }
+        values = [a, b, c - a * shift.x - b * shift.y]
+        if (selectedLine?.itemId === itemId) {
+          setSelectedLine({ itemId, anchor: { x: origin.anchor.x + shift.x, y: origin.anchor.y + shift.y } })
+        }
       } else {
-        // Rotating keeps the norm of (a, b) and the anchor on the line.
-        const anchor = selectedLine?.itemId === itemId ? selectedLine.anchor : rendered.primitive.point
+        // Rotating keeps the norm of (a, b) and the anchor on the line; the
+        // anchor is projected in case the line moved since it was selected.
+        const { point: on, direction } = rendered.primitive
+        const selected = selectedLine?.itemId === itemId ? selectedLine.anchor : on
+        const along = (selected.x - on.x) * direction.x + (selected.y - on.y) * direction.y
+        const anchor = { x: on.x + direction.x * along, y: on.y + direction.y * along }
         const dx = point.x - anchor.x
         const dy = point.y - anchor.y
         const length = Math.hypot(dx, dy)
@@ -611,11 +625,12 @@ function App() {
       const point = toMathematical(viewport, screenPoint(event.clientX, event.clientY))
       if (rendered?.primitive.kind === 'unbounded-line') {
         const { point: on, direction } = rendered.primitive
-        lineDragOrigin.current = { point, coefficients: lineCoefficients(rendered.primitive) }
         // A press selects the line and anchors its normal at the pressed
         // point projected onto the line.
         const along = (point.x - on.x) * direction.x + (point.y - on.y) * direction.y
-        setSelectedLine({ itemId, anchor: { x: on.x + direction.x * along, y: on.y + direction.y * along } })
+        const anchor = { x: on.x + direction.x * along, y: on.y + direction.y * along }
+        lineDragOrigin.current = { point, anchor, coefficients: lineCoefficients(rendered.primitive) }
+        setSelectedLine({ itemId, anchor })
       }
     }
     dispatchHistory({ type: 'boundary' })
@@ -739,15 +754,16 @@ function App() {
     if (kind === 'line') {
       const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
       if (rendered?.primitive.kind === 'unbounded-line') {
-        lineDragOrigin.current = { point: current, coefficients: lineCoefficients(rendered.primitive) }
+        lineDragOrigin.current = { point: current, anchor: current, coefficients: lineCoefficients(rendered.primitive) }
       }
     }
     const target = kind === 'normal'
-      // The normal's head is one unit from the anchor; nudge it, then renormalize.
+      // Nudge the normal handle's head, then the update renormalizes it.
       ? (() => {
           const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
           const normal = rendered?.primitive.kind === 'unbounded-line' ? rendered.primitive.normal : { x: 1, y: 0 }
-          return { x: current.x + normal.x + delta.x, y: current.y + normal.y + delta.y }
+          const length = lineNormalLength(viewport, objectRenderScale)
+          return { x: current.x + normal.x * length + delta.x, y: current.y + normal.y * length + delta.y }
         })()
       : { x: current.x + delta.x, y: current.y + delta.y }
     updateManipulatedItem(itemId, kind, target)

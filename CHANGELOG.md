@@ -35,8 +35,9 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Lines show a translucent halo on hover, optional orientation ticks on
   their positive side (the _Orientation visible_ appearance toggle), and,
   when their source is a literal `line(a, b, c)`, can be translated by
-  dragging and rotated about the pressed point through a unit normal handle
-  that preserves the scale `√(a² + b²)`; both gestures work from the keyboard.
+  dragging and rotated about the pressed point through a dashed normal handle
+  of fixed screen length that preserves the scale `√(a² + b²)`; both gestures
+  work from the keyboard.
 - Compact blade names accept every generator of the active algebra, so an
   unavailable blade such as `e0` under VGA(2) reports an unknown-blade
   diagnostic at its span instead of an undefined name.

@@ -2086,14 +2086,24 @@ body.canvas-gesture .expression-panel {
   pointer-events: none;
 }
 
+/* The selection normal is a helper, not an object: dashed, hollow, and translucent. */
 .line-anchor {
-  fill: currentColor;
+  fill: var(--canvas);
+  stroke: currentColor;
+  opacity: 0.7;
   pointer-events: none;
 }
 
 .line-normal-shaft {
   stroke: currentColor;
-  stroke-linecap: round;
+  stroke-linecap: butt;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.line-normal-head {
+  fill: currentColor;
+  opacity: 0.55;
   pointer-events: none;
 }
 

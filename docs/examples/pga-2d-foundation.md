@@ -74,10 +74,11 @@ Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
    with *Orientation visible*).
 2. Drag `M` to the right: the line translates and `M = line(1, 0, c)` is
    rewritten with the new `c`; `X` and `F` follow.
-3. Click `M`: it stays selected and a unit normal arrow appears, anchored at
-   the point of the line nearest the click. Drag the arrow's head: the line
-   rotates about that anchor, `M = line(a, b, c)` keeps `√(a² + b²) = 1`, and
-   the anchor stays on the line. Press `Escape` to clear the selection.
+3. Click `M`: it stays selected and a dashed normal handle appears, anchored
+   at the point of the line nearest the click; its length does not change
+   with the zoom. Drag the handle's head: the line rotates about that anchor,
+   `M = line(a, b, c)` keeps `√(a² + b²) = 1`, and the anchor stays on the
+   line. Press `Escape` to clear the selection.
 4. With the line focused, press `Enter` to select it, the arrow keys to nudge
    its normal, and `Enter` again to return to translation.
 

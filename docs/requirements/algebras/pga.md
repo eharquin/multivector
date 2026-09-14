@@ -133,8 +133,11 @@ to milestones that explicitly include the standard PGA interpretation.
   hovered or selected, and may show discreet orientation ticks on its
   positive side, toggled by the item's `orientationVisible` appearance.
   Dragging a movable line shall translate it, keeping `(a, b)` and rewriting
-  `c`. Pressing (or `Enter` on the focused line) shall select it and draw its
-  unit normal anchored at the point of the line nearest the press; dragging
-  or nudging the normal's head shall rotate the line about that anchor,
-  preserving the scale `√(a² + b²)`. `Escape`, a viewport pan, or a press
+  `c`. Pressing (or `Enter` on the focused line) shall select it and draw a
+  normal handle anchored at the point of the line nearest the press; the
+  handle shall keep a fixed screen length whatever the zoom and shall be
+  styled as a helper (dashed, translucent, hollow anchor), not as a vector.
+  Dragging or nudging the handle's head shall rotate the line about that
+  anchor, preserving the scale `√(a² + b²)`; the anchor shall follow a
+  translation of the selected line. `Escape`, a viewport pan, or a press
   elsewhere shall clear the selection.

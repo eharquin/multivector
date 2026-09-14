@@ -319,6 +319,11 @@ export function lineOrientationTicks(
   return ticks.join(' ')
 }
 
+/** The normal handle's length in mathematical units at the current zoom. */
+export function lineNormalLength(viewport: Viewport2d, objectRenderScale: number): number {
+  return LINE_NORMAL_LENGTH * objectRenderScale / viewport.pixelsPerUnit
+}
+
 export type LineSelectionLayout = Readonly<{
   anchor: Point2d
   mathematicalAnchor: Point2d
@@ -326,7 +331,14 @@ export type LineSelectionLayout = Readonly<{
   arrowPoints: string
 }>
 
-/** Projects a point onto the line, then lays out the unit normal drawn from that anchor. */
+/** Screen length of the normal handle drawn on a selected line, before the object scale. */
+export const LINE_NORMAL_LENGTH = 56
+
+/**
+ * Projects a point onto the line, then lays out the normal handle drawn from
+ * that anchor. The handle has a fixed screen length whatever the zoom: it is
+ * a rotation helper, not a vector of the document.
+ */
 export function layoutLineSelection(
   primitive: UnboundedLinePrimitive,
   near: Point2d,
@@ -339,10 +351,14 @@ export function layoutLineSelection(
     x: primitive.point.x + primitive.direction.x * along,
     y: primitive.point.y + primitive.direction.y * along,
   }
+  const length = lineNormalLength(viewport, objectRenderScale)
   const segment = layoutOrientedSegment({
     kind: 'oriented-segment',
     start: mathematicalAnchor,
-    end: { x: mathematicalAnchor.x + primitive.normal.x, y: mathematicalAnchor.y + primitive.normal.y },
+    end: {
+      x: mathematicalAnchor.x + primitive.normal.x * length,
+      y: mathematicalAnchor.y + primitive.normal.y * length,
+    },
     accessibleName: primitive.accessibleName,
   }, viewport, objectRenderScale)
   return {
