@@ -139,5 +139,7 @@ to milestones that explicitly include the standard PGA interpretation.
   styled as a helper (dashed, translucent, hollow anchor), not as a vector.
   Dragging or nudging the handle's head shall rotate the line about that
   anchor, preserving the scale `√(a² + b²)`; the anchor shall follow a
-  translation of the selected line. `Escape`, a viewport pan, or a press
+  translation of the selected line, and the rounding of `(a, b)` shall be
+  refined by the anchor's distance from the origin so that the rewritten line
+  still passes through the anchor within the grid precision. `Escape`, a viewport pan, or a press
   elsewhere shall clear the selection.

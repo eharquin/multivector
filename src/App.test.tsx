@@ -2061,6 +2061,29 @@ describe('PGA 2D foundation workflow', () => {
     expect(document.querySelector('.line-normal-head')).not.toBeNull()
   })
 
+  it('keeps a rotated line through its anchor far from the origin at a coarse zoom', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = line(-0.6, 0.8, -30000)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    // Zoom far out: about 0.0089 pixels per unit, so one pixel spans 112 units.
+    fireEvent.wheel(canvas, { deltaY: 6000, clientX: 320, clientY: 240 })
+    const pixelsPerUnit = 72 * Math.exp(-6000 * 0.0015)
+    const pressed = { x: (160 - 320) / pixelsPerUnit, y: (240 - 27) / pixelsPerUnit }
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move L' }), { button: 0, pointerId: 45, clientX: 160, clientY: 27 })
+    fireEvent.pointerUp(canvas, { pointerId: 45 })
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Rotate L' }), { button: 0, pointerId: 46 })
+    fireEvent.pointerMove(canvas, { pointerId: 46, clientX: 232, clientY: -9 })
+    fireEvent.pointerUp(canvas, { pointerId: 46 })
+    const [a, b, c] = /^L = line\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)$/.exec((first as HTMLInputElement).value)!.slice(1).map(Number)
+    // The norm survives the rounding, and the line still passes within a pixel of the press.
+    expect(Math.hypot(a, b)).toBeCloseTo(1, 3)
+    expect(a).toBeCloseTo(2 / Math.sqrt(5), 2)
+    expect(b).toBeCloseTo(1 / Math.sqrt(5), 2)
+    expect(Math.abs(a * pressed.x + b * pressed.y + c) * pixelsPerUnit).toBeLessThan(1)
+  })
+
   it('translates a literal line by dragging it and rotates it about the pressed anchor', () => {
     selectPga()
     const first = screen.getByRole('textbox', { name: 'Expression 1' })

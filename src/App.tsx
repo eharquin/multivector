@@ -481,17 +481,25 @@ function App() {
       if (rendered.primitive.kind !== 'unbounded-line') return
       const components = literalEditComponents(item, rendered.entity)
       if (!components) return
-      const [a0, b0, c0] = lineCoefficients(rendered.primitive)
-      let values: readonly [number, number, number]
+      const [a0, b0] = lineCoefficients(rendered.primitive)
+      // Far from the origin, a coarse (a, b) would move the line by the
+      // anchor's distance times its rounding error: (a, b) are rounded with a
+      // step refined by that distance and c is derived from them, so the
+      // anchor stays on the line.
+      const coefficientStep = (anchor: Point2d) => roundingStep / 10 / Math.max(1, Math.hypot(anchor.x, anchor.y))
+      let rounded: readonly [number, number, number]
       if (kind === 'line') {
         // Translating changes only c; motion along the line has no effect.
         // The selection anchor travels with the line so that a later rotation
         // pivots about the translated line, not the pressed one.
         const origin = lineDragOrigin.current
         if (!origin) return
-        const [a, b, c] = origin.coefficients
+        const step = coefficientStep(origin.anchor)
+        const a = Number(formatGridNumber(origin.coefficients[0], step))
+        const b = Number(formatGridNumber(origin.coefficients[1], step))
         const shift = { x: target.x - origin.point.x, y: target.y - origin.point.y }
-        values = [a, b, c - a * shift.x - b * shift.y]
+        const c = origin.coefficients[2] - a * shift.x - b * shift.y
+        rounded = [a, b, Number(formatGridNumber(c, roundingStep / 10))]
         if (selectedLine?.itemId === itemId) {
           setSelectedLine({ itemId, anchor: { x: origin.anchor.x + shift.x, y: origin.anchor.y + shift.y } })
         }
@@ -507,11 +515,11 @@ function App() {
         const length = Math.hypot(dx, dy)
         if (length === 0) return
         const scale = Math.hypot(a0, b0)
-        const a = dx / length * scale
-        const b = dy / length * scale
-        values = [a, b, -(a * anchor.x + b * anchor.y)]
+        const step = coefficientStep(anchor)
+        const a = Number(formatGridNumber(dx / length * scale, step))
+        const b = Number(formatGridNumber(dy / length * scale, step))
+        rounded = [a, b, Number(formatGridNumber(-(a * anchor.x + b * anchor.y), roundingStep / 10))]
       }
-      const rounded = values.map((value) => Number(formatGridNumber(value, roundingStep / 10)))
       const rewritten = rewriteConstructorLiterals(item.source, components, rounded)
       if (rewritten !== item.source) executeCommand({ kind: 'update-source', itemId, source: rewritten })
       components.forEach((component, index) => {
@@ -523,7 +531,6 @@ function App() {
           kind: 'set-scalar-value', itemId: scalarItem.id, value: rounded[index] * component.sign,
         })
       })
-      void c0
       return
     }
     if (kind === 'head' && interpretation.supportsHead(rendered.entity)) {
