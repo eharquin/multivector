@@ -72,7 +72,7 @@ describe('standard PGA(2) interpretation', () => {
     expect(interpretation.formatPosition('1', '2')).toBe('point(1, 2)')
     expect(interpretation.literalEdit(p)).toEqual({ constructor: 'point', arity: 2 })
     expect(interpretation.literalEdit(d)).toEqual({ constructor: 'ipoint', arity: 2 })
-    expect(interpretation.literalEdit(l)).toBeNull()
+    expect(interpretation.literalEdit(l)).toEqual({ constructor: 'line', arity: 3 })
   })
 
   it('maps entities to the PGA primitives', () => {

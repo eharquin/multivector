@@ -287,3 +287,84 @@ export function layoutIdealArrow(
     accessibleName: primitive.accessibleName,
   }, viewport, objectRenderScale)
 }
+
+/** Short ticks on the positive side of a clipped line, every `spacing` screen pixels. */
+export function lineOrientationTicks(
+  primitive: UnboundedLinePrimitive,
+  layout: NonNullable<LineLayout>,
+  objectRenderScale: number,
+  spacing = 48,
+): string {
+  const dx = layout.end.x - layout.start.x
+  const dy = layout.end.y - layout.start.y
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return ''
+  // The positive side is the normal's side; screen y is flipped.
+  const nx = primitive.normal.x
+  const ny = -primitive.normal.y
+  const tick = 6 * objectRenderScale
+  // Ticks are spaced from the foot of the perpendicular from the origin, a
+  // point of the line itself, so they stay put while the clipped segment
+  // changes with the viewport or with the line's motion.
+  const footAlong = ((layout.foot.x - layout.start.x) * dx + (layout.foot.y - layout.start.y) * dy) / length
+  const ux = dx / length
+  const uy = dy / length
+  const ticks: string[] = []
+  for (let index = Math.ceil(-footAlong / spacing); footAlong + index * spacing <= length; index += 1) {
+    const along = index * spacing
+    const x = layout.foot.x + ux * along
+    const y = layout.foot.y + uy * along
+    ticks.push(`M ${x} ${y} L ${x + nx * tick} ${y + ny * tick}`)
+  }
+  return ticks.join(' ')
+}
+
+/** The normal handle's length in mathematical units at the current zoom. */
+export function lineNormalLength(viewport: Viewport2d, objectRenderScale: number): number {
+  return LINE_NORMAL_LENGTH * objectRenderScale / viewport.pixelsPerUnit
+}
+
+export type LineSelectionLayout = Readonly<{
+  anchor: Point2d
+  mathematicalAnchor: Point2d
+  normalTip: Point2d
+  arrowPoints: string
+}>
+
+/** Screen length of the normal handle drawn on a selected line, before the object scale. */
+export const LINE_NORMAL_LENGTH = 56
+
+/**
+ * Projects a point onto the line, then lays out the normal handle drawn from
+ * that anchor. The handle has a fixed screen length whatever the zoom: it is
+ * a rotation helper, not a vector of the document.
+ */
+export function layoutLineSelection(
+  primitive: UnboundedLinePrimitive,
+  near: Point2d,
+  viewport: Viewport2d,
+  objectRenderScale: number,
+): LineSelectionLayout {
+  const along = (near.x - primitive.point.x) * primitive.direction.x +
+    (near.y - primitive.point.y) * primitive.direction.y
+  const mathematicalAnchor = {
+    x: primitive.point.x + primitive.direction.x * along,
+    y: primitive.point.y + primitive.direction.y * along,
+  }
+  const length = lineNormalLength(viewport, objectRenderScale)
+  const segment = layoutOrientedSegment({
+    kind: 'oriented-segment',
+    start: mathematicalAnchor,
+    end: {
+      x: mathematicalAnchor.x + primitive.normal.x * length,
+      y: mathematicalAnchor.y + primitive.normal.y * length,
+    },
+    accessibleName: primitive.accessibleName,
+  }, viewport, objectRenderScale)
+  return {
+    anchor: segment.start,
+    mathematicalAnchor,
+    normalTip: segment.end,
+    arrowPoints: segment.arrowPoints ?? '',
+  }
+}

@@ -148,12 +148,15 @@ function pointMarker(entity: Extract<Pga2Entity, { kind: 'euclidean-point' }>, a
 }
 
 function unboundedLine(entity: Extract<Pga2Entity, { kind: 'euclidean-line' }>, accessibleName: string): UnboundedLinePrimitive {
-  const scale = entity.a * entity.a + entity.b * entity.b
+  const squared = entity.a * entity.a + entity.b * entity.b
+  const scale = Math.sqrt(squared)
   return Object.freeze({
     kind: 'unbounded-line' as const,
     // The foot of the perpendicular from the origin, and the direction along the line.
-    point: Object.freeze({ x: -entity.a * entity.c / scale, y: -entity.b * entity.c / scale }),
-    direction: Object.freeze({ x: -entity.b / Math.sqrt(scale), y: entity.a / Math.sqrt(scale) }),
+    point: Object.freeze({ x: -entity.a * entity.c / squared, y: -entity.b * entity.c / squared }),
+    direction: Object.freeze({ x: -entity.b / scale, y: entity.a / scale }),
+    normal: Object.freeze({ x: entity.a / scale, y: entity.b / scale }),
+    scale,
     accessibleName,
   })
 }
@@ -186,8 +189,9 @@ function exactEuclideanPoint(value: OwnedMultivector): boolean {
 /**
  * The standard plane-based PGA(2) interpretation, `org.multivector.pga-2d`
  * version 1 (PGA-INT-001 through PGA-INT-008). Points and lines have
- * intrinsic locations, so they accept no position and dragging a point
- * rewrites its `point(x, y)` literal (PGA-VIZ-003). An ideal point has no
+ * intrinsic locations, so they accept no position; dragging a point rewrites
+ * its `point(x, y)` literal and moving a line its `line(a, b, c)` literal
+ * (PGA-VIZ-003, PGA-VIZ-004). An ideal point has no
  * location and accepts a rendering position, a Euclidean point; its head is
  * `position + value`, the Euclidean point at the end of its arrow.
  */
@@ -235,6 +239,7 @@ export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
   literalEdit(entity) {
     if (entity.kind === 'euclidean-point') return { constructor: 'point', arity: 2 }
     if (entity.kind === 'ideal-point') return { constructor: 'ipoint', arity: 2 }
+    if (entity.kind === 'euclidean-line') return { constructor: 'line', arity: 3 }
     return null
   },
   formatPosition: (x, y) => `point(${x}, ${y})`,

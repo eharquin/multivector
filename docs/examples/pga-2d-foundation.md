@@ -67,7 +67,23 @@ Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
 3. Focus the marker of `B` with `Tab` and press the arrow keys to nudge it
    (`Shift` for a larger step).
 
-Lines and ideal points have no handle in this milestone.
+## Move and rotate a line
+
+1. Hover `M`: a translucent halo widens the line, and short ticks on its
+   positive side show its orientation (toggle them from the appearance popover
+   with *Orientation visible*).
+2. Drag `M` to the right: the line translates and `M = line(1, 0, c)` is
+   rewritten with the new `c`; `X` and `F` follow.
+3. Click `M`: it stays selected and a dashed normal handle appears, anchored
+   at the point of the line nearest the click; its length does not change
+   with the zoom. Drag the handle's head: the line rotates about that anchor,
+   `M = line(a, b, c)` keeps `√(a² + b²) = 1`, and the anchor stays on the
+   line. Press `Escape` to clear the selection.
+4. With the line focused, press `Enter` to select it, the arrow keys to nudge
+   its normal, and `Enter` again to return to translation.
+
+Only literal lines move; `L = A & B` shows the halo and ticks but is moved
+through `A` and `B`.
 
 ## Create points from the viewport
 

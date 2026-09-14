@@ -2037,6 +2037,111 @@ describe('PGA 2D foundation workflow', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
   })
 
+  it('rotates a line about its translated anchor after dragging it', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = line(1, 1, 0)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    // Press at (1, -1), on the line, and drag one unit to the right: the anchor follows to (2, -1).
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move L' }), { button: 0, pointerId: 43, clientX: 392, clientY: 312 })
+    fireEvent.pointerMove(canvas, { pointerId: 43, clientX: 464, clientY: 312 })
+    fireEvent.pointerUp(canvas, { pointerId: 43 })
+    expect(first).toHaveValue('L = line(1, 1, -1)')
+    // Rotating now pivots about (2, -1): the line does not snap back through (1, -1).
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Rotate L' }), { button: 0, pointerId: 44 })
+    fireEvent.pointerMove(canvas, { pointerId: 44, clientX: 536, clientY: 312 })
+    fireEvent.pointerUp(canvas, { pointerId: 44 })
+    const [a, b, c] = /^L = line\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)$/.exec((first as HTMLInputElement).value)!.slice(1).map(Number)
+    expect(a).toBeCloseTo(Math.SQRT2, 3)
+    expect(b).toBeCloseTo(0, 3)
+    expect(a * 2 + b * -1 + c).toBeCloseTo(0, 3)
+    // The helper is drawn dashed and hollow, unlike a vector.
+    expect(document.querySelector('.line-normal-shaft')?.getAttribute('stroke-dasharray')).not.toBeNull()
+    expect(document.querySelector('.line-normal-head')).not.toBeNull()
+  })
+
+  it('keeps a rotated line through its anchor far from the origin at a coarse zoom', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = line(-0.6, 0.8, -30000)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    // Zoom far out: about 0.0089 pixels per unit, so one pixel spans 112 units.
+    fireEvent.wheel(canvas, { deltaY: 6000, clientX: 320, clientY: 240 })
+    const pixelsPerUnit = 72 * Math.exp(-6000 * 0.0015)
+    const pressed = { x: (160 - 320) / pixelsPerUnit, y: (240 - 27) / pixelsPerUnit }
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move L' }), { button: 0, pointerId: 45, clientX: 160, clientY: 27 })
+    fireEvent.pointerUp(canvas, { pointerId: 45 })
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Rotate L' }), { button: 0, pointerId: 46 })
+    fireEvent.pointerMove(canvas, { pointerId: 46, clientX: 232, clientY: -9 })
+    fireEvent.pointerUp(canvas, { pointerId: 46 })
+    const [a, b, c] = /^L = line\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)$/.exec((first as HTMLInputElement).value)!.slice(1).map(Number)
+    // The norm survives the rounding, and the line still passes within a pixel of the press.
+    expect(Math.hypot(a, b)).toBeCloseTo(1, 3)
+    expect(a).toBeCloseTo(2 / Math.sqrt(5), 2)
+    expect(b).toBeCloseTo(1 / Math.sqrt(5), 2)
+    expect(Math.abs(a * pressed.x + b * pressed.y + c) * pixelsPerUnit).toBeLessThan(1)
+  })
+
+  it('translates a literal line by dragging it and rotates it about the pressed anchor', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = line(1, 1, 0)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const body = screen.getByRole('button', { name: 'Move L' })
+    expect(document.querySelector('.line-orientation')).not.toBeNull()
+    expect(document.querySelector('.unbounded-line-halo')).toBeNull()
+
+    // Hover shows the translucent double border.
+    fireEvent.pointerEnter(body)
+    expect(document.querySelector('.unbounded-line-halo')).not.toBeNull()
+    fireEvent.pointerLeave(body)
+
+    // Dragging translates: only c changes; the press selects the line.
+    fireEvent.pointerDown(body, { button: 0, pointerId: 41, clientX: 392, clientY: 312 })
+    fireEvent.pointerMove(canvas, { pointerId: 41, clientX: 464, clientY: 312 })
+    fireEvent.pointerUp(canvas, { pointerId: 41 })
+    expect(first).toHaveValue('L = line(1, 1, -1)')
+    const normal = screen.getByRole('button', { name: 'Rotate L' })
+    expect(normal).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(first).toHaveValue('L = line(1, 1, 0)')
+
+    // Rotating the unit normal keeps the norm of (a, b) and the anchor on the
+    // line: the anchor followed the drag to (2, -1) and, after the undo, is
+    // projected back onto x + y = 0 at (1.5, -1.5).
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Rotate L' }), { button: 0, pointerId: 42 })
+    fireEvent.pointerMove(canvas, { pointerId: 42, clientX: 536, clientY: 348 })
+    fireEvent.pointerUp(canvas, { pointerId: 42 })
+    const match = /^L = line\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)$/.exec((first as HTMLInputElement).value)
+    expect(match).not.toBeNull()
+    const [a, b, c] = match!.slice(1).map(Number)
+    // The pointer sits to the right of the anchor: the normal becomes (√2, 0).
+    expect(a).toBeCloseTo(Math.SQRT2, 3)
+    expect(b).toBeCloseTo(0, 3)
+    expect(a * 1.5 + b * -1.5 + c).toBeCloseTo(0, 3)
+
+    // Escape drops the selection; Enter on the focused line shows it again.
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('button', { name: 'Rotate L' })).not.toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move L' }), { key: 'Enter' })
+    expect(screen.getByRole('button', { name: 'Rotate L' })).toBeInTheDocument()
+
+    // Keyboard: arrows translate the focused line.
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move L' }), { key: 'ArrowRight', shiftKey: true })
+    expect(/^L = line\([-\d.]+, [-\d.]+, [-\d.]+\)$/.test((first as HTMLInputElement).value)).toBe(true)
+
+    // An orientation toggle hides the ticks; a non-literal line has no handles.
+    fireEvent.click(screen.getByRole('button', { name: 'Open Line menu for L' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Orientation visible' }))
+    expect(document.querySelector('.line-orientation')).toBeNull()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.change(first, { target: { value: 'L = 2 * line(1, 1, 0)' } })
+    expect(screen.queryByRole('button', { name: 'Move L' })).not.toBeInTheDocument()
+  })
+
   it('drags a literal point as one undoable source rewrite and creates points by double-click', () => {
     selectPga()
     const first = screen.getByRole('textbox', { name: 'Expression 1' })
