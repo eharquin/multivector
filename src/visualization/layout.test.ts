@@ -7,7 +7,7 @@ const viewport: Viewport2d = { width: 800, height: 600, centerX: 0, centerY: 0, 
 describe('PGA primitive layouts', () => {
   it('clips an unbounded line to the viewport edges', () => {
     const horizontal = layoutUnboundedLine(
-      { kind: 'unbounded-line', point: { x: 0, y: 2 }, direction: { x: 1, y: 0 }, accessibleName: 'L' },
+      { kind: 'unbounded-line', point: { x: 0, y: 2 }, direction: { x: 1, y: 0 }, normal: { x: 0, y: 1 }, scale: 1, accessibleName: 'L' },
       viewport,
     )
     expect(horizontal).not.toBeNull()
@@ -15,7 +15,7 @@ describe('PGA primitive layouts', () => {
     expect(horizontal!.start.y).toBeCloseTo(200, 10)
     expect(horizontal!.foot).toEqual({ x: 400, y: 200 })
     const diagonal = layoutUnboundedLine(
-      { kind: 'unbounded-line', point: { x: 0, y: 0 }, direction: { x: Math.SQRT1_2, y: Math.SQRT1_2 }, accessibleName: 'D' },
+      { kind: 'unbounded-line', point: { x: 0, y: 0 }, direction: { x: Math.SQRT1_2, y: Math.SQRT1_2 }, normal: { x: -Math.SQRT1_2, y: Math.SQRT1_2 }, scale: 1, accessibleName: 'D' },
       viewport,
     )
     expect(diagonal!.start.y).toBeCloseTo(600, 10)
@@ -24,7 +24,7 @@ describe('PGA primitive layouts', () => {
 
   it('returns null for a line outside the viewport', () => {
     const far = layoutUnboundedLine(
-      { kind: 'unbounded-line', point: { x: 0, y: 100 }, direction: { x: 1, y: 0 }, accessibleName: 'F' },
+      { kind: 'unbounded-line', point: { x: 0, y: 100 }, direction: { x: 1, y: 0 }, normal: { x: 0, y: 1 }, scale: 1, accessibleName: 'F' },
       viewport,
     )
     expect(far).toBeNull()

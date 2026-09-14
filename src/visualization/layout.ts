@@ -287,3 +287,65 @@ export function layoutIdealArrow(
     accessibleName: primitive.accessibleName,
   }, viewport, objectRenderScale)
 }
+
+/** Short ticks on the positive side of a clipped line, every `spacing` screen pixels. */
+export function lineOrientationTicks(
+  primitive: UnboundedLinePrimitive,
+  layout: NonNullable<LineLayout>,
+  objectRenderScale: number,
+  spacing = 48,
+): string {
+  const dx = layout.end.x - layout.start.x
+  const dy = layout.end.y - layout.start.y
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return ''
+  // The positive side is the normal's side; screen y is flipped.
+  const nx = primitive.normal.x
+  const ny = -primitive.normal.y
+  const tick = 6 * objectRenderScale
+  const count = Math.floor(length / spacing)
+  const offset = (length - count * spacing) / 2
+  const ticks: string[] = []
+  for (let index = 0; index <= count; index += 1) {
+    const t = (offset + index * spacing) / length
+    if (t < 0 || t > 1) continue
+    const x = layout.start.x + dx * t
+    const y = layout.start.y + dy * t
+    ticks.push(`M ${x} ${y} L ${x + nx * tick} ${y + ny * tick}`)
+  }
+  return ticks.join(' ')
+}
+
+export type LineSelectionLayout = Readonly<{
+  anchor: Point2d
+  mathematicalAnchor: Point2d
+  normalTip: Point2d
+  arrowPoints: string
+}>
+
+/** Projects a point onto the line, then lays out the unit normal drawn from that anchor. */
+export function layoutLineSelection(
+  primitive: UnboundedLinePrimitive,
+  near: Point2d,
+  viewport: Viewport2d,
+  objectRenderScale: number,
+): LineSelectionLayout {
+  const along = (near.x - primitive.point.x) * primitive.direction.x +
+    (near.y - primitive.point.y) * primitive.direction.y
+  const mathematicalAnchor = {
+    x: primitive.point.x + primitive.direction.x * along,
+    y: primitive.point.y + primitive.direction.y * along,
+  }
+  const segment = layoutOrientedSegment({
+    kind: 'oriented-segment',
+    start: mathematicalAnchor,
+    end: { x: mathematicalAnchor.x + primitive.normal.x, y: mathematicalAnchor.y + primitive.normal.y },
+    accessibleName: primitive.accessibleName,
+  }, viewport, objectRenderScale)
+  return {
+    anchor: segment.start,
+    mathematicalAnchor,
+    normalTip: segment.end,
+    arrowPoints: segment.arrowPoints ?? '',
+  }
+}

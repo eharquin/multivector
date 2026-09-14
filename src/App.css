@@ -2065,3 +2065,42 @@ body.canvas-gesture .expression-panel {
   stroke: currentColor;
   pointer-events: none;
 }
+
+.unbounded-line-halo {
+  stroke: currentColor;
+  stroke-opacity: 0.18;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.unbounded-line-hit {
+  stroke: transparent;
+  fill: none;
+  cursor: grab;
+}
+
+.line-orientation {
+  stroke: currentColor;
+  stroke-opacity: 0.55;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.line-anchor {
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.line-normal-shaft {
+  stroke: currentColor;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+line.manipulation-focus-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.35;
+  stroke-linecap: round;
+  pointer-events: none;
+}

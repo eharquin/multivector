@@ -192,7 +192,7 @@ export function AppearancePopover({
           </div>
         </section>
       )}
-      {kind === 'Bivector' && onOrientationVisibleChange && (
+      {(kind === 'Bivector' || kind === 'Line') && onOrientationVisibleChange && (
         <section className="appearance-section">
           <h3>Orientation</h3>
           <label className="appearance-toggle-row">

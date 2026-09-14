@@ -123,8 +123,18 @@ to milestones that explicitly include the standard PGA interpretation.
   positioned object. Versors and mixed multivectors shall be reported
   textually and shall not be drawn.
 - **PGA-VIZ-003:** Direct manipulation in the first milestone shall be limited
-  to moving a point whose source is a literal `point(x, y)`, and to the head
-  and base of an ideal point whose source is a literal `ipoint(x, y)`,
+  to moving a point whose source is a literal `point(x, y)`, to the head and
+  base of an ideal point whose source is a literal `ipoint(x, y)`, and to a
+  line whose source is a literal `line(a, b, c)` as specified by PGA-VIZ-004,
   rewriting those literals with the deterministic precision rules of EDIT and
-  INTERACT2D; dragging lines, anchoring to Euclidean points, and interactive
-  motors are excluded until separately specified.
+  INTERACT2D; anchoring to Euclidean points and interactive motors are
+  excluded until separately specified.
+- **PGA-VIZ-004:** A Euclidean line shall show a translucent halo while
+  hovered or selected, and may show discreet orientation ticks on its
+  positive side, toggled by the item's `orientationVisible` appearance.
+  Dragging a movable line shall translate it, keeping `(a, b)` and rewriting
+  `c`. Pressing (or `Enter` on the focused line) shall select it and draw its
+  unit normal anchored at the point of the line nearest the press; dragging
+  or nudging the normal's head shall rotate the line about that anchor,
+  preserving the scale `√(a² + b²)`. `Escape`, a viewport pan, or a press
+  elsewhere shall clear the selection.

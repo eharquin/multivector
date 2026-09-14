@@ -5,7 +5,7 @@
 **Depends on:** VGA 2D Visual Workflow (accepted, release 0.1.0); the
 registered-algebra engineering work identified by the #98 architecture delta
 **Applies:** PGA-001 through PGA-008; PGA-010 through PGA-012; PGA-INT-001
-through PGA-INT-008; PGA-VIZ-001 through PGA-VIZ-003; ALG-001 through ALG-031
+through PGA-INT-008; PGA-VIZ-001 through PGA-VIZ-004; ALG-001 through ALG-031
 as exercised by a second definition
 **Date:** 2026-09-13
 
