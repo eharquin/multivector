@@ -185,8 +185,8 @@ function evaluateExpressionUnchecked(
     case 'exp':
       return unary(expression, evaluate(expression.operand), engine.exp, budget)
     case 'scalar-function':
-      return unary(expression, evaluate(expression.operand),
-        (value) => engine.scalarFunction(expression.name, value), budget)
+      return nary(expression, expression.arguments.map(evaluate),
+        (args) => engine.scalarFunction(expression.name, args), budget)
     case 'grade':
       return unary(expression, evaluate(expression.operand),
         (value) => engine.grade(value, expression.grade), budget)

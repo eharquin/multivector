@@ -1,5 +1,6 @@
 import { type AlgebraBasis } from '../domain/algebraBasis'
 import { type OwnedMultivector } from '../domain/multivector'
+import { type ScalarFunctionName } from '../domain/scalarFunctions'
 
 /**
  * The operation contract every registered algebra definition provides.
@@ -36,10 +37,8 @@ export type AlgebraEngine = Readonly<{
   norm(value: OwnedMultivector): OwnedMultivector
   normalize(value: OwnedMultivector): NormalizationResult
   exp(value: OwnedMultivector): OwnedMultivector
-  scalarFunction(
-    name: 'sin' | 'cos' | 'tan' | 'sinh' | 'cosh' | 'tanh',
-    value: OwnedMultivector,
-  ): OwnedMultivector
+  /** A built-in scalar function of language section 10 on scalar arguments. */
+  scalarFunction(name: ScalarFunctionName, args: readonly OwnedMultivector[]): OwnedMultivector
 }>
 
 export type NormalizationResult =

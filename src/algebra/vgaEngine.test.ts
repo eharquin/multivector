@@ -210,7 +210,7 @@ describe('VGA engine adapter', () => {
     const singular = engine.add(engine.scalar(1), engine.basisBlade('e1'))
 
     expect(() => engine.inverse(singular)).toThrow('not invertible')
-    expect(() => engine.scalarFunction('sin', engine.basisBlade('e1'))).toThrow('requires a scalar')
+    expect(() => engine.scalarFunction('sin', [engine.basisBlade('e1')])).toThrow('must be scalar')
     expect(engine.normalize(engine.scalar(0))).toEqual({
       status: 'unavailable',
       value: engine.scalar(0),

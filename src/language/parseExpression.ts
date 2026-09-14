@@ -1,4 +1,5 @@
 import type { Diagnostic, SourceSpan } from '../domain/diagnostic'
+import { SCALAR_FUNCTIONS, SCALAR_FUNCTION_NAMES, isScalarFunctionName } from '../domain/scalarFunctions'
 import type {
   BasisBladeNode,
   SurfaceExpressionNode,
@@ -31,9 +32,13 @@ type NodeResult =
   | Readonly<{ ok: true; node: SurfaceExpressionNode }>
   | Readonly<{ ok: false; diagnostic: Diagnostic }>
 
-const RESERVED_FUNCTION_NAMES = new Set([
-  'exp', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh',
-])
+const RESERVED_FUNCTION_NAMES = new Set(['exp', ...SCALAR_FUNCTION_NAMES])
+
+/** The fixed argument count of a reserved function, checked at parse time. */
+function reservedArity(callee: string): number | null {
+  if (callee === 'exp') return 1
+  return isScalarFunctionName(callee) ? SCALAR_FUNCTIONS[callee].arity : null
+}
 
 function syntaxDiagnostic(message: string, span: SourceSpan): Diagnostic {
   return {
@@ -636,11 +641,12 @@ class Parser {
         ),
       }
     }
-    if (RESERVED_FUNCTION_NAMES.has(callee.text) && argumentNodes.length !== 1) {
+    const arity = reservedArity(callee.text)
+    if (arity !== null && argumentNodes.length !== arity) {
       return {
         ok: false,
         diagnostic: syntaxDiagnostic(
-          `“${callee.text}” takes exactly one argument.`,
+          `“${callee.text}” takes exactly ${arity === 1 ? 'one argument' : `${arity} arguments`}.`,
           { start: callee.span.start, end: rightParenthesis.span.end },
         ),
       }

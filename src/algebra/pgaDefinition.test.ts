@@ -81,6 +81,19 @@ describe('PGA(2) sources through the language', () => {
     expect(value('e1 >>> point(1, 0)').inspection).toBe('-e02 - e12')
   })
 
+  it('reads distances and angles through norms, products, and the scalar functions', () => {
+    const scalar = (source: string) => value(source).value.coefficients[0]
+    // Distance between unit points: the norm of their join.
+    expect(scalar('norm(point(-2, 1) & point(2, 2))')).toBeCloseTo(Math.hypot(4, 1), 12)
+    // Angle between unit lines: cosine from the inner product, sine from the meet's weight.
+    expect(scalar('acos(line(1, 0, -1) | (line(1, 1, 0) / line(1, 1, 0).norm))')).toBeCloseTo(Math.PI / 4, 12)
+    expect(scalar('atan2((line(1, 0, 0) ^ line(0, 1, 0)).e12, line(1, 0, 0) | line(0, 1, 0))')).toBeCloseTo(Math.PI / 2, 12)
+    expect(scalar('atan2((line(0, 1, 0) ^ line(1, 0, 0)).e12, line(0, 1, 0) | line(1, 0, 0))')).toBeCloseTo(-Math.PI / 2, 12)
+    // Signed distance from a unit line to a unit point: the e012 coefficient of their outer product.
+    expect(scalar('(line(1, 0, -1) ^ point(3, 0)).e012')).toBeCloseTo(2, 12)
+    expect(scalar('inorm(line(1, 0, -1) ^ point(-1, 5))')).toBeCloseTo(2, 12)
+  })
+
   it('reports arity, non-scalar arguments, and unavailable functions', () => {
     expect(evaluateSource('point(1)', context)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_ARITY' } })
     expect(evaluateSource('point(e1, 2)', context)).toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' } })

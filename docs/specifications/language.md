@@ -41,9 +41,10 @@ and partial list results are rejected. Positioned vector and bivector elements
 retain positions through supported list operations without a list-level
 position field; `position` and vector `head` distribute over compatible lists.
 
-Annotations, the remaining properties, operators and functions,
-serialization, and the generalized algebra-symbol and capability registries in this
-specification remain planned. This section records implementation evidence; it
+The scalar functions of section 10 are implemented, including `atan2`.
+Annotations, the remaining properties and operators, serialization, and the
+generalized algebra-symbol and capability registries in this specification
+remain planned. This section records implementation evidence; it
 does not narrow the normative language.
 
 ## 2. Semantic values
@@ -244,26 +245,26 @@ defined by the common design requirements.
 
 The initial language provides:
 
-| Syntax | Operation |
-| --- | --- |
-| `A + B`, `A - B` | addition and subtraction |
-| `A * B` | geometric product |
-| `A / B` | `A * inverse(B)` when the inverse exists |
-| `A ^ B` | outer product |
-| `A & B` | regressive product when defined |
-| `A \| B` | inner product defined by the active convention |
-| `A << B` | left contraction |
-| `R >>> A` | sandwich action |
-| `-A`, `+A` | unary sign |
-| `~A` | reverse |
-| `!A` | dual when defined |
-| `A.reverse`, `A.dual` | postfix reverse and dual |
-| `A.involution` | grade involution |
-| `A**n` | geometric integer power |
-| `A.inverse` | inverse when it exists |
-| `A.e1` | blade coefficient |
-| `A.g1` | grade projection |
-| `L[i]` | list indexing |
+| Syntax                | Operation                                      |
+| --------------------- | ---------------------------------------------- |
+| `A + B`, `A - B`      | addition and subtraction                       |
+| `A * B`               | geometric product                              |
+| `A / B`               | `A * inverse(B)` when the inverse exists       |
+| `A ^ B`               | outer product                                  |
+| `A & B`               | regressive product when defined                |
+| `A \| B`              | inner product defined by the active convention |
+| `A << B`              | left contraction                               |
+| `R >>> A`             | sandwich action                                |
+| `-A`, `+A`            | unary sign                                     |
+| `~A`                  | reverse                                        |
+| `!A`                  | dual when defined                              |
+| `A.reverse`, `A.dual` | postfix reverse and dual                       |
+| `A.involution`        | grade involution                               |
+| `A**n`                | geometric integer power                        |
+| `A.inverse`           | inverse when it exists                         |
+| `A.e1`                | blade coefficient                              |
+| `A.g1`                | grade projection                               |
+| `L[i]`                | list indexing                                  |
 
 `A**0` is scalar one and `A**-1` is the inverse. A multivector exponent shall be
 a finite integer scalar. The Studio-only `A^-1` spelling and the `§` commutator
@@ -300,21 +301,27 @@ Parentheses may always make grouping explicit.
 ## 10. Built-in functions and norms
 
 The initial VGA core provides `abs`, `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`,
-`sinh`, `cosh`, `tanh`, `asin`, `acos`, `atan`, `min`, and `max`. Scalar-only functions require pure
-grade-zero arguments unless an algebra capability explicitly defines their
-multivector extension. In particular, an algebra may expose a multivector
-exponential through `exp`.
+`sinh`, `cosh`, `tanh`, `asin`, `acos`, `atan`, `atan2`, `min`, and `max`.
+Scalar-only functions require pure grade-zero arguments unless an algebra
+capability explicitly defines their multivector extension. In particular, an
+algebra may expose a multivector exponential through `exp`. These names are
+reserved: they cannot be declared, and a call with the wrong number of
+arguments is a syntax diagnostic.
 
 `min(a, b)` and `max(a, b)` require exactly two finite scalar arguments and
-return a grade-zero multivector. In language version 1 they accept neither list
-arguments nor non-scalar multivectors and do not broadcast or reduce. Variadic,
-elementwise-list, and list-reduction forms require a later language design.
+return a grade-zero multivector. `atan2(y, x)` is the two-argument arc tangent,
+the oriented angle of the direction `(x, y)` in `(-pi, pi]`; it is undefined at
+the origin. Scalar functions broadcast over lists like every other operation of
+section 11, elementwise for a list argument and pairwise for two lists of equal
+length; variadic and list-reduction forms require a later language design.
 Factorial is not part of the initial language.
 
-Scalar transcendental functions reject non-finite results. `tan` also produces
-a domain diagnostic at its representable poles using the convention-version
-numeric comparison bound; this numerical boundary check does not alter any
-multivector grade or algebraic-domain classification.
+Scalar functions reject non-finite results and produce a domain diagnostic
+outside their real domain: `sqrt` of a negative value, `log` of a non-positive
+value, `asin` and `acos` outside `[-1, 1]`, and `atan2(0, 0)`. `tan` also
+produces a domain diagnostic at its representable poles using the
+convention-version numeric comparison bound; these numerical boundary checks
+do not alter any multivector grade or algebraic-domain classification.
 
 `A.norm` denotes the primary norm defined by the active algebra's versioned
 conventions. `A.inorm` is available only for an algebra that explicitly defines

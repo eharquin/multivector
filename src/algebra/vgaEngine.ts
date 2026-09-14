@@ -5,6 +5,7 @@ import {
   AlgebraOperationError,
   type AlgebraEngine,
 } from './algebraEngine'
+import { scalarFunctionValue } from './engineSupport'
 
 /** Canonical VGA(2) basis: `e, e1, e2, e12`. */
 export const VGA_2D_BASIS = createAlgebraBasis([1, 2])
@@ -280,38 +281,8 @@ export function createVga2Engine(): AlgebraEngine {
         ...scaled.coefficients.slice(1),
       ])
     },
-    scalarFunction(name, value) {
-      if (value.coefficients.slice(1).some((coefficient) => coefficient !== 0)) {
-        throw new AlgebraOperationError(
-          'ALG_DOMAIN',
-          `The function “${name}” requires a scalar argument.`,
-        )
-      }
-      const scalar = value.coefficients[0]
-      if (name === 'tan') {
-        const nearestPole =
-          Math.PI / 2 +
-          Math.round((scalar - Math.PI / 2) / Math.PI) * Math.PI
-        const tolerance =
-          64 *
-          Number.EPSILON *
-          Math.max(1, Math.abs(scalar), Math.abs(nearestPole))
-        if (Math.abs(scalar - nearestPole) <= tolerance) {
-          throw new AlgebraOperationError(
-            'ALG_DOMAIN',
-            'The tangent is undefined at this scalar value.',
-          )
-        }
-      }
-      const functions = {
-        sin: Math.sin,
-        cos: Math.cos,
-        tan: Math.tan,
-        sinh: Math.sinh,
-        cosh: Math.cosh,
-        tanh: Math.tanh,
-      }
-      return finiteOwned([functions[name](scalar), 0, 0, 0])
+    scalarFunction(name, args) {
+      return finiteOwned([scalarFunctionValue(name, args), 0, 0, 0])
     },
   }
 }

@@ -261,8 +261,48 @@ describe('source evaluation pipeline', () => {
     ['sinh(0)', 0],
     ['cosh(0)', 1],
     ['tanh(0)', 0],
+    ['abs(-2.5)', 2.5],
+    ['sqrt(16)', 4],
+    ['log(exp(2))', 2],
+    ['asin(1)', Math.PI / 2],
+    ['acos(0)', Math.PI / 2],
+    ['atan(1)', Math.PI / 4],
+    ['atan2(1, 1)', Math.PI / 4],
+    ['atan2(-1, -1)', -3 * Math.PI / 4],
+    ['atan2(1, 0)', Math.PI / 2],
+    ['min(2, -3)', -3],
+    ['max(2, -3)', 2],
+    ['acos(e1 | e1)', 0],
+    ['sqrt(4) e12 * e21', 2],
   ])('evaluates scalar function %s', (source, expected) => {
     expect(validValue(source).coefficients[0]).toBeCloseTo(expected, 14)
+  })
+
+  it.each([
+    'sqrt(-1)', 'log(0)', 'log(-1)', 'asin(1.5)', 'acos(-1.0001)', 'atan2(0, 0)',
+    'abs(e1)', 'min(1, e1)', 'max(e12, 1)',
+  ])('reports the scalar-domain failure of %s', (source) => {
+    expect(evaluateSource(source, context)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' },
+    })
+  })
+
+  it('checks the arity of the built-in scalar functions at parse time', () => {
+    expect(evaluateSource('sqrt(1, 2)', context)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX', span: { start: 0, end: 10 } },
+    })
+    expect(evaluateSource('atan2(1)', context)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
+    })
+    expect(evaluateSource('min = 1', context)).toMatchObject({
+      status: 'invalid', diagnostic: { code: 'LANG_SYNTAX' },
+    })
+  })
+
+  it('broadcasts scalar functions over lists', () => {
+    expect(validValue('sqrt([1, 4, 9])[2]').coefficients[0]).toBe(3)
+    expect(validValue('max([1, 5], 3)[1]').coefficients[0]).toBe(5)
+    expect(validValue('atan2([1, -1], [1, 1])[1]').coefficients[0]).toBeCloseTo(-Math.PI / 4, 14)
   })
 
   it('reports singular and scalar-domain failures with source spans', () => {

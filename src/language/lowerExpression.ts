@@ -1,3 +1,4 @@
+import { isScalarFunctionName } from '../domain/scalarFunctions'
 import type {
   CoreExpressionNode,
   SurfaceExpressionNode,
@@ -135,19 +136,15 @@ export function lowerExpression(
         origin: expression.span,
       }
     case 'call-expression': {
-      const scalarFunctions = ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'] as const
-      if (expression.arguments.length === 1) {
-        const operand = lowerExpression(expression.arguments[0])
-        if (expression.callee === 'exp') {
-          return { kind: 'exp', operand, origin: expression.span }
-        }
-        if (scalarFunctions.some((name) => name === expression.callee)) {
-          return {
-            kind: 'scalar-function',
-            name: expression.callee as (typeof scalarFunctions)[number],
-            operand,
-            origin: expression.span,
-          }
+      if (expression.callee === 'exp' && expression.arguments.length === 1) {
+        return { kind: 'exp', operand: lowerExpression(expression.arguments[0]), origin: expression.span }
+      }
+      if (isScalarFunctionName(expression.callee)) {
+        return {
+          kind: 'scalar-function',
+          name: expression.callee,
+          arguments: expression.arguments.map(lowerExpression),
+          origin: expression.span,
         }
       }
       // Every other call resolves against the active algebra's registered
