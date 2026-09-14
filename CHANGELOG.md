@@ -19,8 +19,9 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Interface and accessibility
 
-- Added algebra selection for an empty document from the algebra dialog; the
-  header badge and dialog now describe the document's algebra.
+- Added algebra selection from the header capsule: its badge opens a menu of
+  registered algebras, its `i` segment the algebra information; switching a
+  document with content clears it after confirmation, as one undoable entry.
 - Compact blade names accept every generator of the active algebra, so an
   unavailable blade such as `e0` under VGA(2) reports an unknown-blade
   diagnostic at its span instead of an undefined name.

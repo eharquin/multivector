@@ -14,6 +14,7 @@ import { type AlgebraEngine } from './algebra/algebraEngine'
 import { createBuiltinAlgebraRegistry } from './algebra/builtinAlgebras'
 import { evaluateDocument } from './application/evaluateDocument'
 import { AlgebraInfoDialog } from './components/AlgebraInfoDialog'
+import { AlgebraMenu } from './components/AlgebraMenu'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import { AppearancePopover } from './components/AppearancePopover'
 import { ClearExpressionsButton } from './components/ClearExpressionsButton'
@@ -1404,14 +1405,26 @@ function App() {
     }
   }
 
-  /** Applies a registered definition with its standard interpretation and visualizer (ALG-004). */
+  /**
+   * Applies a registered definition with its standard interpretation and
+   * visualizer (ALG-004). A document with content is cleared first, after
+   * confirmation, in the same history entry so one undo restores both.
+   */
   const selectAlgebra = (algebraId: string) => {
     const definition = algebraRegistry.definitions().find((candidate) => candidate.algebraId === algebraId)
     if (!definition || definition.algebraId === expressionDoc.algebra.algebraId) return
     const conventionVersion = definition.conventionVersions[definition.conventionVersions.length - 1]
     const validation = definition.validateParameters({})
     if (validation.status !== 'valid') return
+    const clearing = hasContent(expressionDoc)
+    if (clearing && !window.confirm(
+      `Switching to ${definition.badge} clears every expression of this document. Continue?`,
+    )) return
+    if (activePlayback) stopPlayback()
     setAppearanceItemId(null)
+    setExpandedListIds(new Set())
+    dispatchHistory({ type: 'begin-transaction' })
+    if (clearing) executeCommand({ kind: 'clear-items' })
     executeCommand({
       kind: 'select-algebra',
       algebra: {
@@ -1423,6 +1436,8 @@ function App() {
       interpretation: { interpretationId: definition.standardInterpretationId, interpretationVersion: 1 },
       visualizerId: definition.standardVisualizerId,
     })
+    dispatchHistory({ type: 'commit-transaction' })
+    setViewportAnnouncement(`${definition.badge} selected${clearing ? '; the document was cleared' : ''}.`)
   }
 
   const clearAllExpressions = () => {
@@ -1520,15 +1535,18 @@ function App() {
         >
           MultiVector
         </a>
-        <button
-          ref={algebraInfoButtonRef}
-          type="button"
-          className="algebra-badge"
-          aria-haspopup="dialog"
-          onClick={() => setInfoDialog('algebra')}
-        >
-          {algebraDefinition.badge}
-        </button>
+        <AlgebraMenu
+          badge={algebraDefinition.badge}
+          choices={algebraRegistry.definitions().map((definition) => ({
+            algebraId: definition.algebraId,
+            badge: definition.badge,
+            name: definition.info({}).name,
+          }))}
+          selectedAlgebraId={algebraDefinition.algebraId}
+          onSelect={selectAlgebra}
+          onInfo={() => setInfoDialog('algebra')}
+          infoButtonRef={algebraInfoButtonRef}
+        />
         <input
           ref={importInputRef}
           className="document-file-input"
@@ -2387,14 +2405,6 @@ function App() {
       {infoDialog === 'algebra' && (
         <AlgebraInfoDialog
           info={algebraDefinition.info(algebraResolution.parameters)}
-          choices={algebraRegistry.definitions().map((definition) => ({
-            algebraId: definition.algebraId,
-            badge: definition.badge,
-            name: definition.info({}).name,
-          }))}
-          selectedAlgebraId={algebraDefinition.algebraId}
-          canSelect={!hasContent(expressionDoc)}
-          onSelect={selectAlgebra}
           returnFocusRef={algebraInfoButtonRef}
           onClose={closeInfoDialog}
         />

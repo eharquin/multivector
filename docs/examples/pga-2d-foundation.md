@@ -6,14 +6,14 @@ that line with a fixed line, an ideal point, and a motor acting on a point.
 
 ## Select the algebra
 
-1. Start from an empty document: clear every expression, or use a new browser
-   session and delete the example rows.
-2. Activate the `VGA · 2D` badge in the header. In the *Document algebra*
-   select, choose `PGA · 2D — Projective Geometric Algebra` and close the
-   dialog with `Escape`. The badge now reads `PGA · 2D`.
+1. Activate the `VGA · 2D` badge in the header: a menu lists the registered
+   algebras. Choose `PGA · 2D — Projective Geometric Algebra`.
+2. If the document has content, confirm that it will be cleared. The badge now
+   reads `PGA · 2D`; the `i` segment of the capsule opens the algebra
+   information.
 
-The algebra of a document with content cannot be changed; the select is
-disabled until the document is empty.
+Clearing and switching form one history entry: `Ctrl+Z` restores both the
+previous expressions and the previous algebra.
 
 ## Build the document
 
