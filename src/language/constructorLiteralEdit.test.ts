@@ -26,7 +26,12 @@ describe('constructor literal editing', () => {
     expect(directItemConstructorComponents('P = point(1, 2)', 'point', 3)).toBeNull()
     expect(directItemConstructorComponents('P = line(1, 2, 3)', 'point', 3)).toBeNull()
     expect(directItemConstructorComponents('P = point(1 + 1, 2, 3)', 'point', 3)).toBeNull()
+  })
+
+  it('edits anonymous expressions as well as declarations', () => {
     expect(directItemConstructorComponents('point(1, 2, 3)', 'point', 3)).toHaveLength(3)
+    expect(rewriteConstructorLiterals('ipoint(1, 2)', directItemConstructorComponents('ipoint(1, 2)', 'ipoint', 2)!, [3, 4]))
+      .toBe('ipoint(3, 4)')
   })
 
   it('rewrites literals around signed references without touching them', () => {
