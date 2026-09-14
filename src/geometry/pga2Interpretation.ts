@@ -19,7 +19,6 @@ import {
  * derived from them under D3 without altering the value.
  */
 export type Pga2Entity =
-  | Readonly<{ kind: 'zero' }>
   | Readonly<{ kind: 'scalar'; value: number; approximated: boolean }>
   | Readonly<{ kind: 'euclidean-point'; x: number; y: number; weight: number; approximated: boolean }>
   | Readonly<{ kind: 'ideal-point'; x: number; y: number; approximated: boolean }>
@@ -53,7 +52,10 @@ export function interpretPga2(
   const approximatedOutside = (grades: readonly number[]) =>
     c.some((coefficient, index) => !grades.includes(GRADE[index]) && negligible(coefficient))
 
-  if (c.every(zeroLike)) return Object.freeze({ kind: 'zero' as const })
+  // The all-zero value is scalar zero, as in VGA, so scalar controls apply to it.
+  if (c.every(zeroLike)) {
+    return Object.freeze({ kind: 'scalar' as const, value: c[INDEX.e], approximated: c.some(negligible) })
+  }
 
   const present = [0, 1, 2, 3].filter(gradePresent)
   if (present.length === 1 && present[0] === 0) {
@@ -100,7 +102,6 @@ export function interpretPga2(
 
 export function describePga2Entity(entity: Pga2Entity): string {
   switch (entity.kind) {
-    case 'zero': return 'Zero'
     case 'scalar': return 'Scalar'
     case 'euclidean-point': return 'Point'
     case 'ideal-point': return 'Ideal point'
@@ -201,7 +202,6 @@ export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
       case 'ideal-point':
         return { status: 'available' }
       case 'scalar':
-      case 'zero':
         return { status: 'non-spatial' }
       case 'line-at-infinity':
         return { status: 'unsupported', message: 'The line at infinity has no drawn form; it is reported textually.' }

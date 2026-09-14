@@ -27,6 +27,7 @@ import { OPAQUE_INTERPRETATION, type InterpretedEntity } from './geometry/interp
 import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
+  showcaseItems,
   vga2FoundationExampleDocument,
   type ExpressionControl,
   type ExpressionItem,
@@ -1418,13 +1419,13 @@ function App() {
     if (validation.status !== 'valid') return
     const clearing = hasContent(expressionDoc)
     if (clearing && !window.confirm(
-      `Switching to ${definition.badge} clears every expression of this document. Continue?`,
+      `Switching to ${definition.badge} replaces every expression of this document with its example. Continue?`,
     )) return
     if (activePlayback) stopPlayback()
     setAppearanceItemId(null)
     setExpandedListIds(new Set())
     dispatchHistory({ type: 'begin-transaction' })
-    if (clearing) executeCommand({ kind: 'clear-items' })
+    if (expressionDoc.items.length > 0) executeCommand({ kind: 'clear-items' })
     executeCommand({
       kind: 'select-algebra',
       algebra: {
@@ -1436,8 +1437,11 @@ function App() {
       interpretation: { interpretationId: definition.standardInterpretationId, interpretationVersion: 1 },
       visualizerId: definition.standardVisualizerId,
     })
+    // The algebra's showcase makes the switch land on a working example.
+    showcaseItems(definition.showcase).forEach((item) => executeCommand({ kind: 'insert-item', item }))
+    nextId.current = definition.showcase.length + 1
     dispatchHistory({ type: 'commit-transaction' })
-    setViewportAnnouncement(`${definition.badge} selected${clearing ? '; the document was cleared' : ''}.`)
+    setViewportAnnouncement(`${definition.badge} selected; its example document was loaded.`)
   }
 
   const clearAllExpressions = () => {

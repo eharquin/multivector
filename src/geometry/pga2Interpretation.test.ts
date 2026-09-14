@@ -11,7 +11,7 @@ const c = (values: Partial<Record<'e' | 'e0' | 'e1' | 'e2' | 'e01' | 'e02' | 'e1
 
 describe('standard PGA(2) interpretation', () => {
   it('classifies every entity kind of PGA-INT-003', () => {
-    expect(interpretPga2(owned([0, 0, 0, 0, 0, 0, 0, 0]))).toEqual({ kind: 'zero' })
+    expect(interpretPga2(owned([0, 0, 0, 0, 0, 0, 0, 0]))).toMatchObject({ kind: 'scalar', value: 0 })
     expect(interpretPga2(c({ e: 3 }))).toMatchObject({ kind: 'scalar', value: 3 })
     expect(interpretPga2(owned(point(1, 2)))).toMatchObject({ kind: 'euclidean-point', x: 1, y: 2, weight: 1 })
     expect(interpretPga2(owned(point(3, 4, 0)))).toMatchObject({ kind: 'ideal-point', x: 3, y: 4 })

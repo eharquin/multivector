@@ -1,66 +1,60 @@
 # PGA 2D Foundation Example
 
-This example exercises the plane-based PGA(2) workflow using the keyboard and
-one pointer gesture. It builds two points, the line through them, the meet of
-that line with a fixed line, an ideal point, and a motor acting on a point.
+This example walks through the plane-based PGA(2) showcase document, which
+is loaded when the algebra is selected, then adds projective equivalence,
+versors, and direct manipulation.
 
 ## Select the algebra
 
 1. Activate the `VGA · 2D` badge in the header: a menu lists the registered
    algebras. Choose `PGA · 2D — Projective Geometric Algebra`.
-2. If the document has content, confirm that it will be cleared. The badge now
-   reads `PGA · 2D`; the `i` segment of the capsule opens the algebra
-   information.
+2. If the document has content, confirm that it will be replaced. The badge now
+   reads `PGA · 2D`, the PGA showcase is loaded, and the `i` segment of the
+   capsule opens the algebra information.
 
-Clearing and switching form one history entry: `Ctrl+Z` restores both the
+Replacing and switching form one history entry: `Ctrl+Z` restores both the
 previous expressions and the previous algebra.
 
-## Build the document
+## Read the showcase
 
-1. Focus the first expression, enter `P = point(1, 2)`, and press `Enter`.
-2. Enter `Q = point(-2, 1)` and press `Enter`.
-3. Enter `J = P & Q` and press `Enter`: the join is the line through `P` and
-   `Q`.
-4. Enter `L = line(1, -1, 0)` and press `Enter`: the line `x − y = 0`.
-5. Enter `M = J ^ L` and press `Enter`: the meet is the point common to both
-   lines.
-6. Enter `D = ipoint(1, 1)` and press `Enter`: the ideal point in direction
-   `(1, 1)`.
-7. Enter `R = exp(-(pi/4) e12)` and press `Enter`: the rotor for a quarter turn
-   about the origin.
-8. Enter `S = R >>> P`.
+The loaded document declares:
 
-The panel should report:
+| Row | Kind | What to observe |
+| --- | --- | --- |
+| `A = point(-2, 1)` | Point at (-2, 1) | a marker with a handle |
+| `B = point(2, 2)` | Point at (2, 2) | a second marker |
+| `L = A & B` | Line | the join: the line through `A` and `B`, clipped to the viewport |
+| `M = line(1, 0, -1)` | Line `x − 1 = 0` | a vertical line |
+| `X = L ^ M` | Point at (1, 1.75), weight −4 | the meet of the two lines; the weight comes from the lines' coefficients, not from the position |
+| `D = ipoint(1, 0)` | Ideal point, direction (1, 0) | an arrow at the right edge of the viewport |
+| `t = 0` | Scalar with a looping slider | press ▶ to animate |
+| `R = exp(-(t/2) * A)` | Scalar at `t = 0`, then Motor | the rotation by `t` about the point `A` |
+| `C = R >>> B` | Point | `B` orbiting `A` while `t` runs |
+| `T = 1 - e01 - 0.5 e02` | Translator | the translation by (2, 1) |
+| `S = T >>> X` | Point at (3, 2.75), weight −4 | `X` translated; the weight is preserved |
+| `F = M >>> A` | Point at (4, 1), weight −1 | the reflection of `A` in `M`; the negative weight is the orientation reversal of an odd versor, not an error |
 
-- `P` as `Point at (1, 2)` and `Q` as `Point at (-2, 1)`;
-- `J` as `Line 0.316228x − 0.948683y + 1.58114 = 0, scale 3.16228`;
-- `L` as `Line 0.707107x − 0.707107y = 0, scale 1.41421`;
-- `M` as `Point at (2.5, 2.5), weight 2` — the meet carries the weight
-  produced by the two lines' coefficients;
-- `D` as `Ideal point direction (1, 1)`;
-- `R` as `Rotor`;
-- `S` as `Point at (-2, 1)`, the quarter-turn image of `P`.
+Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
+`B`. `Escape` stops the animation.
 
-The viewport shows the two points as markers, the two lines clipped to the
-viewport, the meet as a third marker, and the ideal point as an arrow at the
-viewport edge in direction `(1, 1)`. The rotor has no drawn form and is
-reported textually.
+## Exercise projective equivalence and the language
 
-## Exercise projective equivalence and versors
-
-1. Change `Q` to `Q = 2 point(-2, 1)`: it reports `Point at (-2, 1), weight 2`;
-   the join and the meet are unchanged as geometry.
-2. Enter `F = e1 >>> P`: the reflection of `P` in the y axis reports
-   `Point at (-1, 2), weight -1`. The negative weight is the orientation
-   reversal of an odd versor, not an error.
-3. Enter `T = 1 - 1.5 e01`: a `Translator`; `T >>> P` is `Point at (4, 2)`.
+1. Change `B` to `B = 2 * point(2, 2)`: it reports `Point at (2, 2), weight 2`;
+   `L`, `X`, and `C` are unchanged as geometry.
+2. Add `G = M * T`: a `Reflection`, the glide reflection that translates by
+   `T` then reflects in `M`; `G >>> A` is `Point at (2, 2), weight −1`.
+3. Add `N = norm(L)` and `I = inorm(L)`: the Euclidean and ideal norms of the
+   join, `4.12311` and `6`.
+4. Add `P = L ^ line(1, 0, -3)`: the meet with `x = 3`, `Point at (3, 2.25)`;
+   then `Q = L ^ L`: a Scalar zero, since a line meets itself nowhere.
+5. Write `e20` anywhere: it is accepted and displayed as `-e02`.
 
 ## Move a point directly
 
-1. Hover the marker of `P` and drag it: `P = point(x, y)` is rewritten with
-   the pointer's grid-rounded coordinates, and `J`, `M`, and `S` follow.
+1. Drag the marker of `A`: `A = point(x, y)` is rewritten with the pointer's
+   grid-rounded coordinates, and `L`, `X`, `R`, `C`, and `F` follow.
 2. Press `Ctrl+Z` (`⌘Z` on macOS): the whole gesture is undone as one entry.
-3. Focus the marker of `P` with `Tab` and press the arrow keys to nudge it
+3. Focus the marker of `B` with `Tab` and press the arrow keys to nudge it
    (`Shift` for a larger step).
 
 Lines and ideal points have no handle in this milestone.

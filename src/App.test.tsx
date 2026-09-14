@@ -1806,7 +1806,7 @@ describe('VGA 2D vertical slice', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     fireEvent.click(items[1])
     expect(confirm).toHaveBeenCalledOnce()
-    expect(confirm.mock.calls[0][0]).toMatch(/clears every expression/)
+    expect(confirm.mock.calls[0][0]).toMatch(/replaces every expression/)
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     expect(source).toHaveValue('vector(2, 1)')
     expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toHaveFocus()
@@ -1816,11 +1816,13 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' }))
     fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[1])
     expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: 'Expression 1' })).not.toBeInTheDocument()
-    expect(screen.getByText('PGA · 2D selected; the document was cleared.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveValue('A = point(-2, 1)')
+    expect(screen.getAllByRole('textbox', { name: /^Expression \d+$/ })).toHaveLength(12)
+    expect(screen.getByText('PGA · 2D selected; its example document was loaded.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
     expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveValue('vector(2, 1)')
+    expect(screen.getAllByRole('textbox', { name: /^Expression \d+$/ })).toHaveLength(1)
 
     // Re-selecting the current algebra asks nothing and changes nothing.
     confirm.mockClear()
@@ -1959,6 +1961,13 @@ describe('PGA 2D foundation workflow', () => {
     fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[1])
     expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    // Every showcase row evaluates; the tests below start from a single blank row.
+    expect(screen.queryByText(/^(LANG|ALG)_/)).not.toBeInTheDocument()
+    for (const textbox of screen.getAllByRole('textbox', { name: /^Expression \d+$/ }).slice(1)) {
+      fireEvent.change(textbox, { target: { value: '' } })
+      fireEvent.keyDown(textbox, { key: 'Backspace' })
+    }
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: '' } })
   }
 
   it('evaluates, classifies, and draws points, lines, and ideal points', () => {

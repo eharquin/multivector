@@ -245,10 +245,11 @@ P1 & P2 = the line through P1 and P2, oriented from P1 to P2
 Classification uses the tolerance policy of PGA-INT-005 with the Euclidean and
 ideal norms of section 7:
 
+- the all-zero value is *scalar zero*, as in VGA;
 - a grade-2 value is a *Euclidean point* when `norm > epsilon`, otherwise an
-  *ideal point* when `inorm > epsilon`, otherwise *zero*;
+  *ideal point* when `inorm > epsilon`;
 - a grade-1 value is a *Euclidean line* when `norm > epsilon`, otherwise the
-  *line at infinity* when `inorm > epsilon`, otherwise *zero*;
+  *line at infinity* when `inorm > epsilon`;
 - an even value `V` with `V * ~V` equal to `1` or `-1` under the tolerance is
   a *motor* (a *rotor* when its `e01` and `e02` coefficients are within the
   tolerance of zero, a *translator* when its `e12` coefficient is); an odd

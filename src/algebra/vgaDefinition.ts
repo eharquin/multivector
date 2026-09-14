@@ -43,4 +43,11 @@ export const VGA_DEFINITION: AlgebraDefinition = Object.freeze({
   },
   standardInterpretationId: 'org.multivector.vga-2d',
   standardVisualizerId: 'org.multivector.vga-2d',
+  showcase: [
+    { source: 'V1 = vector(0.66, 3.042)' },
+    { source: 'a = 0', slider: { minimumSource: '0', maximumSource: 'tau', stepSource: '0.01', durationSeconds: 2 } },
+    { source: 'R = exp(0.5*a*e12)' },
+    { source: 'V2 = R>>>V1' },
+    { source: 'B = V1 ^ V2' },
+  ],
 })
