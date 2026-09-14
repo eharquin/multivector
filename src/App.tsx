@@ -23,7 +23,8 @@ import {
   type DisplaySettings,
 } from './components/DisplaySettingsMenu'
 import { resolveItemAppearance } from './components/appearancePalette'
-import { OPAQUE_INTERPRETATION, type InterpretedEntity } from './geometry/interpretation'
+import { OPAQUE_INTERPRETATION, type InterpretedEntity, type Point2d } from './geometry/interpretation'
+import type { VisualizationPrimitive } from './visualization/primitives'
 import {
   expressionDocument,
   MAX_EXPRESSION_ITEMS,
@@ -55,7 +56,7 @@ import {
 } from './visualization/viewportCreation'
 import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
-import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine } from './visualization/layout'
+import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine, lineNormalLength, lineOrientationTicks } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -122,7 +123,7 @@ type ActiveScalarPlayback = Readonly<{
   offsetMilliseconds: number
   parameters: PlaybackParameters
 }>
-type ManipulationKind = 'base' | 'head'
+type ManipulationKind = 'base' | 'head' | 'line' | 'normal'
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
@@ -266,6 +267,14 @@ function App() {
     kind: ManipulationKind
     pointerId: number
   }> | null>(null)
+  /** Where a line translation started, so each move is measured from the press. */
+  const lineDragOrigin = useRef<Readonly<{
+    point: Point2d
+    anchor: Point2d
+    coefficients: readonly [number, number, number]
+  }> | null>(null)
+  /** The selected line and the anchor its normal handle is drawn from. */
+  const [selectedLine, setSelectedLine] = useState<Readonly<{ itemId: string; anchor: Point2d }> | null>(null)
   const anchorValidityCache = useRef(new Map<string, boolean>())
   const [hoveredManipulation, setHoveredManipulation] = useState<string | null>(null)
   // Keyboard focus on a handle is drawn as an SVG ring rather than a CSS
@@ -442,6 +451,7 @@ function App() {
   }, [])
   const beginViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     setAppearanceItemId(null)
+    setSelectedLine(null)
     if (viewportLocked || event.button !== 0 || event.target !== event.currentTarget) return
     event.currentTarget.focus({ preventScroll: true })
     guardGestureSelection('pan')
@@ -466,6 +476,62 @@ function App() {
     const target = {
       x: Number(formatGridNumber(point.x, roundingStep)),
       y: Number(formatGridNumber(point.y, roundingStep)),
+    }
+    if (kind === 'line' || kind === 'normal') {
+      if (rendered.primitive.kind !== 'unbounded-line') return
+      const components = literalEditComponents(item, rendered.entity)
+      if (!components) return
+      const [a0, b0] = lineCoefficients(rendered.primitive)
+      // Far from the origin, a coarse (a, b) would move the line by the
+      // anchor's distance times its rounding error: (a, b) are rounded with a
+      // step refined by that distance and c is derived from them, so the
+      // anchor stays on the line.
+      const coefficientStep = (anchor: Point2d) => roundingStep / 10 / Math.max(1, Math.hypot(anchor.x, anchor.y))
+      let rounded: readonly [number, number, number]
+      if (kind === 'line') {
+        // Translating changes only c; motion along the line has no effect.
+        // The selection anchor travels with the line so that a later rotation
+        // pivots about the translated line, not the pressed one.
+        const origin = lineDragOrigin.current
+        if (!origin) return
+        const step = coefficientStep(origin.anchor)
+        const a = Number(formatGridNumber(origin.coefficients[0], step))
+        const b = Number(formatGridNumber(origin.coefficients[1], step))
+        const shift = { x: target.x - origin.point.x, y: target.y - origin.point.y }
+        const c = origin.coefficients[2] - a * shift.x - b * shift.y
+        rounded = [a, b, Number(formatGridNumber(c, roundingStep / 10))]
+        if (selectedLine?.itemId === itemId) {
+          setSelectedLine({ itemId, anchor: { x: origin.anchor.x + shift.x, y: origin.anchor.y + shift.y } })
+        }
+      } else {
+        // Rotating keeps the norm of (a, b) and the anchor on the line; the
+        // anchor is projected in case the line moved since it was selected.
+        const { point: on, direction } = rendered.primitive
+        const selected = selectedLine?.itemId === itemId ? selectedLine.anchor : on
+        const along = (selected.x - on.x) * direction.x + (selected.y - on.y) * direction.y
+        const anchor = { x: on.x + direction.x * along, y: on.y + direction.y * along }
+        const dx = point.x - anchor.x
+        const dy = point.y - anchor.y
+        const length = Math.hypot(dx, dy)
+        if (length === 0) return
+        const scale = Math.hypot(a0, b0)
+        const step = coefficientStep(anchor)
+        const a = Number(formatGridNumber(dx / length * scale, step))
+        const b = Number(formatGridNumber(dy / length * scale, step))
+        rounded = [a, b, Number(formatGridNumber(-(a * anchor.x + b * anchor.y), roundingStep / 10))]
+      }
+      const rewritten = rewriteConstructorLiterals(item.source, components, rounded)
+      if (rewritten !== item.source) executeCommand({ kind: 'update-source', itemId, source: rewritten })
+      components.forEach((component, index) => {
+        if (component.kind !== 'reference') return
+        const scalarItem = expressionDoc.items.find((candidate) =>
+          declaredName(candidate.source) === component.name &&
+          directScalarEdit(candidate.source) !== null)
+        if (scalarItem) executeCommand({
+          kind: 'set-scalar-value', itemId: scalarItem.id, value: rounded[index] * component.sign,
+        })
+      })
+      return
     }
     if (kind === 'head' && interpretation.supportsHead(rendered.entity)) {
       const components = literalEditComponents(item, rendered.entity)
@@ -540,8 +606,15 @@ function App() {
       })
     })
   }
+  const gestureLabel = (kind: ManipulationKind) =>
+    kind === 'head' ? 'Vector head' : kind === 'base' ? 'Object base' : kind === 'line' ? 'Line' : 'Line normal'
+  const lineCoefficients = (primitive: Extract<VisualizationPrimitive, { kind: 'unbounded-line' }>): readonly [number, number, number] => {
+    const a = primitive.normal.x * primitive.scale
+    const b = primitive.normal.y * primitive.scale
+    return [a, b, -(a * primitive.point.x + b * primitive.point.y)]
+  }
   const beginManipulation = (
-    event: ReactPointerEvent<SVGCircleElement>,
+    event: ReactPointerEvent<SVGElement>,
     itemId: string,
     kind: ManipulationKind,
   ) => {
@@ -554,10 +627,26 @@ function App() {
     guardGestureSelection('manipulate')
     manipulationDrag.current = { itemId, kind, pointerId: event.pointerId }
     anchorValidityCache.current.clear()
+    if (kind === 'line') {
+      const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
+      const point = toMathematical(viewport, screenPoint(event.clientX, event.clientY))
+      if (rendered?.primitive.kind === 'unbounded-line') {
+        const { point: on, direction } = rendered.primitive
+        // A press selects the line and anchors its normal at the pressed
+        // point projected onto the line.
+        const along = (point.x - on.x) * direction.x + (point.y - on.y) * direction.y
+        const anchor = { x: on.x + direction.x * along, y: on.y + direction.y * along }
+        lineDragOrigin.current = { point, anchor, coefficients: lineCoefficients(rendered.primitive) }
+        setSelectedLine({ itemId, anchor })
+      }
+    }
     dispatchHistory({ type: 'boundary' })
     dispatchHistory({ type: 'begin-transaction' })
-    setViewportAnnouncement(`${kind === 'head' ? 'Vector head' : 'Object base'} drag started.`)
+    setViewportAnnouncement(`${gestureLabel(kind)} drag started.`)
   }
+  const lineMovable = (item: ExpressionItem, entity: InterpretedEntity): boolean =>
+    interpretation.literalEdit(entity)?.constructor === 'line' &&
+    componentsMovable(literalEditComponents(item, entity))
   const componentsMovable = (
     components: readonly ConstructorComponentEdit[] | null,
   ): boolean => {
@@ -585,11 +674,18 @@ function App() {
         componentsMovable(positionComponents(item.positionSource))
       : componentsMovable(literalEditComponents(item, entity))
   const manipulateWithKeyboard = (
-    event: KeyboardEvent<SVGCircleElement>,
+    event: KeyboardEvent<SVGElement>,
     itemId: string,
     kind: ManipulationKind,
     current: Readonly<{ x: number; y: number }>,
   ) => {
+    if (kind === 'line' && event.key === 'Enter') {
+      event.preventDefault()
+      event.stopPropagation()
+      setSelectedLine((selected) => (selected?.itemId === itemId ? null : { itemId, anchor: current }))
+      setViewportAnnouncement(selectedLine?.itemId === itemId ? 'Line normal hidden.' : 'Line normal shown; move its head to rotate the line.')
+      return
+    }
     if (kind === 'base' && event.key === 'Enter') {
       event.preventDefault()
       event.stopPropagation()
@@ -662,16 +758,28 @@ function App() {
     event.stopPropagation()
     dispatchHistory({ type: 'boundary' })
     dispatchHistory({ type: 'begin-transaction' })
-    updateManipulatedItem(itemId, kind, {
-      x: current.x + delta.x,
-      y: current.y + delta.y,
-    })
+    if (kind === 'line') {
+      const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
+      if (rendered?.primitive.kind === 'unbounded-line') {
+        lineDragOrigin.current = { point: current, anchor: current, coefficients: lineCoefficients(rendered.primitive) }
+      }
+    }
+    const target = kind === 'normal'
+      // Nudge the normal handle's head, then the update renormalizes it.
+      ? (() => {
+          const rendered = renderedPrimitives.find((candidate) => candidate.id === itemId)
+          const normal = rendered?.primitive.kind === 'unbounded-line' ? rendered.primitive.normal : { x: 1, y: 0 }
+          const length = lineNormalLength(viewport, objectRenderScale)
+          return { x: current.x + normal.x * length + delta.x, y: current.y + normal.y * length + delta.y }
+        })()
+      : { x: current.x + delta.x, y: current.y + delta.y }
+    updateManipulatedItem(itemId, kind, target)
     dispatchHistory({ type: 'commit-transaction' })
-    setViewportAnnouncement(
-      `${kind === 'head' ? 'Vector head' : 'Object base'} moved to ${
-        formatGridNumber(current.x + delta.x, step)}, ${
-        formatGridNumber(current.y + delta.y, step)}.`,
-    )
+    setViewportAnnouncement(kind === 'normal'
+      ? `${gestureLabel(kind)} rotated.`
+      : `${gestureLabel(kind)} moved to ${
+          formatGridNumber(current.x + delta.x, step)}, ${
+          formatGridNumber(current.y + delta.y, step)}.`)
   }
   const moveViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const manipulation = manipulationDrag.current
@@ -995,7 +1103,12 @@ function App() {
   }, [activePlayback, stopPlayback])
   useEffect(() => {
     const cancel = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== 'Escape' || !manipulationDrag.current) return
+      if (event.key !== 'Escape') return
+      if (!manipulationDrag.current) {
+        // Outside a gesture, Escape drops the line selection and its normal.
+        setSelectedLine((selected) => (selected ? null : selected))
+        return
+      }
       event.preventDefault()
       manipulationDrag.current = null
       anchorValidityCache.current.clear()
@@ -2378,9 +2491,27 @@ function App() {
                   controller={handleController}
                 />
               })}
-              {renderedLines.map(({ id, primitive, layout, color, label }) => (
-                <UnboundedLineGlyph key={id} primitive={primitive} layout={layout} color={color} label={label} scale={objectRenderScale} />
-              ))}
+              {renderedLines.map(({ id, primitive, entity, layout, color, label, orientationVisible }) => {
+                const item = expressionDoc.items.find((candidate) => candidate.id === id)
+                const selection = selectedLine?.itemId === id
+                  ? layoutLineSelection(primitive, selectedLine.anchor, viewport, objectRenderScale)
+                  : null
+                return <UnboundedLineGlyph
+                  key={id}
+                  id={id}
+                  primitive={primitive}
+                  layout={layout}
+                  color={color}
+                  label={label}
+                  scale={objectRenderScale}
+                  itemPresent={!!item}
+                  movable={!!item && lineMovable(item, entity)}
+                  orientationVisible={orientationVisible}
+                  orientationTicks={lineOrientationTicks(primitive, layout, objectRenderScale)}
+                  selection={selection}
+                  controller={handleController}
+                />
+              })}
               {renderedInfinity.map(({ id, primitive, layout, color, label }) => (
                 <LineAtInfinityGlyph key={id} accessibleName={primitive.accessibleName} layout={layout} color={color} label={label} scale={objectRenderScale} />
               ))}

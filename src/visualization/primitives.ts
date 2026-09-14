@@ -37,11 +37,17 @@ export type PointMarkerPrimitive = Readonly<{
   accessibleName: string
 }>
 
-/** An unbounded straight line through `point` with direction `direction`. */
+/**
+ * An unbounded straight line through `point` with unit direction `direction`
+ * and unit `normal` (the positive side); `scale` is the norm of its
+ * coefficients, so `(a, b) = scale * normal` and `c = -(a x + b y)` at `point`.
+ */
 export type UnboundedLinePrimitive = Readonly<{
   kind: 'unbounded-line'
   point: Point2d
   direction: Point2d
+  normal: Point2d
+  scale: number
   accessibleName: string
 }>
 
