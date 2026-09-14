@@ -80,9 +80,10 @@ to milestones that explicitly include the standard PGA interpretation.
   A point-based reading of the same algebra is a distinct interpretation and
   requires its own approved requirements.
 - **PGA-INT-003:** The interpretation shall use stable semantic entity
-  identifiers for Euclidean points, ideal points, Euclidean lines, the line at
-  infinity, rotors, translators, motors, reflections, zero, and mixed
-  multivectors, independently of user-facing names and appearance.
+  identifiers for scalars (including the all-zero value, as in VGA), Euclidean
+  points, ideal points, Euclidean lines, the line at infinity, rotors,
+  translators, motors, reflections, and mixed multivectors, independently of
+  user-facing names and appearance.
 - **PGA-INT-004:** The interpretation shall report projective equivalence by
   describing a point through its Euclidean position and its weight, and a line
   through its equation and its scale; it shall never make `==` mean projective
