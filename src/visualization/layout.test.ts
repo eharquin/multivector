@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutUnboundedLine } from './layout'
+import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutUnboundedLine, lineOrientationTicks } from './layout'
 import type { Viewport2d } from './viewport'
 
 const viewport: Viewport2d = { width: 800, height: 600, centerX: 0, centerY: 0, pixelsPerUnit: 50 }
@@ -20,6 +20,22 @@ describe('PGA primitive layouts', () => {
     )
     expect(diagonal!.start.y).toBeCloseTo(600, 10)
     expect(diagonal!.end.y).toBeCloseTo(0, 10)
+  })
+
+  it('spaces the orientation ticks from the foot of the line, independently of the clipping', () => {
+    const primitive = { kind: 'unbounded-line', point: { x: 1, y: 2 }, direction: { x: 1, y: 0 }, normal: { x: 0, y: 1 }, scale: 1, accessibleName: 'L' } as const
+    const tickStarts = (view: Viewport2d) =>
+      [...lineOrientationTicks(primitive, layoutUnboundedLine(primitive, view)!, 1).matchAll(/M ([-\d.]+) ([-\d.]+)/g)]
+        .map(([, x, y]) => ({ x: Number(x), y: Number(y) }))
+    const wide = tickStarts(viewport)
+    // The foot (1, 2) sits at screen (450, 200) and carries a tick; the ticks point up, the positive side.
+    expect(wide).toContainEqual({ x: 450, y: 200 })
+    expect(wide.every((tick) => tick.y === 200 && (tick.x - 450) % 48 === 0)).toBe(true)
+    expect(lineOrientationTicks(primitive, layoutUnboundedLine(primitive, viewport)!, 1)).toContain('M 450 200 L 450 194')
+    // A narrower viewport clips the same line differently but keeps the ticks in place.
+    const narrow = tickStarts({ ...viewport, width: 700 })
+    expect(narrow).toContainEqual({ x: 400, y: 200 })
+    expect(narrow.every((tick) => tick.y === 200 && (tick.x - 400) % 48 === 0)).toBe(true)
   })
 
   it('returns null for a line outside the viewport', () => {

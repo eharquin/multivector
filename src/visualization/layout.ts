@@ -303,14 +303,17 @@ export function lineOrientationTicks(
   const nx = primitive.normal.x
   const ny = -primitive.normal.y
   const tick = 6 * objectRenderScale
-  const count = Math.floor(length / spacing)
-  const offset = (length - count * spacing) / 2
+  // Ticks are spaced from the foot of the perpendicular from the origin, a
+  // point of the line itself, so they stay put while the clipped segment
+  // changes with the viewport or with the line's motion.
+  const footAlong = ((layout.foot.x - layout.start.x) * dx + (layout.foot.y - layout.start.y) * dy) / length
+  const ux = dx / length
+  const uy = dy / length
   const ticks: string[] = []
-  for (let index = 0; index <= count; index += 1) {
-    const t = (offset + index * spacing) / length
-    if (t < 0 || t > 1) continue
-    const x = layout.start.x + dx * t
-    const y = layout.start.y + dy * t
+  for (let index = Math.ceil(-footAlong / spacing); footAlong + index * spacing <= length; index += 1) {
+    const along = index * spacing
+    const x = layout.foot.x + ux * along
+    const y = layout.foot.y + uy * along
     ticks.push(`M ${x} ${y} L ${x + nx * tick} ${y + ny * tick}`)
   }
   return ticks.join(' ')
