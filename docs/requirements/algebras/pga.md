@@ -80,12 +80,13 @@ to milestones that explicitly include the standard PGA interpretation.
   A point-based reading of the same algebra is a distinct interpretation and
   requires its own approved requirements.
 - **PGA-INT-003:** The interpretation shall use stable semantic entity
-  identifiers for Euclidean points, ideal points, Euclidean lines, the line at
-  infinity, rotors, translators, motors, reflections, zero, and mixed
-  multivectors, independently of user-facing names and appearance.
+  identifiers for scalars (including the all-zero value, as in VGA), Euclidean
+  points, ideal points, Euclidean lines, the line at infinity, rotors,
+  translators, motors, reflections, and mixed multivectors, independently of
+  user-facing names and appearance.
 - **PGA-INT-004:** The interpretation shall report projective equivalence by
   describing a point through its Euclidean position and its weight, and a line
-  through its equation and its scale; it shall never make `==` mean projective
+  through its scale (its coefficients are inspected as the value itself); it shall never make `==` mean projective
   equivalence.
 - **PGA-INT-005:** Classification shall use a declared tolerance policy of the
   form `epsilon = absoluteFloor + relativeTerm * scale`, where `scale` is the
@@ -102,9 +103,11 @@ to milestones that explicitly include the standard PGA interpretation.
   parity and by `V * ~V` being a unit scalar under the tolerance, and shall
   describe the reflected weight of odd-versor results rather than hide it.
 - **PGA-INT-008:** Euclidean points and lines have intrinsic locations; the
-  interpretation shall not advertise position support for them. Ideal points
-  and the line at infinity have no location; whether they accept a rendering
-  position is deferred to a later milestone and is not advertised by version 1.
+  interpretation shall not advertise position support for them. An ideal
+  point has no location and shall accept a rendering position, which is a
+  Euclidean point written with the `point` constructor; its `head` is the
+  Euclidean point `position + value`, the end of its arrow. The line at
+  infinity accepts no position.
 
 ## 4. Visualization
 
@@ -112,11 +115,31 @@ to milestones that explicitly include the standard PGA interpretation.
   markers and Euclidean lines as unbounded lines clipped to the viewport,
   reusing the common 2D viewport, appearance, label, and display-settings
   requirements without PGA-specific viewport behavior.
-- **PGA-VIZ-002:** Ideal points shall be rendered as direction markers at the
-  viewport edge; the line at infinity, zero, and mixed multivectors shall be
-  reported textually and shall not be drawn.
+- **PGA-VIZ-002:** The line at infinity shall be drawn as the ellipse
+  inscribed in the viewport (a circle for a square viewport). An ideal point
+  shall be drawn, per an item-level appearance setting, as a positioned arrow
+  of its direction and magnitude (the default), as a marker on that ellipse in
+  its direction, or both; the arrow carries the head and base handles of a
+  positioned object. Versors and mixed multivectors shall be reported
+  textually and shall not be drawn.
 - **PGA-VIZ-003:** Direct manipulation in the first milestone shall be limited
-  to moving a point whose source is a literal `point(x, y)`, rewriting that
-  literal with the deterministic precision rules of EDIT and INTERACT2D;
-  dragging lines, anchoring, and interactive motors are excluded until
-  separately specified.
+  to moving a point whose source is a literal `point(x, y)`, to the head and
+  base of an ideal point whose source is a literal `ipoint(x, y)`, and to a
+  line whose source is a literal `line(a, b, c)` as specified by PGA-VIZ-004,
+  rewriting those literals with the deterministic precision rules of EDIT and
+  INTERACT2D; anchoring to Euclidean points and interactive motors are
+  excluded until separately specified.
+- **PGA-VIZ-004:** A Euclidean line shall show a translucent halo while
+  hovered or selected, and may show discreet orientation ticks on its
+  positive side, toggled by the item's `orientationVisible` appearance.
+  Dragging a movable line shall translate it, keeping `(a, b)` and rewriting
+  `c`. Pressing (or `Enter` on the focused line) shall select it and draw a
+  normal handle anchored at the point of the line nearest the press; the
+  handle shall keep a fixed screen length whatever the zoom and shall be
+  styled as a helper (dashed, translucent, hollow anchor), not as a vector.
+  Dragging or nudging the handle's head shall rotate the line about that
+  anchor, preserving the scale `√(a² + b²)`; the anchor shall follow a
+  translation of the selected line, and the rounding of `(a, b)` shall be
+  refined by the anchor's distance from the origin so that the rewritten line
+  still passes through the anchor within the grid precision. `Escape`, a viewport pan, or a press
+  elsewhere shall clear the selection.

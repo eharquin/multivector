@@ -11,7 +11,7 @@ const c = (values: Partial<Record<'e' | 'e0' | 'e1' | 'e2' | 'e01' | 'e02' | 'e1
 
 describe('standard PGA(2) interpretation', () => {
   it('classifies every entity kind of PGA-INT-003', () => {
-    expect(interpretPga2(owned([0, 0, 0, 0, 0, 0, 0, 0]))).toEqual({ kind: 'zero' })
+    expect(interpretPga2(owned([0, 0, 0, 0, 0, 0, 0, 0]))).toMatchObject({ kind: 'scalar', value: 0 })
     expect(interpretPga2(c({ e: 3 }))).toMatchObject({ kind: 'scalar', value: 3 })
     expect(interpretPga2(owned(point(1, 2)))).toMatchObject({ kind: 'euclidean-point', x: 1, y: 2, weight: 1 })
     expect(interpretPga2(owned(point(3, 4, 0)))).toMatchObject({ kind: 'ideal-point', x: 3, y: 4 })
@@ -36,40 +36,64 @@ describe('standard PGA(2) interpretation', () => {
     expect(interpretPga2(owned(point(1, 2)))).toMatchObject({ approximated: false })
   })
 
-  it('describes projective equivalence through position and weight or equation and scale', () => {
+  it('describes projective equivalence through position and weight or scale', () => {
     const doubled = interpretPga2(owned(scale(point(1, 2), 2)))
     expect(doubled).toMatchObject({ kind: 'euclidean-point', weight: 2 })
     expect(detailPga2Entity(doubled)).toBe('at (1, 2), weight 2')
     const reflected = interpretPga2(engine.sandwich(engine.basisBlade('e1'), owned(point(1, 0))))
     expect(reflected).toMatchObject({ kind: 'euclidean-point', weight: -1 })
     expect(detailPga2Entity(reflected)).toBe('at (-1, 0), weight -1')
-    expect(detailPga2Entity(interpretPga2(owned(line(3, 4, -10))))).toBe('0.6x + 0.8y − 2 = 0, scale 5')
-    expect(detailPga2Entity(interpretPga2(owned(line(1, -1, 0))))).toBe('0.707107x − 0.707107y = 0, scale 1.41421')
+    expect(detailPga2Entity(interpretPga2(owned(line(3, 4, -10))))).toBe('scale 5')
+    expect(detailPga2Entity(interpretPga2(owned(line(1, -1, 0))))).toBe('scale 1.41421')
+    expect(detailPga2Entity(interpretPga2(owned(line(0.6, 0.8, -2))))).toBeNull()
     expect(detailPga2Entity(interpretPga2(owned(point(3, 4, 0))))).toBe('direction (3, 4)')
     expect(detailPga2Entity(interpretPga2(c({ e: 1 })))).toBeNull()
   })
 
-  it('owns no positions or heads and maps entities to the PGA primitives', () => {
+  it('gives ideal points, and only them, a rendering position and a head', () => {
     const interpretation = PGA_2D_INTERPRETATION
     const p = interpretation.interpret(owned(scale(point(1, 2), 2)))
+    const d = interpretation.interpret(owned(point(3, 4, 0)))
+    const l = interpretation.interpret(owned(line(0, 1, -2)))
     expect(interpretation.supportsPosition(p)).toBe(false)
     expect(interpretation.supportsHead(p)).toBe(false)
-    expect(interpretation.isPositionValue(owned(point(1, 2)))).toBe(false)
+    expect(interpretation.supportsPosition(d)).toBe(true)
+    expect(interpretation.supportsHead(d)).toBe(true)
+    expect(interpretation.supportsPosition(l)).toBe(false)
+    // A position is an exact Euclidean point; its head is position + value.
+    expect(interpretation.isPositionValue(owned(point(1, 2)))).toBe(true)
+    expect(interpretation.isPositionValue(owned(scale(point(1, 2), 3)))).toBe(true)
+    expect(interpretation.isPositionValue(owned(point(3, 4, 0)))).toBe(false)
+    expect(interpretation.isPositionValue(owned(line(1, 0, 0)))).toBe(false)
+    expect(interpretation.positionOf(owned(scale(point(1, 2), 2)))).toEqual({ x: 1, y: 2 })
+    expect(interpretation.positionOf(interpretation.positionValue({ x: 4, y: -5 }, PGA_2D_BASIS))).toEqual({ x: 4, y: -5 })
+    const head = engine.add(interpretation.positionValue({ x: 1, y: 1 }, PGA_2D_BASIS), owned(point(3, 4, 0)))
+    expect(interpretation.interpret(head)).toMatchObject({ kind: 'euclidean-point', x: 4, y: 5, weight: 1 })
+    expect(interpretation.formatPosition('1', '2')).toBe('point(1, 2)')
+    expect(interpretation.literalEdit(p)).toEqual({ constructor: 'point', arity: 2 })
+    expect(interpretation.literalEdit(d)).toEqual({ constructor: 'ipoint', arity: 2 })
+    expect(interpretation.literalEdit(l)).toEqual({ constructor: 'line', arity: 3 })
+  })
+
+  it('maps entities to the PGA primitives', () => {
+    const interpretation = PGA_2D_INTERPRETATION
+    const p = interpretation.interpret(owned(scale(point(1, 2), 2)))
     expect(interpretation.toPrimitive(p, { accessibleName: 'P', position: { x: 0, y: 0 } }))
       .toEqual({ kind: 'point-marker', point: { x: 1, y: 2 }, accessibleName: 'P' })
     const l = interpretation.interpret(owned(line(0, 1, -2)))
     expect(interpretation.toPrimitive(l, { accessibleName: 'L', position: { x: 0, y: 0 } }))
       .toMatchObject({ kind: 'unbounded-line', point: { x: 0, y: 2 }, direction: { x: -1, y: 0 } })
     const d = interpretation.interpret(owned(point(3, 4, 0)))
-    expect(interpretation.toPrimitive(d, { accessibleName: 'D', position: { x: 0, y: 0 } }))
-      .toEqual({ kind: 'direction-marker', direction: { x: 0.6, y: 0.8 }, accessibleName: 'D' })
-    expect(interpretation.toPrimitive(interpretation.interpret(owned(line(0, 0, 1))), { accessibleName: 'I', position: { x: 0, y: 0 } })).toBeNull()
-    expect(interpretation.visualization(interpretation.interpret(owned(line(0, 0, 1))))).toMatchObject({ status: 'unsupported' })
+    expect(interpretation.toPrimitive(d, { accessibleName: 'D', position: { x: 1, y: 1 } }))
+      .toEqual({ kind: 'ideal-point', position: { x: 1, y: 1 }, direction: { x: 0.6, y: 0.8 }, magnitude: 5, accessibleName: 'D' })
+    const infinity = interpretation.interpret(owned(line(0, 0, 1)))
+    expect(interpretation.toPrimitive(infinity, { accessibleName: 'I', position: { x: 0, y: 0 } }))
+      .toEqual({ kind: 'line-at-infinity', accessibleName: 'I' })
+    expect(interpretation.visualization(infinity)).toEqual({ status: 'available' })
     expect(interpretation.visualization(interpretation.interpret(c({ e: 2 })))).toEqual({ status: 'non-spatial' })
     expect(interpretation.defaultName(l, 0)).toBe('Line 1')
     expect(interpretation.defaultName(d, 1)).toBe('Direction 2')
     expect(interpretation.creation).toEqual({ constructor: 'point', namePrefix: 'P', objectName: 'Point' })
-    expect(interpretation.literalEdit).toEqual({ constructor: 'point', arity: 2 })
     expect(interpretation.model).toBe('plane-based')
   })
 })

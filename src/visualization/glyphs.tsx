@@ -3,16 +3,16 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Point2d } from '../geometry/interpretation'
-import type { AreaLayout, DirectionLayout, LineLayout, SegmentLayout } from './layout'
+import type { AreaLayout, DirectionLayout, InfinityLayout, LineLayout, SegmentLayout } from './layout'
 import type {
-  DirectionMarkerPrimitive,
   OrientedAreaPrimitive,
   OrientedSegmentPrimitive,
   PointMarkerPrimitive,
   UnboundedLinePrimitive,
 } from './primitives'
 
-export type ManipulationKind = 'head' | 'base'
+/** `line` translates a line, `normal` rotates it about the selected anchor. */
+export type ManipulationKind = 'head' | 'base' | 'line' | 'normal'
 
 /**
  * What a glyph needs from the application shell to expose its handles: the
@@ -26,9 +26,9 @@ export type HandleController = Readonly<{
   unhover(key: string): void
   focus(key: string): void
   blur(key: string): void
-  pointerDown(event: ReactPointerEvent<SVGCircleElement>, itemId: string, kind: ManipulationKind): void
+  pointerDown(event: ReactPointerEvent<SVGElement>, itemId: string, kind: ManipulationKind): void
   keyDown(
-    event: KeyboardEvent<SVGCircleElement>,
+    event: KeyboardEvent<SVGElement>,
     itemId: string,
     kind: ManipulationKind,
     current: Point2d,
@@ -291,17 +291,58 @@ export function PointMarkerGlyph({
   </g>
 }
 
+export type LineSelection = Readonly<{
+  /** The anchor on the line, where the normal handle is drawn from (screen space). */
+  anchor: Point2d
+  /** The mathematical anchor, passed to keyboard handlers. */
+  mathematicalAnchor: Point2d
+  /** The tip of the normal handle (screen space). */
+  normalTip: Point2d
+  arrowPoints: string
+}>
+
 export type UnboundedLineGlyphProps = Readonly<{
+  id: string
   primitive: UnboundedLinePrimitive
   layout: NonNullable<LineLayout>
   color: string
   label: string | null
   scale: number
+  itemPresent: boolean
+  /** The line's coefficients are a literal, so it can be translated and rotated. */
+  movable: boolean
+  orientationVisible: boolean
+  /** Short ticks on the positive side, as `M x y L x y` segments. */
+  orientationTicks: string
+  selection: LineSelection | null
+  controller: HandleController
 }>
 
-/** A line clipped to the viewport; no handle in this milestone (PGA-VIZ-003). */
-export function UnboundedLineGlyph({ primitive, layout, color, label, scale }: UnboundedLineGlyphProps) {
+/**
+ * A line clipped to the viewport. A movable line shows a translucent double
+ * border on hover, translates when dragged, and once selected shows its unit
+ * normal, whose head rotates it about the anchor (PGA-VIZ-004).
+ */
+export function UnboundedLineGlyph({
+  id, primitive, layout, color, label, scale, itemPresent, movable, orientationVisible, orientationTicks, selection, controller,
+}: UnboundedLineGlyphProps) {
+  const lineKey = `${id}:line`
+  const normalKey = `${id}:normal`
+  const hovered = controller.hoveredKey === lineKey
   return <g style={{ color }}>
+    {movable && (hovered || selection) && <line
+      className="unbounded-line-halo"
+      x1={layout.start.x} y1={layout.start.y}
+      x2={layout.end.x} y2={layout.end.y}
+      strokeWidth={12 * scale}
+      aria-hidden="true"
+    />}
+    {orientationVisible && orientationTicks && <path
+      className="line-orientation"
+      d={orientationTicks}
+      strokeWidth={1.2 * scale}
+      aria-hidden="true"
+    />}
     <line
       className="unbounded-line"
       x1={layout.start.x} y1={layout.start.y}
@@ -309,20 +350,83 @@ export function UnboundedLineGlyph({ primitive, layout, color, label, scale }: U
       strokeWidth={2.5 * scale}
       aria-label={primitive.accessibleName}
     />
+    {itemPresent && movable && <line
+      className="manipulation-hit-target unbounded-line-hit"
+      x1={layout.start.x} y1={layout.start.y}
+      x2={layout.end.x} y2={layout.end.y}
+      strokeWidth={16}
+      tabIndex={0}
+      role="button"
+      aria-keyshortcuts="Enter"
+      aria-label={`Move ${primitive.accessibleName}`}
+      onPointerEnter={() => controller.hover(lineKey)}
+      onPointerLeave={() => controller.unhover(lineKey)}
+      onFocus={() => controller.focus(lineKey)}
+      onBlur={() => controller.blur(lineKey)}
+      onPointerDown={(event) => controller.pointerDown(event, id, 'line')}
+      onKeyDown={(event) => controller.keyDown(event, id, 'line', selection?.mathematicalAnchor ?? primitive.point)}
+    />}
+    {controller.focusRingKey === lineKey && <line
+      className="manipulation-focus-ring"
+      x1={layout.start.x} y1={layout.start.y}
+      x2={layout.end.x} y2={layout.end.y}
+      strokeWidth={8 * scale}
+      aria-hidden="true"
+    />}
+    {selection && <g className="line-normal">
+      <circle
+        className="line-anchor"
+        cx={selection.anchor.x} cy={selection.anchor.y} r={3.5 * scale}
+        strokeWidth={1.5 * scale}
+        aria-hidden="true"
+      />
+      <line
+        className="line-normal-shaft"
+        x1={selection.anchor.x} y1={selection.anchor.y}
+        x2={selection.normalTip.x} y2={selection.normalTip.y}
+        strokeWidth={2 * scale}
+        strokeDasharray={`${4 * scale} ${4 * scale}`}
+        aria-hidden="true"
+      />
+      <polygon className="line-normal-head" points={selection.arrowPoints} aria-hidden="true" />
+      {controller.focusRingKey === normalKey && <circle
+        className="manipulation-focus-ring"
+        cx={selection.normalTip.x} cy={selection.normalTip.y} r={14 * scale}
+        aria-hidden="true"
+      />}
+      {controller.hoveredKey === normalKey && <circle
+        className="vector-head-indicator"
+        cx={selection.normalTip.x} cy={selection.normalTip.y} r={5 * scale}
+        aria-hidden="true"
+      />}
+      <circle
+        className="manipulation-hit-target vector-head-target"
+        cx={selection.normalTip.x} cy={selection.normalTip.y} r="12"
+        tabIndex={0}
+        role="button"
+        aria-label={`Rotate ${primitive.accessibleName}`}
+        onPointerEnter={() => controller.hover(normalKey)}
+        onPointerLeave={() => controller.unhover(normalKey)}
+        onFocus={() => controller.focus(normalKey)}
+        onBlur={() => controller.blur(normalKey)}
+        onPointerDown={(event) => controller.pointerDown(event, id, 'normal')}
+        onKeyDown={(event) => controller.keyDown(event, id, 'normal', selection.mathematicalAnchor)}
+      />
+    </g>}
     {label && <text className="object-label" x={layout.labelPoint.x + 8} y={layout.labelPoint.y - 8}>{label}</text>}
   </g>
 }
 
 export type DirectionMarkerGlyphProps = Readonly<{
-  primitive: DirectionMarkerPrimitive
+  accessibleName: string
   layout: DirectionLayout
   color: string
   label: string | null
   scale: number
 }>
 
-/** An ideal point: an outward arrow at the viewport edge in its direction. */
-export function DirectionMarkerGlyph({ primitive, layout, color, label, scale }: DirectionMarkerGlyphProps) {
+/** An ideal point on the line at infinity: an outward arrow whose tip sits on the ellipse. */
+export function DirectionMarkerGlyph({ accessibleName, layout, color, label, scale }: DirectionMarkerGlyphProps) {
   const headLength = 10 * scale
   const spread = Math.PI / 6
   const head = [
@@ -337,9 +441,32 @@ export function DirectionMarkerGlyph({ primitive, layout, color, label, scale }:
       x2={layout.tip.x} y2={layout.tip.y}
       strokeWidth={2.5 * scale}
       strokeDasharray={`${4 * scale} ${3 * scale}`}
-      aria-label={primitive.accessibleName}
+      aria-label={`${accessibleName} at infinity`}
     />
     <polygon className="direction-marker-head" points={head} aria-hidden="true" />
     {label && <text className="object-label" x={layout.tail.x + 8} y={layout.tail.y - 8}>{label}</text>}
+  </g>
+}
+
+export type LineAtInfinityGlyphProps = Readonly<{
+  accessibleName: string
+  layout: InfinityLayout
+  color: string
+  label: string | null
+  scale: number
+}>
+
+/** The line at infinity: a dashed ellipse inscribed in the viewport. */
+export function LineAtInfinityGlyph({ accessibleName, layout, color, label, scale }: LineAtInfinityGlyphProps) {
+  return <g style={{ color }}>
+    <ellipse
+      className="line-at-infinity"
+      cx={layout.center.x} cy={layout.center.y}
+      rx={layout.radiusX} ry={layout.radiusY}
+      strokeWidth={2 * scale}
+      strokeDasharray={`${6 * scale} ${5 * scale}`}
+      aria-label={accessibleName}
+    />
+    {label && <text className="object-label" x={layout.center.x + layout.radiusX * Math.SQRT1_2 + 8} y={layout.center.y - layout.radiusY * Math.SQRT1_2 - 8}>{label}</text>}
   </g>
 }

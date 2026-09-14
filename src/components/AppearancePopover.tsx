@@ -17,6 +17,7 @@ type AppearancePopoverProps = Readonly<{
   orientationVisible?: boolean
   bivectorShape?: 'from-vectors' | 'disk' | 'square'
   parallelogramAvailable?: boolean
+  idealPointDisplay?: 'vector' | 'ideal' | 'both'
   colorOnly?: boolean
   control?: ExpressionControl
   reducedMotion?: boolean
@@ -28,6 +29,7 @@ type AppearancePopoverProps = Readonly<{
   onBorderVisibleChange?(visible: boolean): void
   onOrientationVisibleChange?(visible: boolean): void
   onBivectorShapeChange?(shape: 'from-vectors' | 'disk' | 'square'): void
+  onIdealPointDisplayChange?(display: 'vector' | 'ideal' | 'both'): void
   onControlChange?(control: ExpressionControl): void
   onClose(): void
 }>
@@ -42,6 +44,7 @@ export function AppearancePopover({
   orientationVisible = true,
   bivectorShape = 'from-vectors',
   parallelogramAvailable = false,
+  idealPointDisplay = 'vector',
   colorOnly = false,
   control,
   reducedMotion = false,
@@ -53,6 +56,7 @@ export function AppearancePopover({
   onBorderVisibleChange,
   onOrientationVisibleChange,
   onBivectorShapeChange,
+  onIdealPointDisplayChange,
   onControlChange,
   onClose,
 }: AppearancePopoverProps) {
@@ -169,7 +173,26 @@ export function AppearancePopover({
           {!parallelogramAvailable && <p className="appearance-shape-note">From vectors unavailable for this expression.</p>}
         </section>
       )}
-      {kind === 'Bivector' && onOrientationVisibleChange && (
+      {kind === 'Ideal point' && onIdealPointDisplayChange && (
+        <section className="appearance-section">
+          <h3>Display</h3>
+          <div className="bivector-shape-grid" role="group" aria-label="Ideal point display">
+            <button type="button" aria-label="As a vector" aria-pressed={idealPointDisplay === 'vector'}
+              onClick={() => onIdealPointDisplayChange('vector')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><path d="M4 18 L20 6" fill="none" /><polygon points="22,4 15,7 19,11" /></svg>
+            </button>
+            <button type="button" aria-label="At infinity" aria-pressed={idealPointDisplay === 'ideal'}
+              onClick={() => onIdealPointDisplayChange('ideal')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><ellipse cx="14" cy="11" rx="11" ry="8" fill="none" strokeDasharray="3 2" /><polygon points="25,11 19,8 19,14" /></svg>
+            </button>
+            <button type="button" aria-label="Both" aria-pressed={idealPointDisplay === 'both'}
+              onClick={() => onIdealPointDisplayChange('both')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><ellipse cx="14" cy="11" rx="11" ry="8" fill="none" strokeDasharray="3 2" /><path d="M8 15 L16 8" fill="none" /><polygon points="25,11 19,8 19,14" /></svg>
+            </button>
+          </div>
+        </section>
+      )}
+      {(kind === 'Bivector' || kind === 'Line') && onOrientationVisibleChange && (
         <section className="appearance-section">
           <h3>Orientation</h3>
           <label className="appearance-toggle-row">

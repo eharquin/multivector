@@ -15,13 +15,29 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   through the explicit Hodge dual, incidence, Euclidean and ideal norms, and
   rotors, translators, motors, reflections, and glide reflections through the
   common operators; classification, projective descriptions with weight and
-  scale, point markers, clipped lines, and edge direction markers.
+  scale, point markers, clipped lines, positioned ideal-point arrows with an
+  optional marker on the line at infinity, and the line at infinity drawn as
+  the ellipse inscribed in the viewport.
+
+### Document and convention changes
+
+- Canonical format version 5 adds `Appearance.idealPointDisplay` (`vector`,
+  `ideal`, `both`); version 4 documents migrate with `vector`.
 
 ### Interface and accessibility
 
 - Added algebra selection from the header capsule: its badge opens a menu of
-  registered algebras, its `i` segment the algebra information; switching a
-  document with content clears it after confirmation, as one undoable entry.
+  registered algebras, its `i` segment the algebra information; switching
+  replaces the document with the selected algebra's showcase after
+  confirmation, as one undoable entry. The PGA showcase demonstrates points,
+  join and meet, an ideal point, a slider-driven rotation about a point, a
+  translation, and a reflection.
+- Lines show a translucent halo on hover, optional orientation ticks on
+  their positive side (the _Orientation visible_ appearance toggle), and,
+  when their source is a literal `line(a, b, c)`, can be translated by
+  dragging and rotated about the pressed point through a dashed normal handle
+  of fixed screen length that preserves the scale `√(a² + b²)`; both gestures
+  work from the keyboard.
 - Compact blade names accept every generator of the active algebra, so an
   unavailable blade such as `e0` under VGA(2) reports an unknown-blade
   diagnostic at its span instead of an undefined name.

@@ -23,6 +23,18 @@ export type AlgebraReference = Readonly<{
   parameters: AlgebraParameters
 }>
 
+/**
+ * One row of the definition's showcase document: the expressions loaded when
+ * the algebra is selected, so a first session and an algebra switch both
+ * land on a working example of that algebra's workflow.
+ */
+export type ShowcaseItem = Readonly<{
+  source: string
+  positionSource?: string
+  /** A looping slider control on a scalar declaration. */
+  slider?: Readonly<{ minimumSource: string; maximumSource: string; stepSource: string; durationSeconds: number }>
+}>
+
 export type ParameterValidation =
   | Readonly<{ status: 'valid'; parameters: AlgebraParameters }>
   | Readonly<{ status: 'invalid'; message: string }>
@@ -45,4 +57,5 @@ export type AlgebraDefinition = Readonly<{
   info(parameters: AlgebraParameters): AlgebraInfo
   standardInterpretationId: string
   standardVisualizerId: string
+  showcase: readonly ShowcaseItem[]
 }>

@@ -8,6 +8,8 @@ export type ExpressionAppearance = Readonly<{
   borderVisible?: boolean
   orientationVisible?: boolean
   bivectorShape?: 'from-vectors' | 'disk' | 'square'
+  /** How an ideal point is drawn: as a positioned arrow, as an edge marker, or both. */
+  idealPointDisplay?: 'vector' | 'ideal' | 'both'
 }>
 
 export type ExpressionControl = Readonly<{
@@ -114,6 +116,33 @@ export function expressionDocument(
 }
 
 /** The documented VGA(2) workflow shown for a new local browser session. */
+/** Turns a definition's showcase rows into document items with sequential identities. */
+export function showcaseItems(
+  showcase: readonly Readonly<{
+    source: string
+    positionSource?: string
+    slider?: Readonly<{ minimumSource: string; maximumSource: string; stepSource: string; durationSeconds: number }>
+  }>[],
+  firstIndex = 1,
+): ExpressionItem[] {
+  return showcase.map((row, index) => ({
+    id: `item-${firstIndex + index}`,
+    source: row.source,
+    ...(row.positionSource ? { positionSource: row.positionSource } : {}),
+    ...(row.slider
+      ? {
+          control: {
+            mode: 'slider' as const,
+            minimumSource: row.slider.minimumSource,
+            maximumSource: row.slider.maximumSource,
+            stepSource: row.slider.stepSource,
+            animation: { mode: 'loop' as const, direction: 'forward' as const, durationSeconds: row.slider.durationSeconds },
+          },
+        }
+      : {}),
+  }))
+}
+
 export function vga2FoundationExampleDocument(): ExpressionDocument {
   return expressionDocument(
     [

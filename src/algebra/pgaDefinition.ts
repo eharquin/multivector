@@ -51,4 +51,20 @@ export const PGA_DEFINITION: AlgebraDefinition = Object.freeze({
   },
   standardInterpretationId: 'org.multivector.pga-2d',
   standardVisualizerId: 'org.multivector.pga-2d',
+  // Two points, the line through them, a fixed line and their meet, an ideal
+  // point, a slider-driven rotation about A, a translation, and a reflection.
+  showcase: [
+    { source: 'A = point(-2, 1)' },
+    { source: 'B = point(2, 2)' },
+    { source: 'L = A & B' },
+    { source: 'M = line(1, 0, -1)' },
+    { source: 'X = L ^ M' },
+    { source: 'D = ipoint(1, 0)' },
+    { source: 't = 0', slider: { minimumSource: '0', maximumSource: 'tau', stepSource: '0.01', durationSeconds: 4 } },
+    { source: 'R = exp(-(t/2) * A)' },
+    { source: 'C = R >>> B' },
+    { source: 'T = 1 - e01 - 0.5 e02' },
+    { source: 'S = T >>> X' },
+    { source: 'F = M >>> A' },
+  ],
 })
