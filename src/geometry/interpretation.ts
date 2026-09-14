@@ -41,7 +41,7 @@ export type ViewportCreation = Readonly<{
   objectName: string
 }>
 
-/** Which declared constructor literal a drag rewrites when entities carry their own location. */
+/** Which declared constructor literal a drag rewrites for an entity, when its source is that literal. */
 export type LiteralEdit = Readonly<{ constructor: string; arity: number }>
 
 export type Interpretation<E extends InterpretedEntity = InterpretedEntity> = Readonly<{
@@ -64,7 +64,10 @@ export type Interpretation<E extends InterpretedEntity = InterpretedEntity> = Re
   visualization(entity: E): VisualizationSupport
   defaultName(entity: E, index: number): string
   creation: ViewportCreation
-  literalEdit: LiteralEdit | null
+  /** The literal a head drag (entities with a position) or a base drag (located entities) rewrites. */
+  literalEdit(entity: E): LiteralEdit | null
+  /** Writes a position source for a point, in this interpretation's syntax. */
+  formatPosition(x: string, y: string): string
   toPrimitive(entity: E, options: PrimitiveOptions<E>): VisualizationPrimitive | null
 }>
 
@@ -90,6 +93,7 @@ export const OPAQUE_INTERPRETATION: AnyInterpretation = Object.freeze<AnyInterpr
   }),
   defaultName: (_entity, index) => `Value ${index + 1}`,
   creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Object' },
-  literalEdit: null,
+  literalEdit: () => null,
+  formatPosition: (x, y) => `(${x}, ${y})`,
   toPrimitive: () => null,
 })

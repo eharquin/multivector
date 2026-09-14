@@ -256,6 +256,11 @@ ideal norms of section 7:
   value with the same property is a *reflection*; any other value is a
   *multivector*.
 
+A rendering position, where the interpretation accepts one, is a Euclidean
+point with a non-zero weight; the position's coordinates are `(x / w, y / w)`
+and the head of a positioned ideal point is the Euclidean point
+`position + value`.
+
 Two values that differ by a non-zero scalar factor denote the same geometric
 entity. This projective equivalence is reported by the interpretation, which
 describes a point by its position and its weight; it is never the meaning of

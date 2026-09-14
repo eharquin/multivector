@@ -1,7 +1,8 @@
 import { type AlgebraBasis } from '../domain/algebraBasis'
-import { type OwnedMultivector } from '../domain/multivector'
+import { ownedMultivector, type OwnedMultivector } from '../domain/multivector'
 import {
-  type DirectionMarkerPrimitive,
+  type IdealPointPrimitive,
+  type LineAtInfinityPrimitive,
   type PointMarkerPrimitive,
   type UnboundedLinePrimitive,
 } from '../visualization/primitives'
@@ -166,20 +167,38 @@ function unboundedLine(entity: Extract<Pga2Entity, { kind: 'euclidean-line' }>, 
   })
 }
 
-function directionMarker(entity: Extract<Pga2Entity, { kind: 'ideal-point' }>, accessibleName: string): DirectionMarkerPrimitive {
-  const length = Math.hypot(entity.x, entity.y)
+function idealPoint(
+  entity: Extract<Pga2Entity, { kind: 'ideal-point' }>,
+  accessibleName: string,
+  position: Point2d,
+): IdealPointPrimitive {
+  const magnitude = Math.hypot(entity.x, entity.y)
   return Object.freeze({
-    kind: 'direction-marker' as const,
-    direction: Object.freeze({ x: entity.x / length, y: entity.y / length }),
+    kind: 'ideal-point' as const,
+    position: Object.freeze({ x: position.x, y: position.y }),
+    direction: Object.freeze({ x: entity.x / magnitude, y: entity.y / magnitude }),
+    magnitude,
     accessibleName,
   })
+}
+
+const lineAtInfinity = (accessibleName: string): LineAtInfinityPrimitive =>
+  Object.freeze({ kind: 'line-at-infinity' as const, accessibleName })
+
+/** A position in PGA is a Euclidean point with an exact non-zero weight. */
+function exactEuclideanPoint(value: OwnedMultivector): boolean {
+  const c = value.coefficients
+  return c[INDEX.e12] !== 0 &&
+    c.every((coefficient, index) => GRADE[index] === 2 || coefficient === 0)
 }
 
 /**
  * The standard plane-based PGA(2) interpretation, `org.multivector.pga-2d`
  * version 1 (PGA-INT-001 through PGA-INT-008). Points and lines have
- * intrinsic locations, so no entity accepts a position or a head; dragging a
- * point rewrites its `point(x, y)` literal instead (PGA-VIZ-003).
+ * intrinsic locations, so they accept no position and dragging a point
+ * rewrites its `point(x, y)` literal (PGA-VIZ-003). An ideal point has no
+ * location and accepts a rendering position, a Euclidean point; its head is
+ * `position + value`, the Euclidean point at the end of its arrow.
  */
 export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
   interpretationId: 'org.multivector.pga-2d',
@@ -188,23 +207,29 @@ export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
   interpret: (value) => interpretPga2(value),
   describe: describePga2Entity,
   detail: detailPga2Entity,
-  supportsPosition: () => false,
-  supportsHead: () => false,
-  isPositionValue: () => false,
-  positionOf: () => ({ x: 0, y: 0 }),
-  positionValue(_point: Point2d, basis: AlgebraBasis) {
-    throw new RangeError(`PGA entities carry their own location (${basis.blades.length} blades).`)
+  supportsPosition: (entity) => entity.kind === 'ideal-point',
+  supportsHead: (entity) => entity.kind === 'ideal-point',
+  isPositionValue: exactEuclideanPoint,
+  positionOf(value) {
+    const c = value.coefficients
+    return { x: -c[INDEX.e02] / c[INDEX.e12], y: c[INDEX.e01] / c[INDEX.e12] }
+  },
+  positionValue(point: Point2d, basis: AlgebraBasis) {
+    const coefficients = new Array(basis.blades.length).fill(0)
+    coefficients[INDEX.e12] = 1
+    coefficients[INDEX.e02] = -point.x
+    coefficients[INDEX.e01] = point.y
+    return ownedMultivector(coefficients, basis)
   },
   visualization(entity) {
     switch (entity.kind) {
       case 'euclidean-point':
       case 'euclidean-line':
       case 'ideal-point':
+      case 'line-at-infinity':
         return { status: 'available' }
       case 'scalar':
         return { status: 'non-spatial' }
-      case 'line-at-infinity':
-        return { status: 'unsupported', message: 'The line at infinity has no drawn form; it is reported textually.' }
       default:
         return { status: 'unsupported', message: 'This PGA 2D object has no supported visualization.' }
     }
@@ -216,12 +241,18 @@ export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
     return `${family} ${index + 1}`
   },
   creation: { constructor: 'point', namePrefix: 'P', objectName: 'Point' },
-  literalEdit: { constructor: 'point', arity: 2 },
-  toPrimitive(entity, { accessibleName }) {
+  literalEdit(entity) {
+    if (entity.kind === 'euclidean-point') return { constructor: 'point', arity: 2 }
+    if (entity.kind === 'ideal-point') return { constructor: 'ipoint', arity: 2 }
+    return null
+  },
+  formatPosition: (x, y) => `point(${x}, ${y})`,
+  toPrimitive(entity, { accessibleName, position }) {
     switch (entity.kind) {
       case 'euclidean-point': return pointMarker(entity, accessibleName)
       case 'euclidean-line': return unboundedLine(entity, accessibleName)
-      case 'ideal-point': return directionMarker(entity, accessibleName)
+      case 'ideal-point': return idealPoint(entity, accessibleName, position)
+      case 'line-at-infinity': return lineAtInfinity(accessibleName)
       default: return null
     }
   },

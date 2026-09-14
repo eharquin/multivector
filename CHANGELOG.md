@@ -15,7 +15,14 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   through the explicit Hodge dual, incidence, Euclidean and ideal norms, and
   rotors, translators, motors, reflections, and glide reflections through the
   common operators; classification, projective descriptions with weight and
-  scale, point markers, clipped lines, and edge direction markers.
+  scale, point markers, clipped lines, positioned ideal-point arrows with an
+  optional marker on the line at infinity, and the line at infinity drawn as
+  the ellipse inscribed in the viewport.
+
+### Document and convention changes
+
+- Canonical format version 5 adds `Appearance.idealPointDisplay` (`vector`,
+  `ideal`, `both`); version 4 documents migrate with `vector`.
 
 ### Interface and accessibility
 

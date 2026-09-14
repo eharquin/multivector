@@ -8,6 +8,8 @@ export type ExpressionAppearance = Readonly<{
   borderVisible?: boolean
   orientationVisible?: boolean
   bivectorShape?: 'from-vectors' | 'disk' | 'square'
+  /** How an ideal point is drawn: as a positioned arrow, as an edge marker, or both. */
+  idealPointDisplay?: 'vector' | 'ideal' | 'both'
 }>
 
 export type ExpressionControl = Readonly<{
