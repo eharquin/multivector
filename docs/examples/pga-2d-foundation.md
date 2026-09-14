@@ -23,8 +23,8 @@ The loaded document declares:
 | --- | --- | --- |
 | `A = point(-2, 1)` | Point at (-2, 1) | a marker with a handle |
 | `B = point(2, 2)` | Point at (2, 2) | a second marker |
-| `L = A & B` | Line | the join: the line through `A` and `B`, clipped to the viewport |
-| `M = line(1, 0, -1)` | Line `x − 1 = 0` | a vertical line |
+| `L = A & B` | Line, scale 4.12311 | the join: the line through `A` and `B`, clipped to the viewport |
+| `M = line(1, 0, -1)` | Line | the vertical line `x = 1`; a unit line shows no scale |
 | `X = L ^ M` | Point at (1, 1.75), weight −4 | the meet of the two lines; the weight comes from the lines' coefficients, not from the position |
 | `D = ipoint(1, 0)` | Ideal point, direction (1, 0) | an arrow from the origin; its appearance menu can also show it as a marker at infinity |
 | `t = 0` | Scalar with a looping slider | press ▶ to animate |

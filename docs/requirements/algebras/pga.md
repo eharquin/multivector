@@ -86,7 +86,7 @@ to milestones that explicitly include the standard PGA interpretation.
   user-facing names and appearance.
 - **PGA-INT-004:** The interpretation shall report projective equivalence by
   describing a point through its Euclidean position and its weight, and a line
-  through its equation and its scale; it shall never make `==` mean projective
+  through its scale (its coefficients are inspected as the value itself); it shall never make `==` mean projective
   equivalence.
 - **PGA-INT-005:** Classification shall use a declared tolerance policy of the
   form `epsilon = absoluteFloor + relativeTerm * scale`, where `scale` is the

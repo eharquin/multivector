@@ -36,15 +36,16 @@ describe('standard PGA(2) interpretation', () => {
     expect(interpretPga2(owned(point(1, 2)))).toMatchObject({ approximated: false })
   })
 
-  it('describes projective equivalence through position and weight or equation and scale', () => {
+  it('describes projective equivalence through position and weight or scale', () => {
     const doubled = interpretPga2(owned(scale(point(1, 2), 2)))
     expect(doubled).toMatchObject({ kind: 'euclidean-point', weight: 2 })
     expect(detailPga2Entity(doubled)).toBe('at (1, 2), weight 2')
     const reflected = interpretPga2(engine.sandwich(engine.basisBlade('e1'), owned(point(1, 0))))
     expect(reflected).toMatchObject({ kind: 'euclidean-point', weight: -1 })
     expect(detailPga2Entity(reflected)).toBe('at (-1, 0), weight -1')
-    expect(detailPga2Entity(interpretPga2(owned(line(3, 4, -10))))).toBe('0.6x + 0.8y − 2 = 0, scale 5')
-    expect(detailPga2Entity(interpretPga2(owned(line(1, -1, 0))))).toBe('0.707107x − 0.707107y = 0, scale 1.41421')
+    expect(detailPga2Entity(interpretPga2(owned(line(3, 4, -10))))).toBe('scale 5')
+    expect(detailPga2Entity(interpretPga2(owned(line(1, -1, 0))))).toBe('scale 1.41421')
+    expect(detailPga2Entity(interpretPga2(owned(line(0.6, 0.8, -2))))).toBeNull()
     expect(detailPga2Entity(interpretPga2(owned(point(3, 4, 0))))).toBe('direction (3, 4)')
     expect(detailPga2Entity(interpretPga2(c({ e: 1 })))).toBeNull()
   })
