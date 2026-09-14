@@ -20,8 +20,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Interface and accessibility
 
 - Added algebra selection from the header capsule: its badge opens a menu of
-  registered algebras, its `i` segment the algebra information; switching a
-  document with content clears it after confirmation, as one undoable entry.
+  registered algebras, its `i` segment the algebra information; switching
+  replaces the document with the selected algebra's showcase after
+  confirmation, as one undoable entry. The PGA showcase demonstrates points,
+  join and meet, an ideal point, a slider-driven rotation about a point, a
+  translation, and a reflection.
 - Compact blade names accept every generator of the active algebra, so an
   unavailable blade such as `e0` under VGA(2) reports an unknown-blade
   diagnostic at its span instead of an undefined name.
