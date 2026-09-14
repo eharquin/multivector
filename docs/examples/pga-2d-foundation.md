@@ -17,60 +17,61 @@ previous expressions and the previous algebra.
 
 ## Read the showcase
 
-The loaded document declares:
+The loaded document is a triangle whose metric read-outs are products and
+norms; the scalar functions only turn them into numbers:
 
 | Row | Kind | What to observe |
 | --- | --- | --- |
 | `A = point(-2, 1)` | Point at (-2, 1) | a marker with a handle |
 | `B = point(2, 2)` | Point at (2, 2) | a second marker |
-| `L = A & B` | Line, scale 4.12311 | the join: the line through `A` and `B`, clipped to the viewport |
-| `M = line(1, 0, -1)` | Line | the vertical line `x = 1`; a unit line shows no scale |
-| `X = L ^ M` | Point at (1, 1.75), weight −4 | the meet of the two lines; the weight comes from the lines' coefficients, not from the position |
-| `D = ipoint(1, 0)` | Ideal point, direction (1, 0) | an arrow from the origin; its appearance menu can also show it as a marker at infinity |
-| `t = 0` | Scalar with a looping slider | press ▶ to animate |
-| `R = exp(-(t/2) * A)` | Scalar at `t = 0`, then Motor | the rotation by `t` about the point `A` |
-| `C = R >>> B` | Point | `B` orbiting `A` while `t` runs |
-| `T = 1 - e01 - 0.5 e02` | Translator | the translation by (2, 1) |
-| `S = T >>> X` | Point at (3, 2.75), weight −4 | `X` translated; the weight is preserved |
-| `F = M >>> A` | Point at (4, 1), weight −1 | the reflection of `A` in `M`; the negative weight is the orientation reversal of an odd versor, not an error |
+| `C = point(1, -2)` | Point at (1, -2) | the third vertex |
+| `L = A & B` | Line, scale 4.12311 | the join: the side through `A` and `B`, clipped to the viewport; its scale is the distance `AB` |
+| `M = A & C` | Line, scale 4.24264 | the side through `A` and `C` |
+| `dAB = norm(A & B)` | Scalar 4.12311 | the distance between `A` and `B`: the Euclidean norm of their join (times the two weights, here 1) |
+| `dBC = norm(B & C)` | Scalar 4.12311 | the distance between `B` and `C` |
+| `alpha = atan2((L ^ M).e12, L \| M)` | Scalar −1.03038 | the oriented angle at `A` from `L` to `M`: the meet's weight is `‖L‖‖M‖ sin`, the inner product `‖L‖‖M‖ cos`, and `atan2` cancels the norms |
+| `deg = alpha * 180 / pi` | Scalar −59.0362 | the same angle in degrees; negative because `A → B → C` turns clockwise |
+| `hC = (L ^ C).e012 / L.norm` | Scalar −3.63803 | the signed distance from `L` to `C` (the height from `C`), negative on the side opposite the normal of `L` |
+| `area = (A & B & C) / 2` | Scalar −7.5 | the signed area: the triple join is twice the oriented area |
+| `N = line(1, 0, -1)` | Line | the literal vertical line `x = 1`, movable from the viewport |
+| `beta = atan2((L ^ N).e12, L \| N)` | Scalar −1.81577 | the oriented angle from `L` to `N` |
 
-Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
-`B`. `Escape` stops the animation.
+Drag `C` around `A` and `B`: `alpha` and `deg` follow, change sign when `C`
+crosses `L`, and `area` with them; `hC` is zero exactly on `L`. Drag `N` or
+rotate it through its normal handle: `beta` follows, and `deg` is unchanged.
 
-## Exercise projective equivalence and the language
+The recipes generalize: `norm(P & Q)` is a distance between unit points,
+`acos((L | M) / (L.norm * M.norm))` the unoriented angle between two lines in
+`[0, pi]`, `inorm(L ^ P)` the absolute distance from a unit line to a unit
+point; swapping the operands of the oriented angle negates it.
+
+## Exercise projective equivalence, versors, and the language
 
 1. Change `B` to `B = 2 * point(2, 2)`: it reports `Point at (2, 2), weight 2`;
-   `L`, `X`, and `C` are unchanged as geometry.
-2. Add `G = M * T`: a `Reflection`, the glide reflection that translates by
-   `T` then reflects in `M`; `G >>> A` is `Point at (2, 2), weight −1`.
-3. Add `N = norm(L)` and `I = inorm(L)`: the Euclidean and ideal norms of the
-   join, `4.12311` and `6`.
-4. Add `P = L ^ line(1, 0, -3)`: the meet with `x = 3`, `Point at (3, 2.25)`;
-   then `Q = L ^ L`: a Scalar zero, since a line meets itself nowhere.
-5. Write `e20` anywhere: it is accepted and displayed as `-e02`.
-
-## Read distances and angles
-
-The metric read-outs are products and norms; only the scalar functions turn
-them into numbers. With unit points and lines (`A`, `B`, and `M` are unit; a
-join or a meet is not, divide by its norm first):
-
-1. `d = norm(A & B)`: the distance between `A` and `B`, `4.12311` — the join's
-   Euclidean norm is the distance times the two weights.
-2. `Lu = L / L.norm`, then `c = Lu | M`: the cosine of the angle between the two
-   lines, and `a = acos(c)` the angle in radians.
-3. `s = (Lu ^ M).e12`: the sine of the oriented angle from `Lu` to `M` (the
-   meet's weight), so `phi = atan2(s, c)` is the oriented angle in
-   `(-pi, pi]`; swapping the lines negates it.
-4. `h = (M ^ A).e012`: the signed distance from `M` to `A`, `-3` (negative on
-   the side opposite the line's normal); `inorm(M ^ A)` is its absolute value.
-
-Multiply by `180 / pi` for degrees.
+   `L` is unchanged as geometry but `dAB` doubles — the join's norm carries
+   the weights.
+2. Add `X = L ^ N`: the meet, `Point at (1, 1.75), weight −4`; the weight comes
+   from the lines' coefficients, not from the position. Then `Q = L ^ L`: a
+   Scalar zero, since a line meets itself nowhere.
+3. Add `t = 0`, open its appearance menu and choose the slider (`0` to `tau`,
+   loop); then `R = exp(-(t/2) * A)` and `P = R >>> B`: at `t = 0` `R` is the
+   scalar 1, and as soon as the slider moves it is a Motor, the rotation by
+   `t` about `A`; `P` circles `A` at the distance `dAB`. `Escape` stops the
+   animation.
+4. Add `T = 1 - e01 - 0.5 e02`, a Translator by (2, 1), and `S = T >>> X`:
+   `Point at (3, 2.75), weight −4`, the weight preserved.
+5. Add `F = N >>> A`: `Point at (4, 1), weight −1`, the reflection of `A` in
+   `N`; the negative weight is the orientation reversal of an odd versor, not
+   an error. `G = N * T` is a `Reflection`, the glide reflection that
+   translates by `T` then reflects in `N`.
+6. Add `I = inorm(L)`: the ideal norm of the join, `6`.
+7. Write `e20` anywhere: it is accepted and displayed as `-e02`.
 
 ## Ideal points and the line at infinity
 
-1. Add `I = e0`: the line at infinity is drawn as the dashed ellipse inscribed
-   in the viewport.
+1. Add `D = ipoint(1, 0)`: an ideal point, drawn as an arrow from the origin
+   in the direction `(1, 0)`. Then `E = e0`: the line at infinity is drawn as
+   the dashed ellipse inscribed in the viewport.
 2. Open the appearance menu of `D` and choose *At infinity* or *Both*: the
    marker of `D` sits on the ellipse, in the direction `(1, 0)`.
 3. Drag the base of `D`: its position `point(x, y)` is written in the position
@@ -80,28 +81,30 @@ Multiply by `180 / pi` for degrees.
 ## Move a point directly
 
 1. Drag the marker of `A`: `A = point(x, y)` is rewritten with the pointer's
-   grid-rounded coordinates, and `L`, `X`, `R`, `C`, and `F` follow.
+   grid-rounded coordinates, and `L`, `M`, the distances, and the angles
+   follow.
 2. Press `Ctrl+Z` (`⌘Z` on macOS): the whole gesture is undone as one entry.
 3. Focus the marker of `B` with `Tab` and press the arrow keys to nudge it
    (`Shift` for a larger step).
 
 ## Move and rotate a line
 
-1. Hover `M`: a translucent halo widens the line, and short ticks on its
+1. Hover `N`: a translucent halo widens the line, and short ticks on its
    positive side show its orientation (toggle them from the appearance popover
    with *Orientation visible*).
-2. Drag `M` to the right: the line translates and `M = line(1, 0, c)` is
-   rewritten with the new `c`; `X` and `F` follow.
-3. Click `M`: it stays selected and a dashed normal handle appears, anchored
+2. Drag `N` to the right: the line translates and `N = line(1, 0, c)` is
+   rewritten with the new `c`; `beta` is unchanged, a translation keeps the
+   direction.
+3. Click `N`: it stays selected and a dashed normal handle appears, anchored
    at the point of the line nearest the click; its length does not change
    with the zoom. Drag the handle's head: the line rotates about that anchor,
-   `M = line(a, b, c)` keeps `√(a² + b²) = 1`, and the anchor stays on the
-   line. Press `Escape` to clear the selection.
+   `N = line(a, b, c)` keeps `√(a² + b²) = 1`, the anchor stays on the line,
+   and `beta` follows. Press `Escape` to clear the selection.
 4. With the line focused, press `Enter` to select it, the arrow keys to nudge
    its normal, and `Enter` again to return to translation.
 
-Only literal lines move; `L = A & B` shows the halo and ticks but is moved
-through `A` and `B`.
+Only literal lines move; `L = A & B` and `M = A & C` show the halo and ticks
+but are moved through their points.
 
 ## Create points from the viewport
 
