@@ -1,6 +1,6 @@
 import {
   directConstructorComponents,
-  directDeclaredConstructorComponents,
+  directItemConstructorComponents,
   rewriteConstructorLiterals,
   type ConstructorComponentEdit,
 } from './constructorLiteralEdit'
@@ -8,7 +8,7 @@ import { parseExpression } from './parseExpression'
 
 /*
  * VGA vector conveniences over the constructor-literal edit: two components,
- * written as `vector(x, y)` or `(x, y)`.
+ * written as `vector(x, y)` or `(x, y)`, declared or anonymous.
  */
 
 export type DirectVectorComponentEdit = ConstructorComponentEdit
@@ -21,7 +21,7 @@ const pair = (
 export function directDeclaredVectorComponents(
   source: string,
 ): readonly [DirectVectorComponentEdit, DirectVectorComponentEdit] | null {
-  return pair(directDeclaredConstructorComponents(source, 'vector', 2))
+  return pair(directItemConstructorComponents(source, 'vector', 2))
 }
 
 export function directPositionComponents(

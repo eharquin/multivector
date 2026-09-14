@@ -520,6 +520,9 @@ describe('VGA 2D vertical slice', () => {
     const source = screen.getByRole('textbox', { name: 'Expression 1' })
     fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
     expect(container.querySelector('.vector-head-point')).toBeInTheDocument()
+    // Anonymous literals are as editable as declarations (EDIT-003).
+    fireEvent.change(source, { target: { value: 'vector(2, 1)' } })
+    expect(screen.getByRole('button', { name: 'Move head of Vector 1' })).toBeInTheDocument()
 
     fireEvent.change(source, { target: { value: 'V = vector(1 + 1, 1)' } })
     expect(container.querySelector('.vector-head-point')).not.toBeInTheDocument()
