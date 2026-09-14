@@ -55,17 +55,18 @@ function componentsOf(
 }
 
 /**
- * The direct-edit components of a named declaration whose expression is a
- * call to `constructor` with `arity` arguments, each a literal or a signed
- * name; `null` when the source cannot be rewritten in place (EDIT).
+ * The direct-edit components of an item source — a named declaration or an
+ * anonymous expression — that is a call to `constructor` with `arity`
+ * arguments, each a literal or a signed name; `null` when the source cannot
+ * be rewritten in place (EDIT-003).
  */
-export function directDeclaredConstructorComponents(
+export function directItemConstructorComponents(
   source: string,
   constructor: string,
   arity: number,
 ): readonly ConstructorComponentEdit[] | null {
   const parsed = parseDocumentExpression(source)
-  if (!parsed.ok || !parsed.source.declaration) return null
+  if (!parsed.ok) return null
   return componentsOf(parsed.source.expression, constructor, arity)
 }
 

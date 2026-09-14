@@ -76,7 +76,7 @@ import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
 import {
   directConstructorComponents,
-  directDeclaredConstructorComponents,
+  directItemConstructorComponents,
   rewriteConstructorLiterals,
   type ConstructorComponentEdit,
 } from './language/constructorLiteralEdit'
@@ -571,7 +571,7 @@ function App() {
   }
   const literalEditComponents = (item: ExpressionItem, entity: InterpretedEntity) => {
     const edit = interpretation.literalEdit(entity)
-    return edit ? directDeclaredConstructorComponents(item.source, edit.constructor, edit.arity) : null
+    return edit ? directItemConstructorComponents(item.source, edit.constructor, edit.arity) : null
   }
   /** A position source is a two-argument literal of the interpretation's creation constructor. */
   const positionComponents = (positionSource: string) =>
