@@ -37,9 +37,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added algebra selection from the header capsule: its badge opens a menu of
   registered algebras, its `i` segment the algebra information; switching
   replaces the document with the selected algebra's showcase after
-  confirmation, as one undoable entry. The PGA showcase demonstrates points,
-  join and meet, an ideal point, a slider-driven rotation about a point, a
-  translation, and a reflection.
+  confirmation, as one undoable entry. The PGA showcase is a triangle whose
+  side lengths, oriented angle, height, and signed area are read from the
+  norms of joins, the inner product and meet of two sides, the outer product
+  of a side and a vertex, and the triple join, next to a movable literal
+  line.
 - Lines show a translucent halo on hover, optional orientation ticks on
   their positive side (the _Orientation visible_ appearance toggle), and,
   when their source is a literal `line(a, b, c)`, can be translated by

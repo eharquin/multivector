@@ -1820,7 +1820,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(within(screen.getByRole('menu')).getAllByRole('menuitemradio')[1])
     expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Expression 1' })).toHaveValue('A = point(-2, 1)')
-    expect(screen.getAllByRole('textbox', { name: /^Expression \d+$/ })).toHaveLength(12)
+    expect(screen.getAllByRole('textbox', { name: /^Expression \d+$/ })).toHaveLength(13)
     expect(screen.getByText('PGA · 2D selected; its example document was loaded.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
     expect(screen.getByRole('button', { name: 'VGA · 2D. Change algebra' })).toBeInTheDocument()
