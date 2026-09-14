@@ -5,7 +5,7 @@ import type { AnyInterpretation, InterpretedEntity } from '../geometry/interpret
 import type { Point2d } from '../geometry/interpretation'
 import {
   limitRenderedListElements,
-  type DirectionMarkerPrimitive,
+  type IdealPointPrimitive,
   type OrientedAreaPrimitive,
   type OrientedSegmentPrimitive,
   type UnboundedLinePrimitive,
@@ -23,6 +23,7 @@ export type RenderedPrimitive = Readonly<{
   borderVisible: boolean
   orientationVisible: boolean
   bivectorShape: 'from-vectors' | 'disk' | 'square'
+  idealPointDisplay: 'vector' | 'ideal' | 'both'
 }>
 
 /**
@@ -41,7 +42,7 @@ export function collectRenderedPrimitives(
     const kind = evaluated.evaluation.valueType === 'list'
       ? `List (${evaluated.evaluation.value.elements.length})`
       : interpretation.describe(evaluated.evaluation.entity)
-    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape } = resolveItemAppearance(
+    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape, idealPointDisplay } = resolveItemAppearance(
       appearance[evaluated.item.id],
       kind,
       declaredName(evaluated.item.source),
@@ -60,6 +61,7 @@ export function collectRenderedPrimitives(
             borderVisible,
             orientationVisible,
             bivectorShape,
+            idealPointDisplay,
             label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
           }]
         : [])
@@ -73,6 +75,7 @@ export function collectRenderedPrimitives(
           borderVisible,
           orientationVisible,
           bivectorShape,
+          idealPointDisplay,
           label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
         }]
       : []
@@ -226,30 +229,39 @@ export function layoutUnboundedLine(
   }
 }
 
+export type InfinityLayout = Readonly<{ center: Point2d; radiusX: number; radiusY: number }>
+
+/**
+ * The line at infinity drawn as the ellipse inscribed in the viewport, inset
+ * so that markers on it stay fully visible; a square viewport gives a circle.
+ */
+export function layoutLineAtInfinity(viewport: Viewport2d, objectRenderScale: number): InfinityLayout {
+  const inset = 18 * objectRenderScale
+  return {
+    center: { x: viewport.width / 2, y: viewport.height / 2 },
+    radiusX: Math.max(1, viewport.width / 2 - inset),
+    radiusY: Math.max(1, viewport.height / 2 - inset),
+  }
+}
+
 export type DirectionLayout = Readonly<{
-  /** Where the direction leaves the viewport, on its edge. */
+  /** Where the direction meets the line at infinity, on the ellipse. */
   tip: Point2d
   tail: Point2d
   angle: number
 }>
 
-/** Places an ideal point as an arrow at the viewport edge, pointing outward from the center. */
-export function layoutDirectionMarker(
-  primitive: DirectionMarkerPrimitive,
+/** Places an ideal point's marker on the line at infinity, pointing outward from the center. */
+export function layoutIdealMarker(
+  direction: Point2d,
   viewport: Viewport2d,
   objectRenderScale: number,
 ): DirectionLayout {
-  const center = { x: viewport.width / 2, y: viewport.height / 2 }
+  const { center, radiusX, radiusY } = layoutLineAtInfinity(viewport, objectRenderScale)
   // Screen y grows downward while the mathematical y grows upward.
-  const dx = primitive.direction.x
-  const dy = -primitive.direction.y
-  const inset = 18 * objectRenderScale
-  const halfWidth = viewport.width / 2 - inset
-  const halfHeight = viewport.height / 2 - inset
-  const t = Math.min(
-    dx === 0 ? Infinity : halfWidth / Math.abs(dx),
-    dy === 0 ? Infinity : halfHeight / Math.abs(dy),
-  )
+  const dx = direction.x
+  const dy = -direction.y
+  const t = 1 / Math.sqrt((dx / radiusX) ** 2 + (dy / radiusY) ** 2)
   const tip = { x: center.x + dx * t, y: center.y + dy * t }
   const length = 22 * objectRenderScale
   return {
@@ -257,4 +269,21 @@ export function layoutDirectionMarker(
     tail: { x: tip.x - dx * length, y: tip.y - dy * length },
     angle: Math.atan2(dy, dx),
   }
+}
+
+/** The arrow of a positioned ideal point, laid out like an oriented segment. */
+export function layoutIdealArrow(
+  primitive: IdealPointPrimitive,
+  viewport: Viewport2d,
+  objectRenderScale: number,
+): SegmentLayout {
+  return layoutOrientedSegment({
+    kind: 'oriented-segment',
+    start: primitive.position,
+    end: {
+      x: primitive.position.x + primitive.direction.x * primitive.magnitude,
+      y: primitive.position.y + primitive.direction.y * primitive.magnitude,
+    },
+    accessibleName: primitive.accessibleName,
+  }, viewport, objectRenderScale)
 }

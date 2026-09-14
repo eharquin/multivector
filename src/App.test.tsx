@@ -1987,10 +1987,51 @@ describe('PGA 2D foundation workflow', () => {
     expect(screen.getByText('Line at infinity')).toBeInTheDocument()
     expect(screen.getByLabelText('P')).toHaveClass('point-marker')
     expect(screen.getByLabelText('L')).toHaveClass('unbounded-line')
-    expect(screen.getByLabelText('D')).toHaveClass('direction-marker')
-    expect(screen.queryByLabelText('I')).not.toBeInTheDocument()
+    // An ideal point is an arrow by default, with head and base handles.
+    expect(screen.getByLabelText('D')).toHaveClass('vector')
+    expect(screen.queryByLabelText('D at infinity')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move head of D' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move base of D' })).toBeInTheDocument()
+    expect(screen.getByLabelText('I')).toHaveClass('line-at-infinity')
     expect(screen.getByRole('button', { name: 'Move P' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Move head/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Move head of P' })).not.toBeInTheDocument()
+  })
+
+  it('positions an ideal point, drags its head and base, and switches its display', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'D = ipoint(1, 0)' } })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+
+    // Head drag rewrites the ipoint literal relative to the base at the origin.
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move head of D' }), { button: 0, pointerId: 31 })
+    fireEvent.pointerMove(canvas, { pointerId: 31, clientX: 464, clientY: 96 })
+    fireEvent.pointerUp(canvas, { pointerId: 31 })
+    expect(first).toHaveValue('D = ipoint(2, 2)')
+    expect(screen.getByText('Ideal point')).toHaveTextContent('direction (2, 2)')
+
+    // Base drag writes a position in the interpretation's syntax; the head follows.
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move base of D' }), { button: 0, pointerId: 32 })
+    fireEvent.pointerMove(canvas, { pointerId: 32, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 32 })
+    expect(screen.getByRole('textbox', { name: 'Position 1' })).toHaveValue('point(1, 1)')
+    expect(first).toHaveValue('D = ipoint(2, 2)')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: 'D = ipoint(2, 2)' } })
+    fireEvent.keyDown(first, { key: 'Enter' })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 2' }), { target: { value: 'H = D.head' } })
+    expect(screen.getAllByText('Point')[0]).toHaveTextContent('at (3, 3)')
+
+    // Display modes: arrow by default, marker at infinity, or both.
+    fireEvent.click(screen.getByRole('button', { name: 'Open Ideal point menu for D' }))
+    fireEvent.click(screen.getByRole('button', { name: 'At infinity' }))
+    expect(screen.queryByLabelText('D')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('D at infinity')).toHaveClass('direction-marker')
+    expect(screen.queryByRole('button', { name: 'Move head of D' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Both' }))
+    expect(screen.getByLabelText('D')).toHaveClass('vector')
+    expect(screen.getByLabelText('D at infinity')).toHaveClass('direction-marker')
+    fireEvent.keyDown(document, { key: 'Escape' })
   })
 
   it('drags a literal point as one undoable source rewrite and creates points by double-click', () => {

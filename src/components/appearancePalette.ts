@@ -89,6 +89,7 @@ export type ResolvedAppearance = Readonly<{
   borderVisible: boolean
   orientationVisible: boolean
   bivectorShape: 'from-vectors' | 'disk' | 'square'
+  idealPointDisplay: 'vector' | 'ideal' | 'both'
 }>
 
 /**
@@ -113,5 +114,6 @@ export function resolveItemAppearance(
     borderVisible: appearance?.borderVisible ?? false,
     orientationVisible: appearance?.orientationVisible ?? true,
     bivectorShape: appearance?.bivectorShape ?? 'from-vectors',
+    idealPointDisplay: appearance?.idealPointDisplay ?? 'vector',
   }
 }

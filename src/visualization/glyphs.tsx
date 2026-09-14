@@ -3,9 +3,8 @@ import type {
   PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Point2d } from '../geometry/interpretation'
-import type { AreaLayout, DirectionLayout, LineLayout, SegmentLayout } from './layout'
+import type { AreaLayout, DirectionLayout, InfinityLayout, LineLayout, SegmentLayout } from './layout'
 import type {
-  DirectionMarkerPrimitive,
   OrientedAreaPrimitive,
   OrientedSegmentPrimitive,
   PointMarkerPrimitive,
@@ -314,15 +313,15 @@ export function UnboundedLineGlyph({ primitive, layout, color, label, scale }: U
 }
 
 export type DirectionMarkerGlyphProps = Readonly<{
-  primitive: DirectionMarkerPrimitive
+  accessibleName: string
   layout: DirectionLayout
   color: string
   label: string | null
   scale: number
 }>
 
-/** An ideal point: an outward arrow at the viewport edge in its direction. */
-export function DirectionMarkerGlyph({ primitive, layout, color, label, scale }: DirectionMarkerGlyphProps) {
+/** An ideal point on the line at infinity: an outward arrow whose tip sits on the ellipse. */
+export function DirectionMarkerGlyph({ accessibleName, layout, color, label, scale }: DirectionMarkerGlyphProps) {
   const headLength = 10 * scale
   const spread = Math.PI / 6
   const head = [
@@ -337,9 +336,32 @@ export function DirectionMarkerGlyph({ primitive, layout, color, label, scale }:
       x2={layout.tip.x} y2={layout.tip.y}
       strokeWidth={2.5 * scale}
       strokeDasharray={`${4 * scale} ${3 * scale}`}
-      aria-label={primitive.accessibleName}
+      aria-label={`${accessibleName} at infinity`}
     />
     <polygon className="direction-marker-head" points={head} aria-hidden="true" />
     {label && <text className="object-label" x={layout.tail.x + 8} y={layout.tail.y - 8}>{label}</text>}
+  </g>
+}
+
+export type LineAtInfinityGlyphProps = Readonly<{
+  accessibleName: string
+  layout: InfinityLayout
+  color: string
+  label: string | null
+  scale: number
+}>
+
+/** The line at infinity: a dashed ellipse inscribed in the viewport. */
+export function LineAtInfinityGlyph({ accessibleName, layout, color, label, scale }: LineAtInfinityGlyphProps) {
+  return <g style={{ color }}>
+    <ellipse
+      className="line-at-infinity"
+      cx={layout.center.x} cy={layout.center.y}
+      rx={layout.radiusX} ry={layout.radiusY}
+      strokeWidth={2 * scale}
+      strokeDasharray={`${6 * scale} ${5 * scale}`}
+      aria-label={accessibleName}
+    />
+    {label && <text className="object-label" x={layout.center.x + layout.radiusX * Math.SQRT1_2 + 8} y={layout.center.y - layout.radiusY * Math.SQRT1_2 - 8}>{label}</text>}
   </g>
 }

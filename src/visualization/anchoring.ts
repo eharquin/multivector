@@ -39,10 +39,26 @@ export function anchorPoints(
       }]
     case 'point-marker':
       return [{ property: 'position', mathematical: primitive.point }]
+    case 'ideal-point':
+      return [
+        { property: 'position', mathematical: primitive.position },
+        {
+          property: 'head',
+          mathematical: {
+            x: primitive.position.x + primitive.direction.x * primitive.magnitude,
+            y: primitive.position.y + primitive.direction.y * primitive.magnitude,
+          },
+        },
+      ]
     case 'unbounded-line':
-    case 'direction-marker':
+    case 'line-at-infinity':
       return []
   }
+}
+
+/** The base of a primitive: where a head drag measures its components from. */
+export function primitiveBase(primitive: VisualizationPrimitive): Point2d | null {
+  return anchorPoints(primitive).find((anchor) => anchor.property === 'position')?.mathematical ?? null
 }
 
 export type AnchorSearch = Readonly<{
