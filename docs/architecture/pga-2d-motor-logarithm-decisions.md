@@ -136,6 +136,15 @@ along the principal geodesic: a rotation sweeps its angle about the fixed
 centre, a translation its vector. Fixtures: `exp(0.5 * log(M)) = sqrt(M)`,
 `exp(1 * log(M)) = M`, `exp(2 * log(M)) = M * M`.
 
+The geodesic is the principal one of the group, so it is the _long_ way
+whenever `s < 0`: `M = exp(-(3 pi/4) e12)` is a rotation by `3 pi/2`, and
+`exp(t * log(M))` sweeps `3 pi/2`, not `-pi/2`. Since `-M` is the same rigid
+motion, the short way is always available as `exp(t * log(-M))`, and
+`sqrt(-M)` is the half of that short way; the record does not choose it
+silently because `exp(t * log(M))` must reach `M` itself at `t = 1`. Fixture:
+`exp(0.5 * log(-R)) != sqrt(R)` and `exp(0.5 * log(-R)) ^ 2 = -R` for
+`R = exp(-(3 pi/4) e12)`.
+
 Non-integer `M ** t` stays outside this record; language §8 reserves it and
 `exp(t * log(M))` is the explicit, teachable form. A later language decision
 may define `M ** t = exp(t * log(M))` for unit motors without changing this
@@ -209,14 +218,52 @@ coefficient by coefficient):
 Every fixture is also to be cross-checked against ganja.js `Algebra(2, 0, 1)`
 `Log` and `Exp`; a discrepancy is resolved by this record (D11 rule).
 
+Checked on 2026-09-14 with ganja.js from Studio's lockfile: `Log` agrees with
+D13 on every unit motor above, including those with a negative scalar part
+(`-R`, `exp(-(3 pi/4) e12)`, `exp(-(pi/2) point(2, 1))`). The expected
+divergences are exactly the arguments D12 and D16 refuse, where ganja returns
+a value without any diagnostic:
+
+| Argument               | ganja `Log` | This record                                         |
+| ---------------------- | ----------- | --------------------------------------------------- |
+| `-1`                   | `0`         | branch cut, refused (`exp(0) = 1 != -1`)            |
+| `-(1 - 1.5 e01)`       | `1.5 e01`   | branch cut, refused (`exp(1.5 e01) = +T`, not `-T`) |
+| `2 * exp(-(pi/4) e12)` | `0`         | not a unit motor, refused                           |
+| `e01`                  | `e01`       | not a unit motor (`s = w = 0`), refused             |
+
+These rows are fixtures of the diagnostic family; they must not be "fixed"
+toward ganja's values.
+
 ## 9. Relation to MultiVector Studio
 
-Studio evaluates `log` through ganja's `Log` and `sqrt` through
-`exp(log(M) / 2)` after flipping the sign of a motor with a negative scalar
-part. Neither the branch nor the sign flip is documented there. This record
-does not flip signs: `-R` is a legitimate motor whose logarithm lives on the
-other half of the group, and hiding that would make `exp(log(M)) = M` false.
-The closed-form `sqrt` avoids the `log`/`exp` round trip Studio uses.
+Studio (`docs/superpowers/specs/2026-08-15-pga-motor-log-design.md`,
+`applyLog` and the `sqrt` branch of `evalMVArith.js`) evaluates `log` through
+ganja's `Log` behind a per-algebra `supportsMVLog` capability, and `sqrt`
+through `exp(log(M) / 2)` after flipping the sign of a motor with a negative
+scalar part. Its specification delegates the branch to the engine and promises
+no continuity between branches. Compared with this record:
+
+- The capability gate and the scalar-only fallback are the same design as §10.
+- Where `s > 0`, Studio's `sqrt` and D14 agree coefficient by coefficient
+  (rotor, translator, and the D9 motor).
+- Where `s < 0`, the sign flip makes Studio return `sqrt(-M)`: its square is
+  `-M`, the same rigid motion along the short geodesic (D15). The flip is
+  undocumented there; this record does not flip because `-R` is a motor in its
+  own right and `sqrt(M) * sqrt(M) = M`, `exp(log(M)) = M` must hold. The
+  short path stays available through `-M` (D15).
+- Studio applies no unit test and no branch-cut test, so it inherits ganja's
+  silent values of D18 (`log(2R) = 0`, hence `sqrt(2R) = 0`;
+  `sqrt(e01) = 1 + 0.5 e01`, whose square is not `e01`). D12 and D16 refuse
+  these.
+- Studio selects the scalar branch with a relative threshold
+  (`1e-4` of the scalar part); D16 requires the non-scalar coefficients to be
+  exactly zero, in line with exact grade membership (PGA-INT-005).
+- Studio accepts `ln` as an alias of `log`; language §10 does not define `ln`,
+  and this record adds no alias.
+
+The closed-form `sqrt` also avoids the `log`/`exp` round trip Studio uses, and
+fixing the branch here rather than in the backend follows the engine rule
+that the exponential and its inverse follow the specification, not ganja.
 
 ## 10. Consequences for the implementation
 
