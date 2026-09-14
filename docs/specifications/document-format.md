@@ -298,6 +298,20 @@ The encoded shared-fragment limit does not apply to raw JSON imports. Neither
 preprocessing path may pass partial, integrity-failing, malformed, or
 over-limit JSON to the common pipeline.
 
+### 4.1 Format version history
+
+Each version adds required fields with a deterministic migration from the
+previous one; the implementation records the migrations in
+`src/document/canonicalDocument.ts`.
+
+| Version | Change |
+| --- | --- |
+| 1 | The schema of this document. |
+| 2 | `Appearance.borderVisible`. |
+| 3 | `Appearance.orientationVisible` and `Appearance.bivectorShape` (`from-vectors`, `disk`, `square`). |
+| 4 | `ViewState.display.showApproximatedResidue`; earlier documents always showed residue. |
+| 5 | `Appearance.idealPointDisplay` (`vector`, `ideal`, `both`): how an ideal PGA point is drawn; earlier documents default to `vector`. |
+
 All bounds used by these steps are owned by the
 [limits and interaction constants](limits-and-constants.md).
 

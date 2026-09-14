@@ -45,10 +45,23 @@ export type UnboundedLinePrimitive = Readonly<{
   accessibleName: string
 }>
 
-/** A direction without location (an ideal PGA point), drawn at the viewport edge. */
-export type DirectionMarkerPrimitive = Readonly<{
-  kind: 'direction-marker'
+/**
+ * An ideal PGA point: a direction with a magnitude and a separate rendering
+ * position, drawn as a positioned arrow, as a marker on the line at infinity
+ * around the viewport, or both.
+ */
+export type IdealPointPrimitive = Readonly<{
+  kind: 'ideal-point'
+  position: Point2d
+  /** Unit direction. */
   direction: Point2d
+  magnitude: number
+  accessibleName: string
+}>
+
+/** The line at infinity, drawn as the ellipse inscribed in the viewport. */
+export type LineAtInfinityPrimitive = Readonly<{
+  kind: 'line-at-infinity'
   accessibleName: string
 }>
 
@@ -57,7 +70,8 @@ export type VisualizationPrimitive =
   | OrientedAreaPrimitive
   | PointMarkerPrimitive
   | UnboundedLinePrimitive
-  | DirectionMarkerPrimitive
+  | IdealPointPrimitive
+  | LineAtInfinityPrimitive
 
 export const MAX_RENDERED_LIST_ELEMENTS = 1_000
 

@@ -23,10 +23,10 @@ The loaded document declares:
 | --- | --- | --- |
 | `A = point(-2, 1)` | Point at (-2, 1) | a marker with a handle |
 | `B = point(2, 2)` | Point at (2, 2) | a second marker |
-| `L = A & B` | Line | the join: the line through `A` and `B`, clipped to the viewport |
-| `M = line(1, 0, -1)` | Line `x − 1 = 0` | a vertical line |
+| `L = A & B` | Line, scale 4.12311 | the join: the line through `A` and `B`, clipped to the viewport |
+| `M = line(1, 0, -1)` | Line | the vertical line `x = 1`; a unit line shows no scale |
 | `X = L ^ M` | Point at (1, 1.75), weight −4 | the meet of the two lines; the weight comes from the lines' coefficients, not from the position |
-| `D = ipoint(1, 0)` | Ideal point, direction (1, 0) | an arrow at the right edge of the viewport |
+| `D = ipoint(1, 0)` | Ideal point, direction (1, 0) | an arrow from the origin; its appearance menu can also show it as a marker at infinity |
 | `t = 0` | Scalar with a looping slider | press ▶ to animate |
 | `R = exp(-(t/2) * A)` | Scalar at `t = 0`, then Motor | the rotation by `t` about the point `A` |
 | `C = R >>> B` | Point | `B` orbiting `A` while `t` runs |
@@ -48,6 +48,16 @@ Press ▶ on `t`: `R` becomes a motor and `C` circles `A` at the distance of
 4. Add `P = L ^ line(1, 0, -3)`: the meet with `x = 3`, `Point at (3, 2.25)`;
    then `Q = L ^ L`: a Scalar zero, since a line meets itself nowhere.
 5. Write `e20` anywhere: it is accepted and displayed as `-e02`.
+
+## Ideal points and the line at infinity
+
+1. Add `I = e0`: the line at infinity is drawn as the dashed ellipse inscribed
+   in the viewport.
+2. Open the appearance menu of `D` and choose *At infinity* or *Both*: the
+   marker of `D` sits on the ellipse, in the direction `(1, 0)`.
+3. Drag the base of `D`: its position `point(x, y)` is written in the position
+   field and the arrow moves with it; `D.head` is the Euclidean point at the
+   arrow's tip. Drag its head: `D = ipoint(x, y)` is rewritten.
 
 ## Move a point directly
 

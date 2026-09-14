@@ -42,7 +42,7 @@ describe('canonical document format', () => {
       title: 'Vectors',
       description: 'A test document',
       items: [{ id: 'v', source: 'V = vector(2, 1)', positionSource: '(1, 1)', normalization: 'natural' }],
-      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' } },
+      appearance: { v: { visible: false, labelVisible: true, label: 'V', style: 'yellow-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors', idealPointDisplay: 'vector' } },
     }))
   })
 
@@ -55,7 +55,7 @@ describe('canonical document format', () => {
         positionSource: null, normalization: null, control: null,
       }],
       appearance: {
-        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' as const },
+        note: { visible: true, labelVisible: false, label: '', style: 'neutral-4', borderVisible: false, orientationVisible: true, bivectorShape: 'from-vectors' as const, idealPointDisplay: 'vector' as const },
       },
     }
     const encoded = serializeCanonicalDocument(annotation)
@@ -91,7 +91,7 @@ describe('canonical document format', () => {
       )),
     }
     const migrated = parseCanonicalDocument(JSON.stringify(legacy))
-    expect(migrated.formatVersion).toBe(4)
+    expect(migrated.formatVersion).toBe(5)
     expect(migrated.appearance.v.borderVisible).toBe(false)
     expect(migrated.appearance.v.orientationVisible).toBe(true)
     expect(migrated.appearance.v.bivectorShape).toBe('from-vectors')
@@ -106,10 +106,28 @@ describe('canonical document format', () => {
       view: { ...current.view, display: legacyDisplay },
     }
     const migrated = parseCanonicalDocument(JSON.stringify(legacy))
-    expect(migrated.formatVersion).toBe(4)
+    expect(migrated.formatVersion).toBe(5)
     // Preserves the pre-existing document's prior appearance: version 3 had
     // no toggle, so it always behaved as if residue were shown.
     expect(migrated.view.display.showApproximatedResidue).toBe(true)
+  })
+
+  it('migrates version four documents to version five, drawing ideal points as arrows', () => {
+    const current = sample()
+    const legacy = {
+      ...current,
+      formatVersion: 4,
+      appearance: Object.fromEntries(Object.entries(current.appearance).map(([id, entry]) => {
+        const { idealPointDisplay: _idealPointDisplay, ...rest } = entry
+        return [id, rest]
+      })),
+    }
+    const migrated = parseCanonicalDocument(JSON.stringify(legacy))
+    expect(migrated.formatVersion).toBe(5)
+    expect(migrated.appearance.v.idealPointDisplay).toBe('vector')
+    expect(errorCode(() => parseCanonicalDocument(JSON.stringify({
+      ...current, appearance: { v: { ...current.appearance.v, idealPointDisplay: 'arrow' } },
+    })))).toBe('DOCUMENT_SCHEMA')
   })
 
   it('round-trips showApproximatedResidue and validates its type', () => {
@@ -128,7 +146,7 @@ describe('canonical document format', () => {
   })
 
   it('selects the version boundary before complete schema validation', () => {
-    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":5,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
+    expect(errorCode(() => parseCanonicalDocument('{"formatVersion":6,"future":true}'))).toBe('DOCUMENT_FORMAT_VERSION')
   })
 
   it('rejects unknown fields and unregistered styles', () => {

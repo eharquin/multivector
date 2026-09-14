@@ -53,9 +53,9 @@ import {
   creationSource,
   nextObjectName,
 } from './visualization/viewportCreation'
-import { DirectionMarkerGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
+import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
-import { collectRenderedPrimitives, layoutDirectionMarker, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine } from './visualization/layout'
+import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -75,16 +75,13 @@ import {
 import { evaluateScalarControl } from './application/evaluateScalarControl'
 import { directScalarEdit } from './language/directScalarEdit'
 import {
-  directDeclaredConstructorComponents,
+  directConstructorComponents,
+  directItemConstructorComponents,
   rewriteConstructorLiterals,
   type ConstructorComponentEdit,
 } from './language/constructorLiteralEdit'
-import {
-  directDeclaredVectorComponents,
-  directPositionAnchorReference,
-  directPositionComponents,
-  rewriteLiteralComponents,
-} from './language/directVectorEdit'
+import { primitiveBase } from './visualization/anchoring'
+import { directPositionAnchorReference } from './language/directVectorEdit'
 import {
   scalarPlaybackFrame,
   scalarPlaybackOffset,
@@ -470,16 +467,15 @@ function App() {
       x: Number(formatGridNumber(point.x, roundingStep)),
       y: Number(formatGridNumber(point.y, roundingStep)),
     }
-    if (kind === 'head' && rendered.primitive.kind === 'oriented-segment') {
-      const components = directDeclaredVectorComponents(item.source)
-      if (!components) return
+    if (kind === 'head' && interpretation.supportsHead(rendered.entity)) {
+      const components = literalEditComponents(item, rendered.entity)
+      const base = primitiveBase(rendered.primitive)
+      if (!components || !base) return
       const values = [
-        Number(formatGridNumber(target.x - rendered.primitive.start.x, roundingStep)),
-        Number(formatGridNumber(target.y - rendered.primitive.start.y, roundingStep)),
+        Number(formatGridNumber(target.x - base.x, roundingStep)),
+        Number(formatGridNumber(target.y - base.y, roundingStep)),
       ] as const
-      const rewritten = rewriteLiteralComponents(
-        item.source, components, values[0], values[1],
-      )
+      const rewritten = rewriteConstructorLiterals(item.source, components, values)
       if (rewritten !== item.source) executeCommand({
         kind: 'update-source', itemId, source: rewritten,
       })
@@ -498,7 +494,7 @@ function App() {
     if (!interpretation.supportsPosition(rendered.entity)) {
       // The entity carries its own location: rewrite its constructor literal
       // (PGA-VIZ-003) with the pointer's grid-rounded coordinates.
-      const components = literalEditComponents(item)
+      const components = literalEditComponents(item, rendered.entity)
       if (!components) return
       const values = [target.x, target.y]
       const rewritten = rewriteConstructorLiterals(item.source, components, values)
@@ -517,26 +513,19 @@ function App() {
       })
       return
     }
-    if (!item.positionSource) {
-      executeCommand({
-        kind: 'update-position', itemId,
-        positionSource: `(${formatGridNumber(target.x, roundingStep)}, ${
-          formatGridNumber(target.y, roundingStep)})`,
-      })
-      return
-    }
-    const components = directPositionComponents(item.positionSource)
-    if (!components) {
-      executeCommand({
-        kind: 'update-position', itemId,
-        positionSource: `(${formatGridNumber(target.x, roundingStep)}, ${
-          formatGridNumber(target.y, roundingStep)})`,
-      })
-      return
-    }
-    const rewritten = rewriteLiteralComponents(
-      item.positionSource, components, target.x, target.y,
+    const literalPosition = interpretation.formatPosition(
+      formatGridNumber(target.x, roundingStep), formatGridNumber(target.y, roundingStep),
     )
+    if (!item.positionSource) {
+      executeCommand({ kind: 'update-position', itemId, positionSource: literalPosition })
+      return
+    }
+    const components = positionComponents(item.positionSource)
+    if (!components) {
+      executeCommand({ kind: 'update-position', itemId, positionSource: literalPosition })
+      return
+    }
+    const rewritten = rewriteConstructorLiterals(item.positionSource, components, [target.x, target.y])
     if (rewritten !== item.positionSource) executeCommand({
       kind: 'update-position', itemId, positionSource: rewritten,
     })
@@ -580,19 +569,21 @@ function App() {
       declaredName(candidate.source) === component.name &&
       directScalarEdit(candidate.source) !== null).length === 1)
   }
-  const vectorHeadMovable = (item: ExpressionItem): boolean =>
-    componentsMovable(directDeclaredVectorComponents(item.source))
-  const literalEditComponents = (item: ExpressionItem) => interpretation.literalEdit
-    ? directDeclaredConstructorComponents(
-        item.source, interpretation.literalEdit.constructor, interpretation.literalEdit.arity,
-      )
-    : null
+  const literalEditComponents = (item: ExpressionItem, entity: InterpretedEntity) => {
+    const edit = interpretation.literalEdit(entity)
+    return edit ? directItemConstructorComponents(item.source, edit.constructor, edit.arity) : null
+  }
+  /** A position source is a two-argument literal of the interpretation's creation constructor. */
+  const positionComponents = (positionSource: string) =>
+    directConstructorComponents(positionSource, interpretation.creation.constructor, 2)
+  const headMovable = (item: ExpressionItem, entity: InterpretedEntity): boolean =>
+    interpretation.supportsHead(entity) && componentsMovable(literalEditComponents(item, entity))
   const objectBaseMovable = (item: ExpressionItem, entity: InterpretedEntity): boolean =>
     interpretation.supportsPosition(entity)
       ? !item.positionSource ||
         directPositionAnchorReference(item.positionSource) !== null ||
-        componentsMovable(directPositionComponents(item.positionSource))
-      : componentsMovable(literalEditComponents(item))
+        componentsMovable(positionComponents(item.positionSource))
+      : componentsMovable(literalEditComponents(item, entity))
   const manipulateWithKeyboard = (
     event: KeyboardEvent<SVGCircleElement>,
     itemId: string,
@@ -1089,9 +1080,18 @@ function App() {
     const layout = layoutUnboundedLine(entry.primitive, viewport)
     return layout ? [{ ...entry, primitive: entry.primitive, layout }] : []
   })
-  const renderedDirections = renderedPrimitives.flatMap((entry) =>
-    entry.primitive.kind === 'direction-marker'
-      ? [{ ...entry, primitive: entry.primitive, layout: layoutDirectionMarker(entry.primitive, viewport, objectRenderScale) }]
+  const renderedIdealPoints = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'ideal-point'
+      ? [{
+          ...entry,
+          primitive: entry.primitive,
+          arrow: entry.idealPointDisplay === 'ideal' ? null : layoutIdealArrow(entry.primitive, viewport, objectRenderScale),
+          marker: entry.idealPointDisplay === 'vector' ? null : layoutIdealMarker(entry.primitive.direction, viewport, objectRenderScale),
+        }]
+      : [])
+  const renderedInfinity = renderedPrimitives.flatMap((entry) =>
+    entry.primitive.kind === 'line-at-infinity'
+      ? [{ ...entry, primitive: entry.primitive, layout: layoutLineAtInfinity(viewport, objectRenderScale) }]
       : [])
 
   useEffect(() => {
@@ -2137,6 +2137,7 @@ function App() {
                       borderVisible={expressionDoc.appearance[item.id]?.borderVisible ?? false}
                       orientationVisible={expressionDoc.appearance[item.id]?.orientationVisible ?? true}
                       bivectorShape={expressionDoc.appearance[item.id]?.bivectorShape ?? 'from-vectors'}
+                      idealPointDisplay={expressionDoc.appearance[item.id]?.idealPointDisplay ?? 'vector'}
                       parallelogramAvailable={evaluation?.status === 'valid' &&
                         evaluation.valueType === 'single' &&
                         evaluation.primitive?.kind === 'oriented-area' &&
@@ -2165,6 +2166,9 @@ function App() {
                       })}
                       onBivectorShapeChange={(bivectorShape) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { bivectorShape },
+                      })}
+                      onIdealPointDisplayChange={(idealPointDisplay) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { idealPointDisplay },
                       })}
                       onControlChange={(control) => {
                         if (isPlaying) stopPlayback()
@@ -2352,7 +2356,7 @@ function App() {
                   label={label}
                   scale={objectRenderScale}
                   itemPresent={!!item}
-                  headMovable={!!item && vectorHeadMovable(item)}
+                  headMovable={!!item && headMovable(item, entity)}
                   baseMovable={!!item && objectBaseMovable(item, entity)}
                   controller={handleController}
                 />
@@ -2377,9 +2381,36 @@ function App() {
               {renderedLines.map(({ id, primitive, layout, color, label }) => (
                 <UnboundedLineGlyph key={id} primitive={primitive} layout={layout} color={color} label={label} scale={objectRenderScale} />
               ))}
-              {renderedDirections.map(({ id, primitive, layout, color, label }) => (
-                <DirectionMarkerGlyph key={id} primitive={primitive} layout={layout} color={color} label={label} scale={objectRenderScale} />
+              {renderedInfinity.map(({ id, primitive, layout, color, label }) => (
+                <LineAtInfinityGlyph key={id} accessibleName={primitive.accessibleName} layout={layout} color={color} label={label} scale={objectRenderScale} />
               ))}
+              {renderedIdealPoints.map(({ id, primitive, entity, arrow, marker, color, label }) => {
+                const item = expressionDoc.items.find((candidate) => candidate.id === id)
+                return <g key={id}>
+                  {marker && <DirectionMarkerGlyph
+                    accessibleName={primitive.accessibleName}
+                    layout={marker}
+                    color={color}
+                    label={arrow ? null : label}
+                    scale={objectRenderScale}
+                  />}
+                  {arrow && <OrientedSegmentGlyph
+                    id={id}
+                    primitive={{ kind: 'oriented-segment', start: primitive.position, end: {
+                      x: primitive.position.x + primitive.direction.x * primitive.magnitude,
+                      y: primitive.position.y + primitive.direction.y * primitive.magnitude,
+                    }, accessibleName: primitive.accessibleName }}
+                    layout={arrow}
+                    color={color}
+                    label={label}
+                    scale={objectRenderScale}
+                    itemPresent={!!item}
+                    headMovable={!!item && headMovable(item, entity)}
+                    baseMovable={!!item && objectBaseMovable(item, entity)}
+                    controller={handleController}
+                  />}
+                </g>
+              })}
               {renderedPoints.map(({ id, primitive, entity, point, color, label }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 return <PointMarkerGlyph

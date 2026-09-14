@@ -158,7 +158,8 @@ export const VGA_2D_INTERPRETATION: Interpretation<StandardVga2Entity> = Object.
   },
   defaultName: (entity, index) => `${entity.kind === 'bivector-2d' ? 'Bivector' : 'Vector'} ${index + 1}`,
   creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Vector' },
-  literalEdit: null,
+  literalEdit: (entity) => (entity.kind === 'vector-2d' ? { constructor: 'vector', arity: 2 } : null),
+  formatPosition: (x, y) => `(${x}, ${y})`,
   toPrimitive(entity, { accessibleName, position, construction }) {
     if (entity.kind === 'vector-2d') return vectorToPrimitive(entity, accessibleName, position)
     if (entity.kind !== 'bivector-2d') return null

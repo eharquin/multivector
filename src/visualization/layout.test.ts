@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutDirectionMarker, layoutUnboundedLine } from './layout'
+import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutUnboundedLine } from './layout'
 import type { Viewport2d } from './viewport'
 
 const viewport: Viewport2d = { width: 800, height: 600, centerX: 0, centerY: 0, pixelsPerUnit: 50 }
@@ -30,16 +30,29 @@ describe('PGA primitive layouts', () => {
     expect(far).toBeNull()
   })
 
-  it('places a direction marker on the viewport edge pointing outward', () => {
-    const right = layoutDirectionMarker(
-      { kind: 'direction-marker', direction: { x: 1, y: 0 }, accessibleName: 'E' }, viewport, 1,
-    )
+  it('draws the line at infinity as the inscribed ellipse and puts ideal markers on it', () => {
+    const infinity = layoutLineAtInfinity(viewport, 1)
+    expect(infinity).toEqual({ center: { x: 400, y: 300 }, radiusX: 382, radiusY: 282 })
+    const right = layoutIdealMarker({ x: 1, y: 0 }, viewport, 1)
     expect(right.tip).toEqual({ x: 782, y: 300 })
     expect(right.tail.x).toBeLessThan(right.tip.x)
-    const up = layoutDirectionMarker(
-      { kind: 'direction-marker', direction: { x: 0, y: 1 }, accessibleName: 'N' }, viewport, 1,
-    )
+    const up = layoutIdealMarker({ x: 0, y: 1 }, viewport, 1)
     expect(up.tip).toEqual({ x: 400, y: 18 })
     expect(up.angle).toBeCloseTo(-Math.PI / 2, 10)
+    const diagonal = layoutIdealMarker({ x: Math.SQRT1_2, y: Math.SQRT1_2 }, viewport, 1)
+    const onEllipse = ((diagonal.tip.x - 400) / 382) ** 2 + ((diagonal.tip.y - 300) / 282) ** 2
+    expect(onEllipse).toBeCloseTo(1, 10)
+    const square = layoutLineAtInfinity({ ...viewport, width: 600 }, 1)
+    expect(square.radiusX).toBe(square.radiusY)
+  })
+
+  it('lays out a positioned ideal point as an arrow from its position', () => {
+    const arrow = layoutIdealArrow(
+      { kind: 'ideal-point', position: { x: 1, y: 1 }, direction: { x: 0, y: 1 }, magnitude: 2, accessibleName: 'D' },
+      viewport, 1,
+    )
+    expect(arrow.start).toEqual({ x: 450, y: 250 })
+    expect(arrow.end).toEqual({ x: 450, y: 150 })
+    expect(arrow.arrowPoints).not.toBeNull()
   })
 })

@@ -2059,3 +2059,9 @@ body.canvas-gesture .expression-panel {
 .algebra-menu-name {
   color: var(--muted);
 }
+
+.line-at-infinity {
+  fill: none;
+  stroke: currentColor;
+  pointer-events: none;
+}
