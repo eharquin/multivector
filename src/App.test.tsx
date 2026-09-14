@@ -1982,7 +1982,7 @@ describe('PGA 2D foundation workflow', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 4' }), { target: { value: 'I = line(0, 0, 1)' } })
 
     expect(screen.getByText('Point')).toHaveTextContent('at (1, 2)')
-    expect(screen.getByText('Line')).toHaveTextContent('0.707107x − 0.707107y = 0')
+    expect(screen.getByText('Line')).toHaveTextContent('scale 1.41421')
     expect(screen.getByText('Ideal point')).toHaveTextContent('direction (0, 1)')
     expect(screen.getByText('Line at infinity')).toBeInTheDocument()
     expect(screen.getByLabelText('P')).toHaveClass('point-marker')

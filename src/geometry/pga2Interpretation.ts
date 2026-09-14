@@ -118,7 +118,7 @@ export function describePga2Entity(entity: Pga2Entity): string {
 
 const number = (value: number) => Number(value.toPrecision(6)).toString()
 
-/** The projective reading (PGA-INT-004): position and weight, or equation and scale. */
+/** The projective reading (PGA-INT-004): position and weight for points, scale for lines. */
 export function detailPga2Entity(entity: Pga2Entity): string | null {
   switch (entity.kind) {
     case 'euclidean-point':
@@ -127,19 +127,10 @@ export function detailPga2Entity(entity: Pga2Entity): string | null {
     case 'ideal-point':
       return `direction (${number(entity.x)}, ${number(entity.y)})`
     case 'euclidean-line': {
+      // The coefficients are already inspected below the kind; only the
+      // projective scale adds information here.
       const scale = Math.hypot(entity.a, entity.b)
-      const terms = [[entity.a / scale, 'x'], [entity.b / scale, 'y'], [entity.c / scale, '']] as const
-      const equation = terms
-        .filter(([coefficient]) => coefficient !== 0)
-        .map(([coefficient, variable], index) => {
-          const magnitude = number(Math.abs(coefficient))
-          const body = variable && magnitude === '1' ? variable : `${magnitude}${variable}`
-          return index === 0
-            ? `${coefficient < 0 ? '−' : ''}${body}`
-            : ` ${coefficient < 0 ? '−' : '+'} ${body}`
-        })
-        .join('')
-      return `${equation} = 0` + (scale === 1 ? '' : `, scale ${number(scale)}`)
+      return scale === 1 ? null : `scale ${number(scale)}`
     }
     case 'line-at-infinity':
       return `scale ${number(entity.c)}`
