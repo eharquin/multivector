@@ -78,8 +78,9 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Scalar sliders take the object's colour across the whole track, and their
   thumb is a white point ringed in that colour inside a translucent aura of
-  the same colour, matching the canvas handles in every browser; keyboard
-  focus rings the thumb.
+  the same colour, matching the canvas handles in every browser; like them it
+  grows to fill its aura on hover and while dragged, and keyboard focus rings
+  it.
 
 ## 0.1.0 - 2026-09-13
 

@@ -757,6 +757,7 @@ body.reordering-items .reorder-handle {
   border: 2.5px solid var(--slider-color);
   border-radius: 50%;
   box-shadow: 0 0 0 4.5px var(--slider-aura);
+  transition: transform 350ms ease, box-shadow 350ms ease;
   appearance: none;
 }
 
@@ -768,6 +769,20 @@ body.reordering-items .reorder-handle {
   border: 2.5px solid var(--slider-color);
   border-radius: 50%;
   box-shadow: 0 0 0 4.5px var(--slider-aura);
+  transition: transform 350ms ease, box-shadow 350ms ease;
+}
+
+/* Hovering or dragging grows the point to fill its aura, as on the canvas. */
+.scalar-slider-row input[type="range"]:not(:disabled)::-webkit-slider-thumb:hover,
+.scalar-slider-row input[type="range"]:not(:disabled):active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 0 var(--slider-aura);
+  transform: scale(1.8182);
+}
+
+.scalar-slider-row input[type="range"]:not(:disabled)::-moz-range-thumb:hover,
+.scalar-slider-row input[type="range"]:not(:disabled):active::-moz-range-thumb {
+  box-shadow: 0 0 0 0 var(--slider-aura);
+  transform: scale(1.8182);
 }
 
 /* Keyboard focus rings the thumb, as the canvas rings a focused handle. */
@@ -1225,6 +1240,14 @@ body.reordering-items .reorder-handle {
   .viewport-toolbar,
   .viewport-command,
   .viewport-zoom-input {
+    transition: none;
+  }
+
+  .scalar-slider-row input[type="range"]::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .scalar-slider-row input[type="range"]::-moz-range-thumb {
     transition: none;
   }
 }
