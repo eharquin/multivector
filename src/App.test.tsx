@@ -28,7 +28,7 @@ function openDisplaySettings(): HTMLElement {
 
 function viewportCanvas(): SVGSVGElement {
   return screen.getByRole('img', {
-    name: /Two-dimensional VGA viewport/,
+    name: /Two-dimensional [VP]GA viewport/,
   }) as unknown as SVGSVGElement
 }
 
@@ -2256,6 +2256,34 @@ describe('PGA 2D foundation workflow', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     fireEvent.change(first, { target: { value: 'L = 2 * line(1, 1, 0)' } })
     expect(screen.queryByRole('button', { name: 'Move L' })).not.toBeInTheDocument()
+  })
+
+  it('names and describes the viewport after the PGA visualizer', () => {
+    selectPga()
+    expect(screen.getByRole('region', { name: 'PGA 2D viewport' })).toBeInTheDocument()
+    const canvas = screen.getByRole('img', { name: 'Two-dimensional PGA viewport' })
+    const description = canvas.querySelector('desc')
+    expect(screen.queryByRole('img', { name: /VGA/ })).not.toBeInTheDocument()
+    expect(description).toHaveTextContent(
+      'No spatial objects are visible from 1 expressions. Double-click empty viewport space to create a point.',
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'P = point(1, 2)' },
+    })
+    expect(description).toHaveTextContent(
+      /^1 point, 0 lines, 0 ideal points, and 0 lines at infinity are visible\. .*P is a point at 1, 2\. Double-click empty viewport space to create a point\.$/,
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'L = line(1, 0, -1)' },
+    })
+    expect(description).toHaveTextContent(/0 points, 1 line, .* L is a line through 1, 0 with direction 0, -?1\./)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {
+      target: { value: 'I = ipoint(1, 0)' },
+    })
+    expect(description).toHaveTextContent(/1 ideal point, .* I is an ideal point in direction 1, 0 with magnitude 1\./)
   })
 
   it('drags a literal point as one undoable source rewrite and creates points by double-click', () => {

@@ -1,3 +1,4 @@
+import type { DescribedKind } from '../visualization/viewportDescription'
 import {
   type AlgebraDefinition,
   type AlgebraParameters,
@@ -11,6 +12,11 @@ export type VisualizerDescriptor = Readonly<{
   visualizerId: string
   /** Primitive kinds the renderer can draw; others are reported textually. */
   primitiveKinds: ReadonlySet<string>
+  /** Accessible names of the viewport region and of its canvas. */
+  regionName: string
+  canvasName: string
+  /** The kinds the canvas description counts, in reading order. */
+  describedKinds: readonly DescribedKind[]
 }>
 
 export type InterpretationReference = Readonly<{

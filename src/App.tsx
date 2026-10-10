@@ -56,6 +56,7 @@ import {
   creationSource,
   nextObjectName,
 } from './visualization/viewportCreation'
+import { describeViewport } from './visualization/viewportDescription'
 import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
 import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine, lineNormalLength, lineOrientationTicks } from './visualization/layout'
@@ -370,8 +371,9 @@ function App() {
         pixelsPerUnit: clampZoom(expressionDoc.view.viewport.zoom),
       }
     : { ...defaultViewport, ...viewportSize }
+  const visualizer = algebraRegistry.resolveVisualizer(expressionDoc.view.visualizerId)
   const visualizerActive = interpretationResolution.status === 'resolved' &&
-    algebraRegistry.resolveVisualizer(expressionDoc.view.visualizerId) !== null &&
+    visualizer !== null &&
     expressionDoc.view.viewport.kind === 'two-dimensional'
   const grid = adaptiveGrid(viewport)
   const updateView = useCallback((view: typeof expressionDoc.view) => {
@@ -1613,46 +1615,18 @@ function App() {
     }
   }
 
-  const visibleCount = renderedVectors.length + renderedAreas.length
   const displayedNumber = (value: number) => formatDisplayNumber(
     value,
     expressionDoc.view.display.decimalPlaces,
   )
-  const canvasDescription = visibleCount === 0
-      ? `No spatial objects are visible from ${expressionDoc.items.length} expressions. ` +
-        'Double-click empty viewport space to create a vector.'
-      : `${renderedVectors.length} ${renderedVectors.length === 1 ? 'vector' : 'vectors'} ` +
-        `and ${renderedAreas.length} ${renderedAreas.length === 1 ? 'bivector' : 'bivectors'} ` +
-        `are visible. ${renderedVectors
-          .map(
-            ({ primitive }) =>
-              `${primitive.accessibleName} runs from ${
-                primitive.start.x === 0 && primitive.start.y === 0
-                  ? 'the origin'
-                  : `${displayedNumber(primitive.start.x)}, ${displayedNumber(primitive.start.y)}`
-              } to ${displayedNumber(primitive.end.x)}, ${displayedNumber(primitive.end.y)}.`,
-          )
-          .join(' ')} ${renderedAreas
-          .map(({ primitive }) => {
-            const position = primitive.shape.kind === 'loop'
-              ? primitive.shape.center
-              : primitive.shape.vertices[0]
-            const at = position.x === 0 && position.y === 0
-              ? 'the origin'
-              : `(${displayedNumber(position.x)}, ${displayedNumber(position.y)})`
-            const shape = primitive.shape.kind === 'parallelogram'
-              ? 'oriented parallelogram'
-              : 'oriented loop'
-            const signedValue = primitive.orientation === 'counterclockwise'
-              ? primitive.area
-              : -primitive.area
-            return `${primitive.accessibleName} is an ${shape} with signed value ${
-              displayedNumber(signedValue)
-            }, area ${displayedNumber(primitive.area)}, ${primitive.orientation} orientation, positioned at ${at}.`
-          })
-          .join(' ')}${omittedRenderElements > 0
-            ? ` ${omittedRenderElements} additional list elements are omitted by the rendering limit.`
-            : ''} Double-click empty viewport space to create a vector.`
+  const canvasDescription = describeViewport({
+    primitives: renderedPrimitives.map(({ primitive }) => primitive),
+    describedKinds: visualizer?.describedKinds ?? [],
+    expressionCount: expressionDoc.items.length,
+    omittedElements: omittedRenderElements,
+    creationObject: interpretation.creation.objectName.toLowerCase(),
+    formatNumber: displayedNumber,
+  })
 
   return (
     <div className="app-shell">
@@ -2359,7 +2333,7 @@ function App() {
           onKeyDown={resizePanelWithKeyboard}
         />
 
-        {visualizerActive && <section className="visualizer" aria-label="VGA 2D viewport">
+        {visualizerActive && <section className="visualizer" aria-label={visualizer?.regionName}>
           <div ref={canvasFrameRef} className="canvas-frame">
             <div
               className="viewport-toolbar"
@@ -2445,7 +2419,7 @@ function App() {
               className={`canvas${viewportLocked ? ' is-viewport-locked' : ''}`}
               viewBox={`0 0 ${viewport.width} ${viewport.height}`}
               role="img"
-              aria-label="Two-dimensional VGA viewport"
+              aria-label={visualizer?.canvasName}
               aria-describedby="canvas-description"
               tabIndex={0}
               onPointerDown={beginViewportPan}
