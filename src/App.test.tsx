@@ -269,6 +269,63 @@ describe('VGA 2D vertical slice', () => {
     expect(rings()).toHaveLength(0)
   })
 
+  it('keeps focus in the viewport when undoing or redoing a viewport gesture', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    act(() => source.focus())
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const position = screen.getByRole('textbox', { name: 'Position 1' })
+    const canvas = viewportCanvas()
+    sizeViewportCanvas(canvas)
+    const undo = () => fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    const redo = () => fireEvent.keyDown(window, { key: 'z', ctrlKey: true, shiftKey: true })
+
+    // Pointer head drag: undo and redo leave focus on the canvas.
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move head of V' }), { button: 0, pointerId: 8 })
+    fireEvent.pointerMove(canvas, { pointerId: 8, clientX: 536, clientY: 96 })
+    fireEvent.pointerUp(canvas, { pointerId: 8 })
+    expect(source).toHaveValue('V = vector(3, 2)')
+    undo()
+    expect(source).toHaveValue('V = vector(2, 1)')
+    expect(canvas).toHaveFocus()
+    redo()
+    expect(source).toHaveValue('V = vector(3, 2)')
+    expect(canvas).toHaveFocus()
+
+    // Pointer base drag: the same, for a change of the position source.
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Move base of V' }), { button: 0, pointerId: 9 })
+    fireEvent.pointerMove(canvas, { pointerId: 9, clientX: 392, clientY: 168 })
+    fireEvent.pointerUp(canvas, { pointerId: 9 })
+    expect(position).toHaveValue('(1, 1)')
+    undo()
+    expect(screen.getByRole('textbox', { name: 'Position 1' })).not.toHaveValue('(1, 1)')
+    expect(canvas).toHaveFocus()
+    redo()
+    expect(screen.getByRole('textbox', { name: 'Position 1' })).toHaveValue('(1, 1)')
+    expect(canvas).toHaveFocus()
+
+    // Keyboard head move: undo and redo return focus to that handle.
+    const head = screen.getByRole('button', { name: 'Move head of V' })
+    act(() => head.focus())
+    fireEvent.keyDown(head, { key: 'ArrowRight' })
+    expect(source).toHaveValue('V = vector(3.1, 2)')
+    act(() => canvas.focus())
+    undo()
+    expect(source).toHaveValue('V = vector(3, 2)')
+    expect(screen.getByRole('button', { name: 'Move head of V' })).toHaveFocus()
+    act(() => canvas.focus())
+    redo()
+    expect(screen.getByRole('button', { name: 'Move head of V' })).toHaveFocus()
+
+    // An editor change still restores its editor.
+    act(() => source.focus())
+    fireEvent.change(source, { target: { value: 'V = vector(4, 2)' } })
+    act(() => canvas.focus())
+    undo()
+    expect(source).toHaveValue('V = vector(3.1, 2)')
+    expect(source).toHaveFocus()
+  })
+
   it('returns focus to the canvas when a pointer gesture ends', () => {
     render(<App />)
     const source = screen.getByRole('textbox', { name: 'Expression 1' })

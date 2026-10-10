@@ -64,6 +64,7 @@ function BaseHandle({
         ...(yieldToHead ? { pointerEvents: 'none' as const } : {}),
       }}
       tabIndex={movable ? 0 : undefined}
+      data-handle-key={movable ? key : undefined}
       role={movable ? 'button' : undefined}
       aria-keyshortcuts={movable ? 'Enter Delete' : undefined}
       aria-label={movable ? `${handleLabel} ${accessibleName}` : undefined}
@@ -143,6 +144,7 @@ export function OrientedSegmentGlyph({
         className="manipulation-hit-target vector-head-target"
         cx={end.x} cy={end.y} r="12"
         tabIndex={0}
+        data-handle-key={headKey}
         role="button"
         aria-label={`Move head of ${primitive.accessibleName}`}
         onPointerEnter={() => controller.hover(headKey)}
@@ -356,6 +358,7 @@ export function UnboundedLineGlyph({
       x2={layout.end.x} y2={layout.end.y}
       strokeWidth={16}
       tabIndex={0}
+      data-handle-key={lineKey}
       role="button"
       aria-keyshortcuts="Enter"
       aria-label={`Move ${primitive.accessibleName}`}
@@ -403,6 +406,7 @@ export function UnboundedLineGlyph({
         className="manipulation-hit-target vector-head-target"
         cx={selection.normalTip.x} cy={selection.normalTip.y} r="12"
         tabIndex={0}
+        data-handle-key={normalKey}
         role="button"
         aria-label={`Rotate ${primitive.accessibleName}`}
         onPointerEnter={() => controller.hover(normalKey)}
