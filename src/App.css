@@ -734,17 +734,17 @@ body.reordering-items .reorder-handle {
   appearance: none;
 }
 
-/* The track takes the object's colour; the thumb is a white point ringed in
-   that colour inside a 10 px aura of the same colour at 20 %. */
+/* The track and the aura take the object's colour at 20 %; the thumb is a
+   white point ringed in that colour, as on the canvas. */
 .scalar-slider-row input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: var(--slider-color);
+  background: var(--slider-aura);
   border-radius: 2px;
 }
 
 .scalar-slider-row input[type="range"]::-moz-range-track {
   height: 4px;
-  background: var(--slider-color);
+  background: var(--slider-aura);
   border-radius: 2px;
 }
 

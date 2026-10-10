@@ -76,7 +76,7 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `[min] ≤ a ≤ [max] step [s]`, instead of an `INTERVAL` label followed by
   three fields; in a narrow panel the step wraps below the inequality.
 
-- Scalar sliders take the object's colour across the whole track, and their
+- Scalar sliders draw their track in the object's colour at 20 %, and their
   thumb is a white point ringed in that colour inside a translucent aura of
   the same colour, matching the canvas handles in every browser; like them it
   grows to fill its aura on hover and while dragged, and keyboard focus rings
