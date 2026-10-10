@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -2079,7 +2080,7 @@ function App() {
                             disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
                               scalarEdit.value < controlEvaluation.minimum! ||
                               scalarEdit.value > controlEvaluation.maximum!}
-                            style={{ accentColor: color }}
+                            style={{ '--slider-color': color } as CSSProperties}
                             onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
                             onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
                             onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}

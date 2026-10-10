@@ -723,11 +723,66 @@ body.reordering-items .reorder-handle {
 }
 
 .scalar-slider-row input[type="range"] {
+  --slider-color: var(--accent);
+  --slider-aura: color-mix(in srgb, var(--slider-color) 20%, transparent);
   min-width: 0;
   flex: 1;
   min-height: 24px;
   margin: 0;
+  background: transparent;
   cursor: pointer;
+  appearance: none;
+}
+
+/* The track takes the object's colour; the thumb is a white point ringed in
+   that colour inside a 10 px aura of the same colour at 20 %. */
+.scalar-slider-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--slider-color);
+  border-radius: 2px;
+}
+
+.scalar-slider-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--slider-color);
+  border-radius: 2px;
+}
+
+.scalar-slider-row input[type="range"]::-webkit-slider-thumb {
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  margin-top: -3.5px;
+  background: #fff;
+  border: 2.5px solid var(--slider-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4.5px var(--slider-aura);
+  appearance: none;
+}
+
+.scalar-slider-row input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border: 2.5px solid var(--slider-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4.5px var(--slider-aura);
+}
+
+/* Keyboard focus rings the thumb, as the canvas rings a focused handle. */
+.scalar-slider-row input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.scalar-slider-row input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 8.5px;
+}
+
+.scalar-slider-row input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 8.5px;
 }
 
 /* Only the track dims; the bound labels and diagnostic below stay at full contrast. */

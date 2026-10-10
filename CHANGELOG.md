@@ -76,6 +76,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `[min] ≤ a ≤ [max] step [s]`, instead of an `INTERVAL` label followed by
   three fields; in a narrow panel the step wraps below the inequality.
 
+- Scalar sliders take the object's colour across the whole track, and their
+  thumb is a white point ringed in that colour inside a translucent aura of
+  the same colour, matching the canvas handles in every browser; keyboard
+  focus rings the thumb.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag
