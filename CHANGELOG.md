@@ -52,6 +52,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unavailable blade such as `e0` under VGA(2) reports an unknown-blade
   diagnostic at its span instead of an undefined name.
 
+- Kept the viewport lock button in place while zooming: the zoom read-out
+  is as wide as a toolbar command and longer values extend leftwards over the
+  canvas instead of widening the toolbar.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag
