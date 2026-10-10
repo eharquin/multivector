@@ -19,6 +19,8 @@ export const MIN_PIXELS_PER_UNIT = 0.001
 export const MAX_PIXELS_PER_UNIT = 1_000_000
 export const GRID_TARGET_PIXELS = 72
 export const MAX_GRID_LINES = 256
+/** Smallest on-screen distance an arrow key moves a manipulated object. */
+export const KEYBOARD_STEP_PIXELS = 7
 
 export type GridLine = Readonly<{
   coordinate: number
@@ -73,6 +75,17 @@ export function formatZoomPercentage(pixelsPerUnit: number): string {
   }
   if (percentage >= 100) return `${Math.round(percentage)}%`
   return `${Number(percentage.toPrecision(3))}%`
+}
+
+/**
+ * The mathematical distance an arrow key moves a manipulated object: the
+ * 1–2–5 step covering at least `KEYBOARD_STEP_PIXELS` at the current scale,
+ * ten times that with Shift, so a press stays visible at every zoom level and
+ * rewritten sources stay round (0.1 and 1 at the 72 px default).
+ */
+export function keyboardManipulationStep(pixelsPerUnit: number, coarse: boolean): number {
+  const step = oneTwoFiveStep(KEYBOARD_STEP_PIXELS / pixelsPerUnit)
+  return coarse ? step * 10 : step
 }
 
 const ZOOM_PERCENTAGE_SOURCE = /^\s*\+?(\d+(?:\.\d*)?|\.\d+)(e[+-]?\d+)?\s*%?\s*$/i

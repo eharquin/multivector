@@ -67,6 +67,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   key bring the origin back to the center at the current zoom, while `Home`
   still restores the origin at 100 %. Both announce what they did.
 
+- Arrow keys on a focused handle now move the object by a round step that
+  follows the zoom (0.1 at 100 %, ten times that with Shift; at least 7 screen
+  pixels at every scale), and the announced position matches the rewritten
+  source.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

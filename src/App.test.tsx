@@ -673,6 +673,32 @@ describe('VGA 2D vertical slice', () => {
     expect(vectorSource).toHaveValue('B = 2e12')
   })
 
+  it('scales arrow-key manipulation steps with the viewport zoom', () => {
+    render(<App />)
+    const source = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'V = vector(2, 1)' } })
+    const zoom = screen.getByRole('textbox', { name: 'Zoom level' })
+    const head = () => screen.getByRole('button', { name: 'Move head of V' })
+
+    fireEvent.keyDown(head(), { key: 'ArrowRight' })
+    expect(source).toHaveValue('V = vector(2.1, 1)')
+    fireEvent.keyDown(head(), { key: 'ArrowUp', shiftKey: true })
+    expect(source).toHaveValue('V = vector(2.1, 2)')
+
+    fireEvent.change(zoom, { target: { value: '1000' } })
+    fireEvent.keyDown(zoom, { key: 'Enter' })
+    fireEvent.keyDown(head(), { key: 'ArrowLeft' })
+    expect(source).toHaveValue('V = vector(2.09, 2)')
+
+    fireEvent.change(zoom, { target: { value: '10' } })
+    fireEvent.keyDown(zoom, { key: 'Enter' })
+    fireEvent.keyDown(head(), { key: 'ArrowDown' })
+    expect(source).toHaveValue('V = vector(2.09, 1)')
+    fireEvent.keyDown(head(), { key: 'ArrowRight', shiftKey: true })
+    expect(source).toHaveValue('V = vector(12.09, 1)')
+    expect(screen.getByText('Vector head moved to 12.09, 1.')).toBeInTheDocument()
+  })
+
   it('snaps a vector base to a named vector head and unlinks it by dragging away', () => {
     const { container } = render(<App />)
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), {

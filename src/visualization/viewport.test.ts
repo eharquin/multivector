@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   adaptiveGrid,
   formatZoomPercentage,
+  KEYBOARD_STEP_PIXELS,
+  keyboardManipulationStep,
   MAX_GRID_LINES,
   MAX_PIXELS_PER_UNIT,
   MIN_PIXELS_PER_UNIT,
@@ -57,6 +59,22 @@ describe('2D viewport transform', () => {
     expect(formatZoomPercentage(72)).toBe('100%')
     expect(formatZoomPercentage(MIN_PIXELS_PER_UNIT)).toBe('1.39E-3%')
     expect(formatZoomPercentage(MAX_PIXELS_PER_UNIT)).toBe('1.39E6%')
+  })
+
+  it('scales keyboard manipulation steps with the zoom, keeping them round and visible', () => {
+    expect(keyboardManipulationStep(72, false)).toBe(0.1)
+    expect(keyboardManipulationStep(72, true)).toBe(1)
+    expect(keyboardManipulationStep(MIN_PIXELS_PER_UNIT, false)).toBe(10_000)
+    expect(keyboardManipulationStep(MAX_PIXELS_PER_UNIT, false)).toBeCloseTo(1e-5, 20)
+    for (const pixelsPerUnit of [MIN_PIXELS_PER_UNIT, 0.37, 8, 72, 512, 9_999, MAX_PIXELS_PER_UNIT]) {
+      const step = keyboardManipulationStep(pixelsPerUnit, false)
+      const pixels = step * pixelsPerUnit
+      expect(pixels).toBeGreaterThanOrEqual(KEYBOARD_STEP_PIXELS * (1 - 1e-12))
+      expect(pixels).toBeLessThanOrEqual(KEYBOARD_STEP_PIXELS * 2.5 + 1e-9)
+      const leading = step / 10 ** Math.floor(Math.log10(step) + 1e-12)
+      expect([1, 2, 5].some((digit) => Math.abs(leading - digit) < 1e-9)).toBe(true)
+      expect(keyboardManipulationStep(pixelsPerUnit, true)).toBeCloseTo(step * 10, 12)
+    }
   })
 
   it('reads typed zoom levels as clamped scales and rejects other text', () => {
