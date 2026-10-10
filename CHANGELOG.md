@@ -82,6 +82,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dragging grows the ring to fill the aura while the centre keeps its size,
   and keyboard focus rings the thumb; the look is the same in every browser.
 
+- Objects created by double-clicking the viewport are named with the first
+  free letter, `A` to `Z`, then `A1` to `Z1` and so on, instead of `V1`, `V2`
+  in VGA and `P1`, `P2` in PGA.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

@@ -157,7 +157,7 @@ export const VGA_2D_INTERPRETATION: Interpretation<StandardVga2Entity> = Object.
     return { status: 'unsupported', message: 'This VGA 2D object has no supported visualization.' }
   },
   defaultName: (entity, index) => `${entity.kind === 'bivector-2d' ? 'Bivector' : 'Vector'} ${index + 1}`,
-  creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Vector' },
+  creation: { constructor: 'vector', objectName: 'Vector' },
   literalEdit: (entity) => (entity.kind === 'vector-2d' ? { constructor: 'vector', arity: 2 } : null),
   formatPosition: (x, y) => `(${x}, ${y})`,
   toPrimitive(entity, { accessibleName, position, construction }) {

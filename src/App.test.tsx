@@ -491,7 +491,7 @@ describe('VGA 2D vertical slice', () => {
   it('creates a collision-free vector from empty viewport coordinates as one history entry', () => {
     render(<App />)
     const first = screen.getByRole('textbox', { name: 'Expression 1' })
-    fireEvent.change(first, { target: { value: 'V1 = vector(2, 1)' } })
+    fireEvent.change(first, { target: { value: 'A = vector(2, 1)' } })
     const canvas = viewportCanvas()
     sizeViewportCanvas(canvas)
 
@@ -499,9 +499,9 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.doubleClick(canvas, { clientX: 410, clientY: 150 })
 
     const created = screen.getByRole('textbox', { name: 'Expression 2' })
-    expect(created).toHaveValue('V2 = vector(1, 1)')
+    expect(created).toHaveValue('B = vector(1, 1)')
     expect(created).toHaveFocus()
-    expect(screen.getByText('V2 created at 1, 1.')).toBeInTheDocument()
+    expect(screen.getByText('B created at 1, 1.')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
     expect(screen.queryByRole('textbox', { name: 'Expression 2' }))
@@ -511,7 +511,7 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Redo document change' }))
     expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveFocus()
     expect(screen.getByRole('textbox', { name: 'Expression 2' }))
-      .toHaveValue('V2 = vector(1, 1)')
+      .toHaveValue('B = vector(1, 1)')
   })
 
   it('does not create or select when an existing rendered object is double-clicked', () => {
@@ -2279,7 +2279,7 @@ describe('PGA 2D foundation workflow', () => {
     expect(first).toHaveValue('P = point(2, 2)')
 
     fireEvent.doubleClick(canvas, { clientX: 392, clientY: 168 })
-    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveValue('P1 = point(1, 1)')
-    expect(screen.getByText('P1 created at 1, 1.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveValue('A = point(1, 1)')
+    expect(screen.getByText('A created at 1, 1.')).toBeInTheDocument()
   })
 })

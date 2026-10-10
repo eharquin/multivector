@@ -235,7 +235,7 @@ export const PGA_2D_INTERPRETATION: Interpretation<Pga2Entity> = Object.freeze({
       : entity.kind === 'ideal-point' ? 'Direction' : 'Point'
     return `${family} ${index + 1}`
   },
-  creation: { constructor: 'point', namePrefix: 'P', objectName: 'Point' },
+  creation: { constructor: 'point', objectName: 'Point' },
   literalEdit(entity) {
     if (entity.kind === 'euclidean-point') return { constructor: 'point', arity: 2 }
     if (entity.kind === 'ideal-point') return { constructor: 'ipoint', arity: 2 }
