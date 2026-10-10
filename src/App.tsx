@@ -18,6 +18,7 @@ import { AlgebraMenu } from './components/AlgebraMenu'
 import { ExpressionReferenceDialog } from './components/ExpressionReferenceDialog'
 import { AppearancePopover } from './components/AppearancePopover'
 import { ClearExpressionsButton } from './components/ClearExpressionsButton'
+import { ZoomLevelField } from './components/ZoomLevelField'
 import {
   DisplaySettingsMenu,
   type DisplaySettings,
@@ -43,7 +44,6 @@ import {
   clampZoom,
   DEFAULT_PIXELS_PER_UNIT,
   formatGridNumber,
-  formatZoomPercentage,
   panByScreen,
   toMathematical,
   toScreen,
@@ -2398,9 +2398,13 @@ function App() {
                   <rect x="2.5" y="2.5" width="11" height="11" fill="none" />
                 </svg>
               </button>
-              <output className="viewport-zoom" aria-live="polite">
-                {formatZoomPercentage(viewport.pixelsPerUnit)}
-              </output>
+              <ZoomLevelField
+                pixelsPerUnit={viewport.pixelsPerUnit}
+                locked={viewportLocked}
+                onZoom={(pixelsPerUnit) => updateViewport(zoomAt(
+                  viewport, { x: viewport.width / 2, y: viewport.height / 2 }, pixelsPerUnit,
+                ))}
+              />
               </div>
             </div>
             <svg

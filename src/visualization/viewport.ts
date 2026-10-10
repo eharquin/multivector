@@ -75,6 +75,20 @@ export function formatZoomPercentage(pixelsPerUnit: number): string {
   return `${Number(percentage.toPrecision(3))}%`
 }
 
+const ZOOM_PERCENTAGE_SOURCE = /^\s*\+?(\d+(?:\.\d*)?|\.\d+)(e[+-]?\d+)?\s*%?\s*$/i
+
+/**
+ * Reads a typed zoom level, `150`, `150%`, or `1.5E3%`, as a clamped camera
+ * scale; null when the text is not a positive percentage.
+ */
+export function parseZoomPercentage(source: string): number | null {
+  const match = ZOOM_PERCENTAGE_SOURCE.exec(source)
+  if (!match) return null
+  const percentage = Number(match[1] + (match[2] ?? ''))
+  if (!Number.isFinite(percentage) || percentage <= 0) return null
+  return clampZoom(percentage / 100 * DEFAULT_PIXELS_PER_UNIT)
+}
+
 /** Changes scale while leaving the mathematical point under the cursor fixed. */
 export function zoomAt(
   viewport: Viewport2d,
