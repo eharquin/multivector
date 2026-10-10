@@ -346,6 +346,63 @@ describe('VGA 2D vertical slice', () => {
     expect(undo).toBeDisabled()
   })
 
+  it('sets the zoom level from a typed percentage without creating mathematical history', () => {
+    render(<App />)
+    const vector = screen.getByLabelText('Vector 1')
+    const zoom = screen.getByRole('textbox', { name: 'Zoom level' })
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+    expect(zoom).toHaveValue('100%')
+
+    fireEvent.change(zoom, { target: { value: '200' } })
+    fireEvent.keyDown(zoom, { key: 'Enter' })
+    expect(zoom).toHaveValue('200%')
+    expect(screen.getByText('200%', { selector: 'output' })).toBeInTheDocument()
+    expect(vector).toHaveAttribute('x1', '320')
+    expect(Number(vector.getAttribute('x2'))).toBeGreaterThan(560)
+    expect(undo).toBeDisabled()
+
+    fireEvent.change(zoom, { target: { value: '1E9%' } })
+    fireEvent.keyDown(zoom, { key: 'Enter' })
+    expect(zoom).toHaveValue('1.39E6%')
+
+    fireEvent.change(zoom, { target: { value: '1e-9' } })
+    fireEvent.keyDown(zoom, { key: 'Enter' })
+    expect(zoom).toHaveValue('1.39E-3%')
+  })
+
+  it('returns to 100% on text that is not a positive percentage and restores the read-out on Escape or blur', () => {
+    render(<App />)
+    const zoom = screen.getByRole('textbox', { name: 'Zoom level' })
+
+    for (const invalid of ['abc', '-5', '']) {
+      fireEvent.change(zoom, { target: { value: '200' } })
+      fireEvent.keyDown(zoom, { key: 'Enter' })
+      expect(zoom).toHaveValue('200%')
+      fireEvent.change(zoom, { target: { value: invalid } })
+      fireEvent.keyDown(zoom, { key: 'Enter' })
+      expect(zoom).toHaveValue('100%')
+      expect(screen.getByText('100%', { selector: 'output' })).toBeInTheDocument()
+    }
+
+    fireEvent.change(zoom, { target: { value: '300' } })
+    fireEvent.keyDown(zoom, { key: 'Escape' })
+    expect(zoom).toHaveValue('100%')
+
+    fireEvent.change(zoom, { target: { value: '300' } })
+    fireEvent.blur(zoom)
+    expect(zoom).toHaveValue('100%')
+  })
+
+  it('keeps the zoom level read-only while the viewport is locked', () => {
+    render(<App />)
+    const zoom = screen.getByRole('textbox', { name: 'Zoom level' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
+    expect(zoom).toHaveAttribute('readonly')
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock viewport' }))
+    expect(zoom).not.toHaveAttribute('readonly')
+  })
+
   it('locks mouse and keyboard navigation, then restores it after unlocking', () => {
     render(<App />)
     const canvas = viewportCanvas()

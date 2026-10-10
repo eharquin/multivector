@@ -56,6 +56,13 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is as wide as a toolbar command and longer values extend leftwards over the
   canvas instead of widening the toolbar.
 
+- Made the viewport zoom read-out editable: typing a percentage such as
+  `150`, `150%`, or `1.5E3%` and pressing Enter sets the scale around the
+  viewport center, clamped to the zoom bounds, and any other text returns to
+  100 %; Escape or leaving the field restores the read-out, and the field is
+  read-only while the viewport is locked. VIEW2D-004 now states the bounds
+  extended in #79.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

@@ -6,6 +6,7 @@ import {
   MAX_PIXELS_PER_UNIT,
   MIN_PIXELS_PER_UNIT,
   panByScreen,
+  parseZoomPercentage,
   toMathematical,
   toScreen,
   zoomAt,
@@ -56,6 +57,23 @@ describe('2D viewport transform', () => {
     expect(formatZoomPercentage(72)).toBe('100%')
     expect(formatZoomPercentage(MIN_PIXELS_PER_UNIT)).toBe('1.39E-3%')
     expect(formatZoomPercentage(MAX_PIXELS_PER_UNIT)).toBe('1.39E6%')
+  })
+
+  it('reads typed zoom levels as clamped scales and rejects other text', () => {
+    expect(parseZoomPercentage('150')).toBe(108)
+    expect(parseZoomPercentage(' 50 % ')).toBe(36)
+    expect(parseZoomPercentage('+.5%')).toBe(0.36)
+    expect(parseZoomPercentage('1.5E3%')).toBe(1080)
+    expect(parseZoomPercentage('2e-1')).toBeCloseTo(0.144, 12)
+    expect(parseZoomPercentage('1E-9%')).toBe(MIN_PIXELS_PER_UNIT)
+    expect(parseZoomPercentage('1E12')).toBe(MAX_PIXELS_PER_UNIT)
+    for (const value of [MIN_PIXELS_PER_UNIT, 72, MAX_PIXELS_PER_UNIT]) {
+      expect(parseZoomPercentage(formatZoomPercentage(value)))
+        .toBeCloseTo(value, Math.max(0, -Math.floor(Math.log10(value)) + 2))
+    }
+    for (const invalid of ['', '%', 'abc', '0', '0%', '-50', '1e999', '50%%', '1,5', '5 0']) {
+      expect(parseZoomPercentage(invalid)).toBeNull()
+    }
   })
 
   it('pans in screen space without changing scale', () => {

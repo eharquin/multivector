@@ -1147,7 +1147,8 @@ body.reordering-items .reorder-handle {
   .settings-switch-track,
   .settings-switch-thumb,
   .viewport-toolbar,
-  .viewport-command {
+  .viewport-command,
+  .viewport-zoom-input {
     transition: none;
   }
 }
@@ -1437,10 +1438,47 @@ code {
   display: flex;
   justify-content: flex-end;
   white-space: nowrap;
-  padding-right: 3px;
   font: 600 0.72rem var(--font-mono);
   color: var(--muted);
   text-align: right;
+}
+
+/* Reads as the plain read-out until hovered or focused; one character per
+   glyph of the monospaced text, so the field grows leftwards with it. */
+.viewport-zoom-input {
+  flex: none;
+  box-sizing: content-box;
+  width: calc(var(--zoom-chars, 4) * 1ch);
+  min-width: 0;
+  margin: 0;
+  padding: 1px 2px;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.viewport-zoom-input:not(:read-only):hover {
+  color: var(--accent);
+  background: var(--surface-active);
+}
+
+.viewport-zoom-input:not(:read-only):focus {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.viewport-zoom-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.viewport-zoom-input:read-only {
+  cursor: default;
 }
 
 .canvas-frame {
