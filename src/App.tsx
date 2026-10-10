@@ -44,6 +44,7 @@ import {
   clampZoom,
   DEFAULT_PIXELS_PER_UNIT,
   formatGridNumber,
+  keyboardManipulationStep,
   panByScreen,
   toMathematical,
   toScreen,
@@ -756,7 +757,7 @@ function App() {
       setViewportAnnouncement('Object base unlinked and kept at its resolved position.')
       return
     }
-    const step = event.shiftKey ? 1 : 0.1
+    const step = keyboardManipulationStep(viewport.pixelsPerUnit, event.shiftKey)
     const delta = event.key === 'ArrowLeft' ? { x: -step, y: 0 }
       : event.key === 'ArrowRight' ? { x: step, y: 0 }
         : event.key === 'ArrowUp' ? { x: 0, y: step }
@@ -787,8 +788,8 @@ function App() {
     setViewportAnnouncement(kind === 'normal'
       ? `${gestureLabel(kind)} rotated.`
       : `${gestureLabel(kind)} moved to ${
-          formatGridNumber(current.x + delta.x, step)}, ${
-          formatGridNumber(current.y + delta.y, step)}.`)
+          formatGridNumber(current.x + delta.x, 1 / viewport.pixelsPerUnit)}, ${
+          formatGridNumber(current.y + delta.y, 1 / viewport.pixelsPerUnit)}.`)
   }
   const moveViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const manipulation = manipulationDrag.current
