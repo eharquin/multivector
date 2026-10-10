@@ -923,6 +923,10 @@ describe('VGA 2D vertical slice', () => {
       .toBeVisible()
     expect(screen.getByRole('textbox', { name: 'Step source' }))
       .toBeVisible()
+    const interval = screen.getByRole('group', { name: 'Interval of a' })
+    expect(interval).toHaveTextContent(/^≤ a ≤step$/)
+    expect(within(interval).getAllByRole('textbox').map((field) => field.getAttribute('aria-label')))
+      .toEqual(['Minimum source', 'Maximum source', 'Step source'])
     const trigger = screen.getByRole('button', {
       name: 'Open Scalar menu for a',
     })

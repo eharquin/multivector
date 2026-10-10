@@ -72,6 +72,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pixels at every scale), and the announced position matches the rewritten
   source.
 
+- A scalar slider's interval fields read as the inequality they set,
+  `[min] ≤ a ≤ [max] step [s]`, instead of an `INTERVAL` label followed by
+  three fields; in a narrow panel the step wraps below the inequality.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

@@ -756,8 +756,9 @@ body.reordering-items .reorder-handle {
 
 .scalar-interval-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   padding: 0 8px 6px 0;
 }
 
@@ -767,6 +768,26 @@ body.reordering-items .reorder-handle {
   font: 10px var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+/* The interval reads as the inequality it sets: min ≤ name ≤ max, step s. */
+.scalar-interval-relation {
+  flex-shrink: 0;
+  color: var(--muted);
+  font: 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.scalar-interval-name {
+  color: var(--text);
+}
+
+/* In a narrow panel the step wraps as a unit below the inequality. */
+.scalar-interval-step {
+  display: flex;
+  flex: 1.4 1 0;
+  align-items: center;
+  gap: 6px;
 }
 
 .scalar-interval-row input {
