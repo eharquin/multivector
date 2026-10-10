@@ -3,22 +3,24 @@ import { formatRoundTripNumber } from '../domain/numberFormat'
 const DECLARATION_NAME = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/
 const MAX_COORDINATE_DECIMALS = 8
 
-/** Returns the first generated vector name that is not already declared. */
-/** The first free `prefix<n>` name among the document's declarations. */
-export function nextObjectName(sources: readonly string[], prefix: string): string {
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/**
+ * The first free name for an object created in the viewport: `A` through `Z`,
+ * then `A1` through `Z1`, `A2`, and so on, skipping every declared name.
+ */
+export function nextObjectName(sources: readonly string[]): string {
   const declarations = new Set(
     sources.flatMap((source) => {
       const name = DECLARATION_NAME.exec(source)?.[1]
       return name ? [name] : []
     }),
   )
-  let suffix = 1
-  while (declarations.has(`${prefix}${suffix}`)) suffix += 1
-  return `${prefix}${suffix}`
-}
-
-export function nextVectorName(sources: readonly string[]): string {
-  return nextObjectName(sources, 'V')
+  for (let round = 0; ; round += 1) {
+    const suffix = round === 0 ? '' : String(round)
+    const free = [...LETTERS].find((letter) => !declarations.has(`${letter}${suffix}`))
+    if (free) return `${free}${suffix}`
+  }
 }
 
 /**

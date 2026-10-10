@@ -37,7 +37,6 @@ export type VisualizationSupport =
 /** How the viewport creates a new located object by double-click (INTERACT2D-001). */
 export type ViewportCreation = Readonly<{
   constructor: string
-  namePrefix: string
   objectName: string
 }>
 
@@ -92,7 +91,7 @@ export const OPAQUE_INTERPRETATION: AnyInterpretation = Object.freeze<AnyInterpr
     message: 'The document’s interpretation is not available in this runtime.',
   }),
   defaultName: (_entity, index) => `Value ${index + 1}`,
-  creation: { constructor: 'vector', namePrefix: 'V', objectName: 'Object' },
+  creation: { constructor: 'vector', objectName: 'Object' },
   literalEdit: () => null,
   formatPosition: (x, y) => `(${x}, ${y})`,
   toPrimitive: () => null,

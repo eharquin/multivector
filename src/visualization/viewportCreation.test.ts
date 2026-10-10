@@ -1,19 +1,32 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatViewportCoordinate,
-  nextVectorName,
+  nextObjectName,
   vectorCreationSource,
 } from './viewportCreation'
 import { MAX_PIXELS_PER_UNIT, MIN_PIXELS_PER_UNIT } from './viewport'
 
 describe('viewport vector creation', () => {
-  it('chooses the first collision-free generated declaration name', () => {
-    expect(nextVectorName([
-      'V1 = e1',
-      '  V3 = vector(3, 0)',
-      'V2value = 2',
+  it('names created objects A to Z, then A1 to Z1, skipping declared names', () => {
+    expect(nextObjectName([])).toBe('A')
+    expect(nextObjectName([
+      'A = point(1, 2)',
+      '  B = vector(3, 0)',
+      'Cvalue = 2',
+      'c = 3',
       'vector(1, 1)',
-    ])).toBe('V2')
+    ])).toBe('C')
+    const alphabet = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+    expect(nextObjectName(alphabet.map((letter) => `${letter} = 1`))).toBe('A1')
+    expect(nextObjectName([
+      ...alphabet.map((letter) => `${letter} = 1`),
+      'A1 = 1',
+      'B1 = 1',
+    ])).toBe('C1')
+    expect(nextObjectName([
+      ...alphabet.map((letter) => `${letter} = 1`),
+      ...alphabet.map((letter) => `${letter}1 = 1`),
+    ])).toBe('A2')
   })
 
   it('formats coordinates at zoom-aware precision without negative zero', () => {

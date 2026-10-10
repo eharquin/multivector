@@ -108,8 +108,10 @@ but are moved through their points.
 
 ## Create points from the viewport
 
-Double-click empty viewport space: a new declaration `P1 = point(x, y)` is
-inserted with the pointer's coordinates and focused.
+Double-click empty viewport space: a new declaration `D = point(x, y)` is
+inserted with the pointer's coordinates and focused. Created objects take the
+first free name among `A` to `Z`, then `A1` to `Z1`, and so on; the showcase
+already declares `A`, `B`, and `C`.
 
 ## Save, reload, export, and import
 

@@ -93,7 +93,7 @@ describe('standard PGA(2) interpretation', () => {
     expect(interpretation.visualization(interpretation.interpret(c({ e: 2 })))).toEqual({ status: 'non-spatial' })
     expect(interpretation.defaultName(l, 0)).toBe('Line 1')
     expect(interpretation.defaultName(d, 1)).toBe('Direction 2')
-    expect(interpretation.creation).toEqual({ constructor: 'point', namePrefix: 'P', objectName: 'Point' })
+    expect(interpretation.creation).toEqual({ constructor: 'point', objectName: 'Point' })
     expect(interpretation.model).toBe('plane-based')
   })
 })
