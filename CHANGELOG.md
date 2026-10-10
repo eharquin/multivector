@@ -91,6 +91,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whose description counts and describes its points, lines, ideal points, and
   line at infinity, and offers to create a point; VGA output is unchanged.
 
+- Undoing or redoing a viewport gesture keeps focus in the viewport — on the
+  canvas after a pointer drag, on the moved handle after an arrow-key move —
+  instead of jumping to the last edited expression.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag

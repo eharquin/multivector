@@ -233,6 +233,8 @@ function App() {
   const pendingFocus = useRef<string | null>(null)
   const lastEditorFocus = useRef<EditorFocus | null>(null)
   const pendingHistoryFocus = useRef(lastEditorFocus.current)
+  /** Set by an undo or redo that traverses a step, read once the document renders. */
+  const pendingTraversal = useRef(false)
   const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
   const viewportCreatedItemIds = useRef(new Set<string>())
   const pausedPlayback = useRef<Readonly<{
@@ -360,8 +362,10 @@ function App() {
   }
   const dispatchHistoryWithFocus = useCallback((type: 'undo' | 'redo') => {
     pendingHistoryFocus.current = lastEditorFocus.current
+    pendingTraversal.current = !history.transaction &&
+      (type === 'undo' ? history.past.length > 0 : history.future.length > 0)
     dispatchHistory({ type })
-  }, [])
+  }, [history.past.length, history.future.length, history.transaction])
 
   const viewport: Viewport2d = expressionDoc.view.viewport.kind === 'two-dimensional'
     ? {
@@ -692,6 +696,7 @@ function App() {
     kind: ManipulationKind,
     current: Readonly<{ x: number; y: number }>,
   ) => {
+    const keyboardOrigin = { kind: 'viewport', handleKey: `${itemId}:${kind}` } as const
     if (kind === 'line' && event.key === 'Enter') {
       event.preventDefault()
       event.stopPropagation()
@@ -744,7 +749,7 @@ function App() {
         kind: 'update-position', itemId,
         positionSource: `${next.name}.${next.property}`,
       })
-      dispatchHistory({ type: 'commit-transaction' })
+      dispatchHistory({ type: 'commit-transaction', origin: keyboardOrigin })
       setViewportAnnouncement(`Object base linked to ${next.name} ${next.property}.`)
       return
     }
@@ -756,7 +761,7 @@ function App() {
       dispatchHistory({ type: 'boundary' })
       dispatchHistory({ type: 'begin-transaction' })
       updateManipulatedItem(itemId, kind, current)
-      dispatchHistory({ type: 'commit-transaction' })
+      dispatchHistory({ type: 'commit-transaction', origin: keyboardOrigin })
       setViewportAnnouncement('Object base unlinked and kept at its resolved position.')
       return
     }
@@ -787,7 +792,7 @@ function App() {
         })()
       : { x: current.x + delta.x, y: current.y + delta.y }
     updateManipulatedItem(itemId, kind, target)
-    dispatchHistory({ type: 'commit-transaction' })
+    dispatchHistory({ type: 'commit-transaction', origin: keyboardOrigin })
     setViewportAnnouncement(kind === 'normal'
       ? `${gestureLabel(kind)} rotated.`
       : `${gestureLabel(kind)} moved to ${
@@ -868,7 +873,9 @@ function App() {
     manipulationDrag.current = null
     anchorValidityCache.current.clear()
     setAnchorPreview(null)
-    dispatchHistory({ type: outcome === 'commit' ? 'commit-transaction' : 'cancel-transaction' })
+    dispatchHistory(outcome === 'commit'
+      ? { type: 'commit-transaction', origin: { kind: 'viewport', handleKey: null } }
+      : { type: 'cancel-transaction' })
     viewportSvgRef.current?.focus({ preventScroll: true })
   }
   const endViewportPan = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -1228,6 +1235,21 @@ function App() {
       pendingFocus.current = null
       return
     }
+    // Undoing or redoing a viewport gesture keeps focus in the viewport: on
+    // the handle a keyboard gesture moved, when it still exists, otherwise on
+    // the canvas, as after the gesture itself (#115).
+    const traversal = pendingTraversal.current ? history.lastTraversal : null
+    pendingTraversal.current = false
+    if (traversal?.kind === 'viewport') {
+      pendingHistoryFocus.current = null
+      const handle = traversal.handleKey === null
+        ? undefined
+        : [...viewportSvgRef.current?.querySelectorAll('[data-handle-key]') ?? []]
+          .find((element) => element.getAttribute('data-handle-key') === traversal.handleKey)
+      if (handle instanceof SVGElement) handle.focus({ preventScroll: true })
+      else viewportSvgRef.current?.focus({ preventScroll: true })
+      return
+    }
     const selection = pendingHistoryFocus.current
     if (!selection) return
     pendingHistoryFocus.current = null
@@ -1254,7 +1276,7 @@ function App() {
       restoredSelection.direction,
     )
     rememberEditorFocus(input)
-  }, [expressionDoc])
+  }, [expressionDoc, history.lastTraversal])
 
   useEffect(() => {
     const resize = (clientX: number) => {

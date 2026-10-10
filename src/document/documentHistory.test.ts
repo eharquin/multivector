@@ -11,6 +11,32 @@ const source = (history: ReturnType<typeof createDocumentHistory>) =>
   history.present.items[0]?.source
 
 describe('document history', () => {
+  it('reports the origin of the step each undo and redo traverses', () => {
+    let history = createDocumentHistory(expressionDocument([{ id: 'item', source: 'A = 1' }]))
+    const origin = { kind: 'viewport', handleKey: 'item:head' } as const
+    history = documentHistoryReducer(history, {
+      type: 'execute', command: { kind: 'update-source', itemId: 'item', source: 'A = 2' },
+    })
+    history = documentHistoryReducer(history, { type: 'begin-transaction' })
+    history = documentHistoryReducer(history, {
+      type: 'execute', command: { kind: 'update-source', itemId: 'item', source: 'A = 3' },
+    })
+    history = documentHistoryReducer(history, { type: 'commit-transaction', origin })
+    expect(history.lastTraversal).toBeNull()
+
+    history = documentHistoryReducer(history, { type: 'undo' })
+    expect(source(history)).toBe('A = 2')
+    expect(history.lastTraversal).toBe(origin)
+    history = documentHistoryReducer(history, { type: 'undo' })
+    expect(source(history)).toBe('A = 1')
+    expect(history.lastTraversal).toBeNull()
+    history = documentHistoryReducer(history, { type: 'redo' })
+    expect(history.lastTraversal).toBeNull()
+    history = documentHistoryReducer(history, { type: 'redo' })
+    expect(source(history)).toBe('A = 3')
+    expect(history.lastTraversal).toBe(origin)
+  })
+
   it('undoes and redoes complete document snapshots and clears redo after mutation', () => {
     let history = createDocumentHistory(expressionDocument(
       [{ id: 'item', source: 'A = 1', positionSource: '(1, 2)' }],
