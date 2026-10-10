@@ -403,9 +403,18 @@ function App() {
   }
   const zoomViewport = (factor: number, anchor = { x: viewport.width / 2, y: viewport.height / 2 }) =>
     updateViewport(zoomAt(viewport, anchor, viewport.pixelsPerUnit * factor))
-  const resetViewport = () => updateViewport({
-    ...viewport, centerX: 0, centerY: 0, pixelsPerUnit: DEFAULT_PIXELS_PER_UNIT,
-  })
+  // Recentering keeps the scale; Home, or recentering then typing 100 %,
+  // restores the documented view (VIEW2D-003).
+  const recenterViewport = () => {
+    updateViewport({ ...viewport, centerX: 0, centerY: 0 })
+    setViewportAnnouncement('View recentered on the origin.')
+  }
+  const resetViewport = () => {
+    updateViewport({
+      ...viewport, centerX: 0, centerY: 0, pixelsPerUnit: DEFAULT_PIXELS_PER_UNIT,
+    })
+    setViewportAnnouncement('View reset to the origin at 100%.')
+  }
   const handleViewportWheel = (event: WheelEvent) => {
     event.preventDefault()
     if (viewportLocked) return
@@ -934,7 +943,8 @@ function App() {
     else if (event.key === '-') next = zoomAt(viewport, { x: viewport.width / 2, y: viewport.height / 2 }, viewport.pixelsPerUnit / 1.25)
     else if (event.key === '0' || event.key === 'Home') {
       event.preventDefault()
-      resetViewport()
+      if (event.key === '0') recenterViewport()
+      else resetViewport()
       return
     } else return
     event.preventDefault()
@@ -2378,8 +2388,8 @@ function App() {
               <button
                 type="button"
                 className="viewport-command"
-                onClick={resetViewport}
-                aria-label="Reset view"
+                onClick={recenterViewport}
+                aria-label="Recenter view"
                 disabled={viewportLocked}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
