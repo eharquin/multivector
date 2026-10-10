@@ -77,10 +77,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   three fields; in a narrow panel the step wraps below the inequality.
 
 - Scalar sliders draw their track in the object's colour at 20 %, and their
-  thumb is a white point ringed in that colour inside a translucent aura of
-  the same colour, matching the canvas handles in every browser; like them it
-  grows to fill its aura on hover and while dragged, and keyboard focus rings
-  it.
+  thumb as the canvas base point, at the same size and object scale: a ring in
+  the object's colour with a white centre inside a 20 % aura. Hovering or
+  dragging grows the ring to fill the aura while the centre keeps its size,
+  and keyboard focus rings the thumb; the look is the same in every browser.
 
 ## 0.1.0 - 2026-09-13
 

@@ -724,18 +724,28 @@ body.reordering-items .reorder-handle {
 
 .scalar-slider-row input[type="range"] {
   --slider-color: var(--accent);
+  --slider-scale: 1.5;
   --slider-aura: color-mix(in srgb, var(--slider-color) 20%, transparent);
   min-width: 0;
   flex: 1;
-  min-height: 24px;
+  min-height: max(24px, calc(20px * var(--slider-scale) + 4px));
   margin: 0;
   background: transparent;
   cursor: pointer;
   appearance: none;
 }
 
-/* The track and the aura take the object's colour at 20 %; the thumb is a
-   white point ringed in that colour, as on the canvas. */
+/* The track and the aura take the object's colour at 20 %. The thumb is the
+   canvas base point at the canvas object scale (--slider-scale): a point of
+   radius 4.5 inside an aura of radius 10, here with a white centre. Ring and
+   aura are painted inside the 20-unit target, so the whole aura reacts to the
+   pointer; --slider-ring is registered so that only the ring grows on hover. */
+@property --slider-ring {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 6.75px;
+}
+
 .scalar-slider-row input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   background: var(--slider-aura);
@@ -749,40 +759,47 @@ body.reordering-items .reorder-handle {
 }
 
 .scalar-slider-row input[type="range"]::-webkit-slider-thumb {
-  box-sizing: border-box;
-  width: 11px;
-  height: 11px;
-  margin-top: -3.5px;
-  background: #fff;
-  border: 2.5px solid var(--slider-color);
+  --slider-ring: calc(4.5px * var(--slider-scale));
+  width: calc(20px * var(--slider-scale));
+  height: calc(20px * var(--slider-scale));
+  margin-top: calc(2px - 10px * var(--slider-scale));
+  background: radial-gradient(
+    circle closest-side,
+    #fff calc(2.25px * var(--slider-scale)),
+    var(--slider-color) calc(2.25px * var(--slider-scale)) var(--slider-ring),
+    var(--slider-aura) var(--slider-ring) 100%
+  );
+  border: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 4.5px var(--slider-aura);
-  transition: transform 350ms ease, box-shadow 350ms ease;
+  transition: --slider-ring 350ms ease;
   appearance: none;
 }
 
 .scalar-slider-row input[type="range"]::-moz-range-thumb {
-  box-sizing: border-box;
-  width: 11px;
-  height: 11px;
-  background: #fff;
-  border: 2.5px solid var(--slider-color);
+  --slider-ring: calc(4.5px * var(--slider-scale));
+  width: calc(20px * var(--slider-scale));
+  height: calc(20px * var(--slider-scale));
+  background: radial-gradient(
+    circle closest-side,
+    #fff calc(2.25px * var(--slider-scale)),
+    var(--slider-color) calc(2.25px * var(--slider-scale)) var(--slider-ring),
+    var(--slider-aura) var(--slider-ring) 100%
+  );
+  border: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 4.5px var(--slider-aura);
-  transition: transform 350ms ease, box-shadow 350ms ease;
+  transition: --slider-ring 350ms ease;
 }
 
-/* Hovering or dragging grows the point to fill its aura, as on the canvas. */
+/* Hovering or dragging grows the coloured ring to fill the aura, as on the
+   canvas; the white centre keeps its size. */
 .scalar-slider-row input[type="range"]:not(:disabled)::-webkit-slider-thumb:hover,
 .scalar-slider-row input[type="range"]:not(:disabled):active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 0 var(--slider-aura);
-  transform: scale(1.8182);
+  --slider-ring: calc(10px * var(--slider-scale));
 }
 
 .scalar-slider-row input[type="range"]:not(:disabled)::-moz-range-thumb:hover,
 .scalar-slider-row input[type="range"]:not(:disabled):active::-moz-range-thumb {
-  box-shadow: 0 0 0 0 var(--slider-aura);
-  transform: scale(1.8182);
+  --slider-ring: calc(10px * var(--slider-scale));
 }
 
 /* Keyboard focus rings the thumb, as the canvas rings a focused handle. */
@@ -792,12 +809,12 @@ body.reordering-items .reorder-handle {
 
 .scalar-slider-row input[type="range"]:focus-visible::-webkit-slider-thumb {
   outline: 2px solid var(--accent);
-  outline-offset: 8.5px;
+  outline-offset: calc(3px * var(--slider-scale));
 }
 
 .scalar-slider-row input[type="range"]:focus-visible::-moz-range-thumb {
   outline: 2px solid var(--accent);
-  outline-offset: 8.5px;
+  outline-offset: calc(3px * var(--slider-scale));
 }
 
 /* Only the track dims; the bound labels and diagnostic below stay at full contrast. */

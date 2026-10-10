@@ -2080,7 +2080,10 @@ function App() {
                             disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
                               scalarEdit.value < controlEvaluation.minimum! ||
                               scalarEdit.value > controlEvaluation.maximum!}
-                            style={{ '--slider-color': color } as CSSProperties}
+                            style={{
+                              '--slider-color': color,
+                              '--slider-scale': objectRenderScale,
+                            } as CSSProperties}
                             onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
                             onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
                             onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
