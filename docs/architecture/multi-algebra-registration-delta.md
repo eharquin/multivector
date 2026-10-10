@@ -1,6 +1,6 @@
 # Multi-Algebra Registration Delta
 
-**Status:** Proposed for review
+**Status:** Accepted 2026-09-13; implemented in #147–#154 (see §7)
 **Issue:** #98
 **Date:** 2026-09-13
 **Decision owner:** Algebra-definition and interpretation architecture
@@ -154,3 +154,23 @@ for the milestone.
 
 VGA(3), PGA(3), CGA, motor logarithms, figure export, and any change to the
 0.1.0 supported-browser statement.
+
+## 7. Outcome
+
+All eight steps merged in order: #147 (step 1), #148 (2), #149 (3), #150 (4),
+#151 (5), #152 (6), #153 (7), and #154 (8). The PGA 2D Foundation acceptance
+record holds the automated evidence of P2D-001.
+
+Couplings that remain after the delta, each tracked separately:
+
+- `src/App.tsx` did not keep shrinking (§5): 2 588 lines at 0.1.0, 2 346 after
+  step 7, 2 594 once the PGA interface landed (#155, #159, #164). Reducing it
+  to a composition shell is #173.
+- The viewport's accessible name and description still spell VGA(2) and
+  describe only vectors and bivectors (#172).
+- `src/presentation/formatNumber.ts` applies the VGA(2) classification
+  threshold to the display of every algebra; the algebra-owned numerical
+  policy of #68 replaces it.
+- `src/visualization/primitives.ts` takes its entity types from
+  `vga2Interpretation`; the generic primitive layer should depend on the
+  interpretation contract only.
