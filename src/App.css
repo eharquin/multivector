@@ -1429,8 +1429,14 @@ code {
   stroke-width: 1.5;
 }
 
+/* As wide as a command, so the read-out never resizes the toolbar: longer
+   values overflow leftwards over the canvas and the lock stays in place. */
 .viewport-zoom {
-  min-width: 4ch;
+  align-self: flex-end;
+  width: 26px;
+  display: flex;
+  justify-content: flex-end;
+  white-space: nowrap;
   padding-right: 3px;
   font: 600 0.72rem var(--font-mono);
   color: var(--muted);
