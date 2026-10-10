@@ -723,11 +723,98 @@ body.reordering-items .reorder-handle {
 }
 
 .scalar-slider-row input[type="range"] {
+  --slider-color: var(--accent);
+  --slider-scale: 1.5;
+  --slider-aura: color-mix(in srgb, var(--slider-color) 20%, transparent);
   min-width: 0;
   flex: 1;
-  min-height: 24px;
+  min-height: max(24px, calc(20px * var(--slider-scale) + 4px));
   margin: 0;
+  background: transparent;
   cursor: pointer;
+  appearance: none;
+}
+
+/* The track and the aura take the object's colour at 20 %. The thumb is the
+   canvas base point at the canvas object scale (--slider-scale): a point of
+   radius 4.5 inside an aura of radius 10, here with a white centre. Ring and
+   aura are painted inside the 20-unit target, so the whole aura reacts to the
+   pointer; --slider-ring is registered so that only the ring grows on hover. */
+@property --slider-ring {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 6.75px;
+}
+
+.scalar-slider-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--slider-aura);
+  border-radius: 2px;
+}
+
+.scalar-slider-row input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--slider-aura);
+  border-radius: 2px;
+}
+
+.scalar-slider-row input[type="range"]::-webkit-slider-thumb {
+  --slider-ring: calc(4.5px * var(--slider-scale));
+  width: calc(20px * var(--slider-scale));
+  height: calc(20px * var(--slider-scale));
+  margin-top: calc(2px - 10px * var(--slider-scale));
+  background: radial-gradient(
+    circle closest-side,
+    #fff calc(2.25px * var(--slider-scale)),
+    var(--slider-color) calc(2.25px * var(--slider-scale)) var(--slider-ring),
+    var(--slider-aura) var(--slider-ring) 100%
+  );
+  border: 0;
+  border-radius: 50%;
+  transition: --slider-ring 350ms ease;
+  appearance: none;
+}
+
+.scalar-slider-row input[type="range"]::-moz-range-thumb {
+  --slider-ring: calc(4.5px * var(--slider-scale));
+  width: calc(20px * var(--slider-scale));
+  height: calc(20px * var(--slider-scale));
+  background: radial-gradient(
+    circle closest-side,
+    #fff calc(2.25px * var(--slider-scale)),
+    var(--slider-color) calc(2.25px * var(--slider-scale)) var(--slider-ring),
+    var(--slider-aura) var(--slider-ring) 100%
+  );
+  border: 0;
+  border-radius: 50%;
+  transition: --slider-ring 350ms ease;
+}
+
+/* Hovering or dragging grows the coloured ring to fill the aura, as on the
+   canvas; the white centre keeps its size. */
+.scalar-slider-row input[type="range"]:not(:disabled)::-webkit-slider-thumb:hover,
+.scalar-slider-row input[type="range"]:not(:disabled):active::-webkit-slider-thumb {
+  --slider-ring: calc(10px * var(--slider-scale));
+}
+
+.scalar-slider-row input[type="range"]:not(:disabled)::-moz-range-thumb:hover,
+.scalar-slider-row input[type="range"]:not(:disabled):active::-moz-range-thumb {
+  --slider-ring: calc(10px * var(--slider-scale));
+}
+
+/* Keyboard focus rings the thumb, as the canvas rings a focused handle. */
+.scalar-slider-row input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.scalar-slider-row input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: calc(3px * var(--slider-scale));
+}
+
+.scalar-slider-row input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: calc(3px * var(--slider-scale));
 }
 
 /* Only the track dims; the bound labels and diagnostic below stay at full contrast. */
@@ -756,8 +843,9 @@ body.reordering-items .reorder-handle {
 
 .scalar-interval-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
   padding: 0 8px 6px 0;
 }
 
@@ -767,6 +855,26 @@ body.reordering-items .reorder-handle {
   font: 10px var(--font-mono);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+/* The interval reads as the inequality it sets: min ≤ name ≤ max, step s. */
+.scalar-interval-relation {
+  flex-shrink: 0;
+  color: var(--muted);
+  font: 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.scalar-interval-name {
+  color: var(--text);
+}
+
+/* In a narrow panel the step wraps as a unit below the inequality. */
+.scalar-interval-step {
+  display: flex;
+  flex: 1.4 1 0;
+  align-items: center;
+  gap: 6px;
 }
 
 .scalar-interval-row input {
@@ -1149,6 +1257,14 @@ body.reordering-items .reorder-handle {
   .viewport-toolbar,
   .viewport-command,
   .viewport-zoom-input {
+    transition: none;
+  }
+
+  .scalar-slider-row input[type="range"]::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .scalar-slider-row input[type="range"]::-moz-range-thumb {
     transition: none;
   }
 }

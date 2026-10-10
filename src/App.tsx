@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -2079,7 +2080,10 @@ function App() {
                             disabled={controlEvaluation.status === 'invalid' || !scalarEdit ||
                               scalarEdit.value < controlEvaluation.minimum! ||
                               scalarEdit.value > controlEvaluation.maximum!}
-                            style={{ accentColor: color }}
+                            style={{
+                              '--slider-color': color,
+                              '--slider-scale': objectRenderScale,
+                            } as CSSProperties}
                             onPointerDown={() => dispatchHistory({ type: 'begin-transaction' })}
                             onPointerUp={() => dispatchHistory({ type: 'commit-transaction' })}
                             onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
@@ -2110,32 +2114,50 @@ function App() {
 
                       {scalar && effectiveControl?.mode === 'slider' && controlEvaluation && (
                         <>
-                          <div className="scalar-interval-row">
-                            <span className="scalar-interval-label">interval</span>
-                            {([
-                              ['minimumSource', 'Minimum source'],
-                              ['maximumSource', 'Maximum source'],
-                              ['stepSource', 'Step source'],
-                            ] as const).map(([property, label]) => (
-                              <input
-                                key={property}
-                                value={effectiveControl[property]}
-                                aria-label={label}
-                                aria-invalid={controlEvaluation.fields[
-                                  property === 'minimumSource' ? 'minimum' :
-                                    property === 'maximumSource' ? 'maximum' : 'step'
-                                ].status === 'invalid'}
-                                onBlur={() => dispatchHistory({ type: 'boundary' })}
-                                onChange={(event) => {
-                                  if (isPlaying) stopPlayback()
-                                  pausedPlayback.current = null
-                                  executeCommand({
-                                    kind: 'update-control', itemId: item.id,
-                                    control: { ...effectiveControl, [property]: event.target.value },
-                                  }, `control-${property}:${item.id}`)
-                                }}
-                              />
-                            ))}
+                          <div
+                            className="scalar-interval-row"
+                            role="group"
+                            aria-label={`Interval of ${declaredName(item.source) ?? objectName}`}
+                          >
+                            {(() => {
+                              const intervalField = (
+                                property: 'minimumSource' | 'maximumSource' | 'stepSource',
+                                label: string,
+                              ) => (
+                                <input
+                                  value={effectiveControl[property]}
+                                  aria-label={label}
+                                  aria-invalid={controlEvaluation.fields[
+                                    property === 'minimumSource' ? 'minimum' :
+                                      property === 'maximumSource' ? 'maximum' : 'step'
+                                  ].status === 'invalid'}
+                                  onBlur={() => dispatchHistory({ type: 'boundary' })}
+                                  onChange={(event) => {
+                                    if (isPlaying) stopPlayback()
+                                    pausedPlayback.current = null
+                                    executeCommand({
+                                      kind: 'update-control', itemId: item.id,
+                                      control: { ...effectiveControl, [property]: event.target.value },
+                                    }, `control-${property}:${item.id}`)
+                                  }}
+                                />
+                              )
+                              return (
+                                <>
+                                  {intervalField('minimumSource', 'Minimum source')}
+                                  <span className="scalar-interval-relation" aria-hidden="true">
+                                    ≤ <span className="scalar-interval-name">
+                                      {declaredName(item.source) ?? objectName}
+                                    </span> ≤
+                                  </span>
+                                  {intervalField('maximumSource', 'Maximum source')}
+                                  <span className="scalar-interval-step">
+                                    <span className="scalar-interval-label" aria-hidden="true">step</span>
+                                    {intervalField('stepSource', 'Step source')}
+                                  </span>
+                                </>
+                              )
+                            })()}
                           </div>
                           {controlEvaluation.status === 'invalid' && (
                             <div className="scalar-interval-diagnostic" role="alert">
