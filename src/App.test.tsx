@@ -346,6 +346,35 @@ describe('VGA 2D vertical slice', () => {
     expect(undo).toBeDisabled()
   })
 
+  it('recenters at the current scale from the button and 0, and resets to 100% from Home', () => {
+    render(<App />)
+    const canvas = viewportCanvas()
+    const vector = screen.getByLabelText('Vector 1')
+    const zoom = screen.getByRole('textbox', { name: 'Zoom level' })
+    const undo = screen.getByRole('button', { name: 'Undo document change' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
+    expect(vector).toHaveAttribute('x1', '360')
+    fireEvent.click(screen.getByRole('button', { name: 'Recenter view' }))
+    expect(vector).toHaveAttribute('x1', '320')
+    expect(zoom).toHaveValue('125%')
+    expect(screen.getByText('View recentered on the origin.')).toBeInTheDocument()
+
+    fireEvent.keyDown(canvas, { key: 'ArrowUp' })
+    expect(vector).not.toHaveAttribute('y1', '240')
+    fireEvent.keyDown(canvas, { key: '0' })
+    expect(vector).toHaveAttribute('y1', '240')
+    expect(zoom).toHaveValue('125%')
+
+    fireEvent.keyDown(canvas, { key: 'ArrowLeft' })
+    fireEvent.keyDown(canvas, { key: 'Home' })
+    expect(vector).toHaveAttribute('x1', '320')
+    expect(zoom).toHaveValue('100%')
+    expect(screen.getByText('View reset to the origin at 100%.')).toBeInTheDocument()
+    expect(undo).toBeDisabled()
+  })
+
   it('sets the zoom level from a typed percentage without creating mathematical history', () => {
     render(<App />)
     const vector = screen.getByLabelText('Vector 1')
@@ -416,7 +445,7 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('Viewport locked.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Zoom in' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Reset view' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Recenter view' })).toBeDisabled()
 
     fireEvent.wheel(canvas, { deltaY: -200, clientX: 320, clientY: 240 })
     fireEvent.keyDown(canvas, { key: 'ArrowLeft' })

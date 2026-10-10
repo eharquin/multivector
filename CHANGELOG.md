@@ -63,6 +63,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   read-only while the viewport is locked. VIEW2D-004 now states the bounds
   extended in #79.
 
+- The viewport's `Reset view` control became `Recenter view`: it and the `0`
+  key bring the origin back to the center at the current zoom, while `Home`
+  still restores the origin at 100 %. Both announce what they did.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag
