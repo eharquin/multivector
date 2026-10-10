@@ -1,6 +1,6 @@
 # PGA(2) Motor Logarithm and Square Root Decisions
 
-**Status:** Proposed 2026-09-14
+**Status:** Accepted 2026-09-29
 **Issue:** #162
 **Date:** 2026-09-14
 **Decision owner:** Algebra-definition and interpretation architecture
@@ -283,10 +283,10 @@ that the exponential and its inverse follow the specification, not ganja.
 
 ## 11. Review checklist
 
-- [ ] D12 domain: unit motors only, `M / M.norm` for the rest
-- [ ] D13 principal logarithm `theta = atan2(w, s)`, centre weighted by the half-angle
-- [ ] D14 closed-form square root `(1 + M) / sqrt(2 (1 + s))`
-- [ ] D15 interpolation `exp(t * log(M))`, no fractional power
-- [ ] D16 bound, branch cut, translator limit, diagnostics
-- [ ] D17 amendment of convention version 1 rather than a version 2
-- [ ] D18 fixture plan
+- [x] D12 domain: unit motors only, `M / M.norm` for the rest
+- [x] D13 principal logarithm `theta = atan2(w, s)`, centre weighted by the half-angle
+- [x] D14 closed-form square root `(1 + M) / sqrt(2 (1 + s))`
+- [x] D15 interpolation `exp(t * log(M))`, no fractional power
+- [x] D16 bound, branch cut, translator limit, diagnostics
+- [x] D17 amendment of convention version 1 rather than a version 2
+- [x] D18 fixture plan
