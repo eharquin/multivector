@@ -139,11 +139,72 @@ function normScalar(value: OwnedMultivector): number {
 
 const idealNormScalar = (value: OwnedMultivector): number => normScalar(dualOwned(value))
 
+/** Storage indices of the even part `s + w e12 + u e01 + v e02` and of the odd part. */
+const EVEN_BIVECTOR = [4, 5, 6] as const
+const ODD = [1, 2, 3, 7] as const
+const E12 = 6
+
+/**
+ * The unit-motor domain of the motor logarithm and square root (decision
+ * record D12, D16): odd coefficients exactly zero, `s*s + w*w = 1`, and
+ * `1 + s` above the branch cut, all within the convention comparison bound.
+ */
+function unitMotor(value: OwnedMultivector, name: 'log' | 'sqrt'): Readonly<{ s: number; w: number; bound: number }> {
+  const coefficients = value.coefficients
+  const scale = Math.max(...coefficients.map(Math.abs))
+  const bound = 64 * Number.EPSILON * Math.max(1, scale)
+  const s = coefficients[0]
+  const w = coefficients[E12]
+  if (ODD.some((index) => coefficients[index] !== 0) || Math.abs(s * s + w * w - 1) > bound) {
+    throw new AlgebraOperationError(
+      'ALG_UNSUPPORTED_DOMAIN',
+      `“${name}” requires a unit motor (an even element with M * ~M = 1); divide by M.norm.`,
+    )
+  }
+  if (1 + s <= bound) {
+    throw new AlgebraOperationError(
+      'ALG_UNSUPPORTED_DOMAIN',
+      `“${name}” has no principal value at the branch cut, where the scalar part is -1 (M = -1 or M = -T).`,
+    )
+  }
+  return { s, w, bound }
+}
+
+/**
+ * The principal logarithm `(theta / w) B` with `theta = atan2(w, s)` (D13).
+ * `atan2` is accurate relative to a small `w`, so the ratio needs no series;
+ * below the bound the motor is the translator it is and `log(T) = B`.
+ */
+function motorLogarithm(value: OwnedMultivector): OwnedMultivector {
+  const { s, w, bound } = unitMotor(value, 'log')
+  const factor = Math.abs(w) <= bound ? 1 : Math.atan2(w, s) / w
+  const result = new Array(DIMENSION).fill(0)
+  for (const index of EVEN_BIVECTOR) result[index] = value.coefficients[index] * factor
+  return finiteOwned(result)
+}
+
+/**
+ * The closed-form principal square root `(1 + M) / sqrt(2 (1 + s))` (D14).
+ * Near the cut `1 + s` cancels, so a negative `s` takes the equal
+ * `w*w / (1 - s)`, which keeps the relative precision of `w`.
+ */
+function motorSquareRoot(value: OwnedMultivector): OwnedMultivector {
+  const { s, w } = unitMotor(value, 'sqrt')
+  const onePlusS = s < 0 ? (w * w) / (1 - s) : 1 + s
+  const factor = 1 / Math.sqrt(2 * onePlusS)
+  return finiteOwned(value.coefficients.map((coefficient, index) =>
+    (index === 0 ? onePlusS : coefficient) * factor))
+}
+
+const isScalarValue = (value: OwnedMultivector): boolean =>
+  value.coefficients.slice(1).every((coefficient) => coefficient === 0)
+
 /**
  * Creates the ganja.js-backed PGA(2) adapter for `Cl(2, 0, 1)` under PGA
  * convention version 1. Every result is copied out of ganja.js before it
- * crosses this boundary; duality, the regressive product, norms, and the
- * exponential follow the specification rather than the backend.
+ * crosses this boundary; duality, the regressive product, norms, the
+ * exponential, and the motor logarithm and square root follow the
+ * specification rather than the backend.
  */
 export function createPga2Engine(): AlgebraEngine {
   const basis = PGA_2D_BASIS
@@ -245,6 +306,11 @@ export function createPga2Engine(): AlgebraEngine {
       return closed
     },
     scalarFunction(name, args) {
+      // The scalar branches of language section 10 come first; a non-scalar
+      // argument of `log` or `sqrt` takes the motor branch (D16).
+      if ((name === 'log' || name === 'sqrt') && args.length === 1 && !isScalarValue(args[0])) {
+        return name === 'log' ? motorLogarithm(args[0]) : motorSquareRoot(args[0])
+      }
       return scalar(scalarFunctionValue(name, args))
     },
   }

@@ -1,6 +1,6 @@
 # PGA(2) Motor Logarithm and Square Root Decisions
 
-**Status:** Accepted 2026-09-29
+**Status:** Accepted 2026-09-29; implemented 2026-10-11
 **Issue:** #162
 **Date:** 2026-09-14
 **Decision owner:** Algebra-definition and interpretation architecture
@@ -70,6 +70,14 @@ Derivation: `exp(lambda B) = cos(lambda w) + (sin(lambda w)/w) B`, so
 that is `lambda w = theta`. The translator case is the `w -> 0` limit
 (`theta / w -> 1`) and is exact because the series terminates.
 
+`theta` is the motor's parameter, not the rotation angle. A rotation by
+`alpha` is `M = exp(-(alpha/2) P)` (D9), so `s = cos(alpha/2)`,
+`w = -sin(alpha/2)` for a unit point `P`, and `theta = -alpha/2`: the `e12`
+coefficient of `log(M)`, which the interpretation reports as the weight, is
+`theta` itself, that is minus the half-angle of the rotation. No further
+halving is involved; `exp(log(M) / 2)` halves it again to `-alpha/4`, the
+square root.
+
 Consequences, each a fixture:
 
 - `log(exp(-(alpha/2) e12)) = -(alpha/2) e12` for `alpha` in `(-2 pi, 2 pi)`:
@@ -88,7 +96,7 @@ Consequences, each a fixture:
 - For a general motor the logarithm identifies the motion: `M = T(1, 2) *
 exp(-(pi/4) e12) = 0.70711 - 1.06066 e01 - 0.35355 e02 - 0.70711 e12` (the
   D9 worked example) has `theta = -pi/4` and `log(M) = -(pi/4) (e12 + 1.5 e01
-  - 0.5 e02) = -(pi/4) point(-0.5, 1.5)`: `M`is the rotation by`pi/2`about`(-0.5, 1.5)`, which the direct computation confirms (`c - rot(c) = (1, 2)`for`c = (-0.5, 1.5)`).
+  + 0.5 e02) = -(pi/4) point(-0.5, 1.5)`: `M`is the rotation by`pi/2`about`(-0.5, 1.5)`, which the direct computation confirms (`c - rot(c) = (1, 2)`for`c = (-0.5, 1.5)`).
 - The branch is the principal one of the group, not of the rotation angle:
   `-R` and `R` are distinct motors with distinct logarithms. `exp(1.5 pi e12)
 = -e12` has `theta = -pi/2` and `log = -(pi/2) e12`, not `1.5 pi e12`;
@@ -108,7 +116,12 @@ sqrt(M) = (1 + M) / sqrt(2 (1 + s))
 ```
 
 Proof: `(1 + M)^2 = 1 + 2M + M^2 = 1 + 2M + (s*s - w*w) + 2 s B = 2 (1 + s) M`
-using `1 - w*w = s*s`. The result is the unit motor `exp(log(M) / 2)` of the
+using `1 - w*w = s*s`. Near the cut `1 + s` cancels catastrophically: `s`
+close to `-1` carries an absolute error of about `1e-16`, so `1 + s = 5e-13`
+keeps only three or four digits and `sqrt(M) * sqrt(M)` misses `M` by `1e-4`.
+For `s < 0` the implementation therefore uses the equal value
+`w*w / (1 - s)`, which keeps the relative precision of `w`; under
+`s*s + w*w = 1` the square is still exactly `M`. The result is the unit motor `exp(log(M) / 2)` of the
 principal branch (its scalar part `(1 + s) / sqrt(2 (1 + s)) > 0` selects
 `theta / 2` in `(-pi/2, pi/2)`), computed without the logarithm's transcendental
 round trip. Worked examples:
@@ -173,6 +186,13 @@ scale = max(abs(coefficient)) over the argument
 - **Translator limit:** `abs(w) <= bound` selects the `w = 0` branch, so a
   motor whose `e12` coefficient is floating-point noise is treated as the
   translator it is; the two branches are continuous there (`theta / w -> 1`).
+  Above the bound `theta / w` is computed directly and needs no series:
+  `atan2(w, s)` is accurate relative to a small `w`, and dividing by the same
+  `w` loses nothing. Approaching the cut (`s < 0`), `theta / w` grows like
+  `pi / w` because the value does: the logarithm of a rotation by nearly
+  `2 pi` about a distant centre is large. That is the conditioning of the
+  function, not an instability, and the cut test above is a tolerance, not an
+  exact `w = 0`.
 - The bound governs the choice of branch only; coefficients of the result are
   owned values computed from the argument, never rounded to it, and the
   interpretation's classification tolerance (PGA-INT-005) is not involved.
@@ -209,7 +229,7 @@ coefficient by coefficient):
 | Rotation about a point | `R = exp(-(pi/2) point(2, 1))`: `log(R) = -(pi/2) point(2, 1)`, `sqrt(R) = exp(-(pi/4) point(2, 1))`                                                  |
 | Translator             | `log(1 - 1.5 e01) = -1.5 e01`, `sqrt(1 - 1.5 e01) = 1 - 0.75 e01`, `exp(log(T)) = T` exactly                                                          |
 | General motor          | the D9 motor: `log(M) = -(pi/4) point(-0.5, 1.5)`, `sqrt(M) = exp(-(pi/8) point(-0.5, 1.5))`                                                          |
-| Identities             | `exp(log(M)) = M`, `sqrt(M) * sqrt(M) = M`, `exp(0.5 log(M)) = sqrt(M)`, `exp(2 log(M)) = M * M`, `log(exp(X)) = X` for `abs(w) < pi`                 |
+| Identities             | `exp(log(M)) = M`, `sqrt(M) * sqrt(M) = M`, `exp(0.5 log(M)) = sqrt(M)`, `exp(2 log(M)) = M * M` on the D9 motor (`w != 0` with a translation), on a rotation about `point(2, 1)` with `theta` within `1e-6` of `pi`, and on the other motors above; `log(exp(X)) = X` for `abs(w) < pi` |
 | Principal branch       | `log(exp(1.5 pi e12)) = -(pi/2) e12`, `log(exp(2 pi e12)) = 0`, `log(-R) != -log(R)`                                                                  |
 | Scalar branches        | `log(exp(2)) = 2`, `sqrt(4) = 2`, `log(0)`, `log(-1)`, `sqrt(-1)` refused                                                                             |
 | Diagnostics            | `log(-1)`, `sqrt(-1)`, `log(-(1 - 1.5 e01))`, `log(2 * exp(-(pi/4) e12))`, `log(e1)`, `sqrt(line(1, 0, -1))`, `log(1 + e1)`, `log(e01)` (`s = w = 0`) |
@@ -218,7 +238,8 @@ coefficient by coefficient):
 Every fixture is also to be cross-checked against ganja.js `Algebra(2, 0, 1)`
 `Log` and `Exp`; a discrepancy is resolved by this record (D11 rule).
 
-Checked on 2026-09-14 with ganja.js from Studio's lockfile: `Log` agrees with
+Checked on 2026-09-14 with ganja.js from Studio's lockfile, and again on
+2026-10-11 with ganja.js 1.0.204 from this repository: `Log` agrees with
 D13 on every unit motor above, including those with a negative scalar part
 (`-R`, `exp(-(3 pi/4) e12)`, `exp(-(pi/2) point(2, 1))`). The expected
 divergences are exactly the arguments D12 and D16 refuse, where ganja returns
@@ -228,7 +249,7 @@ a value without any diagnostic:
 | ---------------------- | ----------- | --------------------------------------------------- |
 | `-1`                   | `0`         | branch cut, refused (`exp(0) = 1 != -1`)            |
 | `-(1 - 1.5 e01)`       | `1.5 e01`   | branch cut, refused (`exp(1.5 e01) = +T`, not `-T`) |
-| `2 * exp(-(pi/4) e12)` | `0`         | not a unit motor, refused                           |
+| `2 * exp(-(pi/4) e12)` | `0` (Studio), `NaN` (1.0.204) | not a unit motor, refused             |
 | `e01`                  | `e01`       | not a unit motor (`s = w = 0`), refused             |
 
 These rows are fixtures of the diagnostic family; they must not be "fixed"
@@ -267,10 +288,10 @@ that the exponential and its inverse follow the specification, not ganja.
 
 ## 10. Consequences for the implementation
 
-- `pgaEngine.functions` registers `log` and `sqrt` with arity 1; the language
-  §10 scalar functions of the same names dispatch to the engine when the
-  argument is not scalar (the lowering keeps `scalar-function` for scalar
-  arguments and the engine owns the motor branches). Capability identifiers
+- `log` and `sqrt` keep their language §10 lowering to `scalar-function`; the
+  PGA engine's `scalarFunction` takes the motor branch when the argument has
+  a non-zero non-scalar coefficient, so the names are not added to the
+  engine's registered `functions`, which only serve generic calls. Capability identifiers
   `org.multivector.capability.motor-logarithm` and
   `org.multivector.capability.motor-square-root`, absent from VGA so that
   `log(e12)` under VGA keeps the scalar-only diagnostic of §10.
@@ -278,8 +299,10 @@ that the exponential and its inverse follow the specification, not ganja.
   drawn as a Euclidean or ideal point by PGA-VIZ-001/002, and its description
   shows the weight (the half-angle) by PGA-INT-004.
 - New requirements PGA-013 (logarithm), PGA-014 (square root), and the
-  amended convention §8; the PGA example gains an interpolation walkthrough
-  and the showcase two rows (`H = sqrt(M)`, `S = exp(t * log(M)) >>> P`).
+  amended convention §8; the PGA example gains a logarithm and square-root
+  walkthrough, and the showcase three rows: `R = sqrt(M * L / (M.norm *
+  L.norm))`, the rotation about `A` from side `L` to side `M`, a slider `t`,
+  and `S = exp(t * log(R)) >>> B`, which sweeps `B` onto `M`.
 
 ## 11. Review checklist
 

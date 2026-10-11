@@ -5,7 +5,10 @@
 **Convention version:** 1
 **Applies to:** PGA geometric dimension 2
 **Refines:** PGA-005, PGA-006, ALG-013, and ALG-031
-**Decision record:** [PGA(2) Convention Decisions](../architecture/pga-2d-convention-decisions.md)
+**Decision records:** [PGA(2) Convention Decisions](../architecture/pga-2d-convention-decisions.md),
+[PGA(2) Motor Logarithm and Square Root Decisions](../architecture/pga-2d-motor-logarithm-decisions.md)
+**Amended:** 2026-10-11, section 8 adds the motor logarithm and square root
+(D12–D18) to version 1; no previously valid source changes value (D17)
 **License:** MIT
 
 ## 1. Purpose and authority
@@ -203,8 +206,44 @@ Consequences, each fixed by a reference fixture:
   translation by `(dx, dy)`;
 - `exp` of an ideal point translates perpendicular to its direction.
 
-The logarithm of a motor and non-integer powers are not part of convention
-version 1.
+### 8.1 Logarithm and square root of a motor
+
+A _unit motor_ is an even value `M = s + B`, with `B = w e12 + u e01 + v e02`,
+whose odd coefficients are exactly zero and for which `M * ~M = s*s + w*w = 1`
+within the comparison bound below. Its principal logarithm, with
+`theta = atan2(w, s)` in `(-pi, pi]`, and its principal square root are:
+
+```text
+log(M)  = (theta / w) * B                   when w != 0
+log(M)  = B                                 when w = 0 and s = 1 (translator)
+sqrt(M) = (1 + M) / sqrt(2 * (1 + s))       when s != -1
+```
+
+`exp(log(M)) = M`, `sqrt(M) * sqrt(M) = M`, and `sqrt(M) = exp(log(M) / 2)`.
+For a rotation by `alpha` about a unit point `P`, `M = exp(-(alpha/2) P)`, so
+`theta = -alpha/2` and `log(M) = -(alpha/2) P`: the centre weighted by minus
+the half-angle. The logarithm of a translator is the ideal point of the
+exponential above. `log(exp(X)) = X` when the `e12` coefficient of `X` is in
+`(-pi, pi)`. The branch is that of the group: `M` and `-M` are the same rigid
+motion with different logarithms, and `exp(t * log(M))` interpolates from 1 to
+`M` along the principal branch, the long way round when `s < 0`.
+
+The decisions use the comparison bound
+`64 * Number.EPSILON * max(1, scale)`, where `scale` is the largest absolute
+coefficient of `M`:
+
+- a value whose odd coefficients are not all zero, or with
+  `abs(s*s + w*w - 1)` above the bound, is not a unit motor and receives a
+  domain diagnostic that suggests dividing by `M.norm`;
+- `1 + s` at or below the bound is the branch cut (`M = -1`, `M = -T`) and
+  receives a domain diagnostic for both functions;
+- `abs(w)` at or below the bound selects the translator branch of `log`.
+
+The bound selects branches only; result coefficients are computed from the
+argument's owned coefficients. A value whose non-scalar coefficients are all
+exactly zero keeps the scalar `log` and `sqrt` of language section 10.
+Non-integer powers are not part of convention version 1; `exp(t * log(M))` is
+their explicit form.
 
 ## 9. Constructors
 
@@ -295,6 +334,10 @@ fixtures. They cover:
   perpendicular translation of an ideal exponent;
 - reflections of a point and of a line, a glide reflection and its unit norm,
   with the negated weight of reflected points;
+- the logarithm and square root of a rotor about the origin, of a rotor with a
+  negative scalar part, of a rotation about a point, of a translator, and of a
+  general motor, the principal branch, and the arguments they refuse (with the
+  values ganja.js `Log` returns for them instead);
 - Euclidean and ideal norms, classification, sign-preserving normalization,
   and position read-back, including a negative weight.
 

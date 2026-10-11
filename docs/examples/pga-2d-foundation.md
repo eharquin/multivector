@@ -35,10 +35,15 @@ norms; the scalar functions only turn them into numbers:
 | `area = (A & B & C) / 2` | Scalar −7.5 | the signed area: the triple join is twice the oriented area |
 | `N = line(1, 0, -1)` | Line | the literal vertical line `x = 1`, movable from the viewport |
 | `beta = atan2((L ^ N).e12, L \| N)` | Scalar −1.81577 | the oriented angle from `L` to `N` |
+| `R = sqrt(M * L / (M.norm * L.norm))` | Motor | the rotation about `A` that turns `L` onto `M`: `M * L` reflects in `L` then in `M`, a rotation by twice the angle, and `sqrt` halves it |
+| `t = 0.5` | Scalar 0.5 | a slider from `0` to `1` |
+| `S = exp(t * log(R)) >>> B` | Point at (1.9735, −0.100595) | `B` turned about `A` by `t` times the angle: from `B` at `t = 0` to the side `M` at `t = 1` |
 
 Drag `C` around `A` and `B`: `alpha` and `deg` follow, change sign when `C`
 crosses `L`, and `area` with them; `hC` is zero exactly on `L`. Drag `N` or
 rotate it through its normal handle: `beta` follows, and `deg` is unchanged.
+Play `t`: `S` sweeps the arc from `B` to `M` and back; drag `C` and the arc
+follows the angle at `A`.
 
 The recipes generalize: `norm(P & Q)` is a distance between unit points,
 `acos((L | M) / (L.norm * M.norm))` the unoriented angle between two lines in
@@ -53,12 +58,12 @@ point; swapping the operands of the oriented angle negates it.
 2. Add `X = L ^ N`: the meet, `Point at (1, 1.75), weight −4`; the weight comes
    from the lines' coefficients, not from the position. Then `Q = L ^ L`: a
    Scalar zero, since a line meets itself nowhere.
-3. Add `t = 0`, open its appearance menu and choose the slider (`0` to `tau`,
-   loop); then `R = exp(-(t/2) * A)` and `P = R >>> B`: at `t = 0` `R` is the
+3. Add `a = 0`, open its appearance menu and choose the slider (`0` to `tau`,
+   loop); then `K = exp(-(a/2) * A)` and `P = K >>> B`: at `a = 0` `K` is the
    scalar 1, and as soon as the slider moves it is a Motor, the rotation by
-   `t` about `A`; `P` circles `A` at the distance `dAB`. `Escape` stops the
+   `a` about `A`; `P` circles `A` at the distance `dAB`. `Escape` stops the
    animation.
-4. Add `T = 1 - e01 - 0.5 e02`, a Translator by (2, 1), and `S = T >>> X`:
+4. Add `T = 1 - e01 - 0.5 e02`, a Translator by (2, 1), and `Y = T >>> X`:
    `Point at (3, 2.75), weight −4`, the weight preserved.
 5. Add `F = N >>> A`: `Point at (4, 1), weight −1`, the reflection of `A` in
    `N`; the negative weight is the orientation reversal of an odd versor, not
@@ -66,6 +71,28 @@ point; swapping the operands of the oriented angle negates it.
    translates by `T` then reflects in `N`.
 6. Add `I = inorm(L)`: the ideal norm of the join, `6`.
 7. Write `e20` anywhere: it is accepted and displayed as `-e02`.
+
+## Take the logarithm and the square root of a motor
+
+`log` and `sqrt` accept a unit motor, an even value with `M * ~M = 1`, as well
+as a scalar
+([convention section 8](../specifications/pga-conventions.md#8-exponential)):
+
+1. Add `H = log(R)`: `Point at (-2, 1), weight 0.515188`. The logarithm of a
+   rotation is its centre, `A`, weighted by minus half the angle: `R` turns by
+   `alpha = −1.03038`.
+2. Add `D = log(1 - 1.5 e01)`: `-1.5e01`, an ideal point. The logarithm of a
+   translator is perpendicular to the translation by `(3, 0)`, as for `exp`.
+3. Add `E = sqrt(1 - 1.5 e01)`: `1 - 0.75e01`, half the translation.
+   `E * E` gives the translator back, and `exp(log(R))` gives `R` back.
+4. `exp(t * log(R))` is the interpolation of the showcase. It follows the
+   principal branch, so for a motor with a negative scalar part it takes the
+   long way round. `-R` is the same rigid motion as `R`, but `log(-R)` is
+   `Point at (-2, 1), weight −2.6264`: a rotation by `2 pi − 1.03038` the
+   other way, and `exp(t * log(-R)) >>> B` sweeps the long arc.
+5. Write `log(2 * R)`: a diagnostic asks for a unit motor; divide by
+   `(2 * R).norm`. `log(-(1 - 1.5 e01))` and `sqrt(-1)` are refused on the
+   branch cut, where the scalar part is −1.
 
 ## Ideal points and the line at infinity
 

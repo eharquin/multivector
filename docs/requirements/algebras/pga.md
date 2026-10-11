@@ -4,7 +4,8 @@
 **Date:** 2026-09-13
 **Initial supported dimension:** 2
 **Planned dimensions:** 3
-**Decision record:** [PGA(2) Convention Decisions](../../architecture/pga-2d-convention-decisions.md)
+**Decision records:** [PGA(2) Convention Decisions](../../architecture/pga-2d-convention-decisions.md),
+[PGA(2) Motor Logarithm and Square Root Decisions](../../architecture/pga-2d-motor-logarithm-decisions.md)
 **License:** MIT
 
 ## 1. Definition
@@ -30,6 +31,7 @@ first activated member is PGA(2).
   products; reverse, grade involution, and the Hodge dual; grade projection
   and coefficient access; integer powers; inverse and division where
   mathematically defined; the sandwich action; the exponential of bivectors;
+  the logarithm and square root of unit motors (PGA-013, PGA-014);
   and the Euclidean norm `norm` and ideal norm `inorm` as separately
   identified capabilities.
 - **PGA-006:** Basis order, duality, regressive product, inner product, norms,
@@ -65,6 +67,17 @@ milestone:
   parameters, definition and convention versions, and the interpretation and
   visualizer identifiers using the existing document format; no PGA-specific
   schema fork is permitted.
+- **PGA-013:** `log` shall return the principal logarithm of a unit motor
+  defined by [convention section 8.1](../../specifications/pga-conventions.md#81-logarithm-and-square-root-of-a-motor),
+  under the capability `org.multivector.capability.motor-logarithm`. A
+  non-unit, odd, or mixed argument and an argument on the branch cut shall
+  receive a domain diagnostic rather than a value; a scalar argument keeps the
+  language section 10 logarithm.
+- **PGA-014:** `sqrt` shall return the principal square root of a unit motor,
+  `(1 + M) / sqrt(2 (1 + s))`, under the capability
+  `org.multivector.capability.motor-square-root`, with the same diagnostics
+  and scalar branch as PGA-013. `sqrt(M) * sqrt(M) = M` and
+  `exp(log(M) / 2) = sqrt(M)` shall be conformance fixtures.
 
 ## 3. Plane-based geometry interpretation
 
