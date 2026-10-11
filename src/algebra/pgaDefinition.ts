@@ -29,6 +29,8 @@ export const PGA_DEFINITION: AlgebraDefinition = Object.freeze({
     'org.multivector.capability.normalize',
     'org.multivector.capability.exp',
     'org.multivector.capability.scalar-functions',
+    'org.multivector.capability.motor-logarithm',
+    'org.multivector.capability.motor-square-root',
     'org.multivector.capability.pseudoscalar',
   ]),
   validateParameters(parameters) {
@@ -51,12 +53,12 @@ export const PGA_DEFINITION: AlgebraDefinition = Object.freeze({
   },
   standardInterpretationId: 'org.multivector.pga-2d',
   standardVisualizerId: 'org.multivector.pga-2d',
-  // Two points, the line through them, a fixed line and their meet, an ideal
-  // point, a slider-driven rotation about A, a translation, and a reflection.
   // A triangle whose sides are joins: distances are norms of joins, the
   // angle at A comes from the inner product and the meet of two sides, the
   // height from the outer product of a side and the opposite vertex, and the
   // area from the triple join. N is a literal line, movable from the viewport.
+  // R, the square root of the product of the two unit sides through A, turns
+  // L onto M about A; S interpolates it with exp(t log R) and sweeps B onto M.
   showcase: [
     { source: 'A = point(-2, 1)' },
     { source: 'B = point(2, 2)' },
@@ -71,5 +73,8 @@ export const PGA_DEFINITION: AlgebraDefinition = Object.freeze({
     { source: 'area = (A & B & C) / 2' },
     { source: 'N = line(1, 0, -1)' },
     { source: 'beta = atan2((L ^ N).e12, L | N)' },
+    { source: 'R = sqrt(M * L / (M.norm * L.norm))' },
+    { source: 't = 0.5', slider: { minimumSource: '0', maximumSource: '1', stepSource: '0.01', durationSeconds: 3 } },
+    { source: 'S = exp(t * log(R)) >>> B' },
   ],
 })

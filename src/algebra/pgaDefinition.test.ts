@@ -94,6 +94,22 @@ describe('PGA(2) sources through the language', () => {
     expect(scalar('inorm(line(1, 0, -1) ^ point(-1, 5))')).toBeCloseTo(2, 12)
   })
 
+  it('takes the logarithm and square root of unit motors, and keeps the scalar branches', () => {
+    expect(value('log(1 - 1.5 e01)').inspection).toBe('-1.5e01')
+    expect(value('sqrt(1 - 1.5 e01)').inspection).toBe('1 - 0.75e01')
+    const generator = value('log(exp(-(pi/4) e12))').value.coefficients
+    expect(generator[6]).toBeCloseTo(-Math.PI / 4, 12)
+    const half = value('exp(0.5 * log(exp(-(pi/2) * point(2, 1)))) - sqrt(-point(2, 1))').value.coefficients
+    half.forEach((coefficient) => expect(coefficient).toBeCloseTo(0, 12))
+    expect(value('log(exp(2))').inspection).toBe('2')
+    expect(value('sqrt(4)').inspection).toBe('2')
+    expect(evaluateSource('log(2 * exp(e12))', context))
+      .toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_UNSUPPORTED_DOMAIN', message: expect.stringMatching(/unit motor/) } })
+    expect(evaluateSource('sqrt(-(1 - 1.5 e01))', context))
+      .toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_UNSUPPORTED_DOMAIN', message: expect.stringMatching(/branch cut/) } })
+    expect(evaluateSource('log(-1)', context)).toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' } })
+  })
+
   it('reports arity, non-scalar arguments, and unavailable functions', () => {
     expect(evaluateSource('point(1)', context)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_ARITY' } })
     expect(evaluateSource('point(e1, 2)', context)).toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' } })
@@ -107,5 +123,7 @@ describe('PGA(2) sources through the language', () => {
     expect(evaluateSource('inorm(e1)', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' } })
     expect(evaluateSource('e1.inorm', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'LANG_UNSUPPORTED_FUNCTION' } })
     expect(evaluateSource('vector(1, 2)', vga)).toMatchObject({ status: 'valid', inspection: 'e1 + 2e2' })
+    expect(evaluateSource('log(exp(e12))', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' } })
+    expect(evaluateSource('sqrt(e1)', vga)).toMatchObject({ status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' } })
   })
 })

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   PGA2_BASIS,
   PGA2_CLASSIFICATION_FIXTURES,
+  PGA2_MOTOR_REFUSAL_FIXTURES,
   PGA2_OPERATION_FIXTURES,
   type Pga2Coefficients,
 } from './pga2ReferenceFixtures'
@@ -10,7 +11,7 @@ import {
 /*
  * Cross-checks the hand-computed fixtures against ganja.js `Cl(2,0,1)`, the
  * library the future engine will wrap. The library is evidence, not
- * authority: the one known difference is recorded below and the fixtures keep
+ * authority: the known differences are recorded below and the fixtures keep
  * the specification's value.
  */
 
@@ -34,6 +35,9 @@ const regressive = (left: Backend, right: Backend): Backend =>
 const sandwich = (versor: Backend, value: Backend): Backend =>
   versor.Mul(value).Mul(versor.Reverse)
 
+const halve = (value: Backend): Backend =>
+  new Pga2(fromBackend(value).map((coefficient) => coefficient / 2))
+
 describe('PGA(2) reference fixtures against ganja.js Cl(2,0,1)', () => {
   it('shares the canonical basis order', () => {
     expect(Pga2.describe().basis).toEqual(['1', ...PGA2_BASIS.slice(1)])
@@ -51,6 +55,9 @@ describe('PGA(2) reference fixtures against ganja.js Cl(2,0,1)', () => {
           case 'reverse': return left.Reverse
           case 'sandwich': return sandwich(left, right)
           case 'exp': return left.Exp()
+          case 'log': return left.Log()
+          // ganja has no motor square root: D14 equals exp(log(M) / 2).
+          case 'sqrt': return halve(left.Log()).Exp()
         }
       })()
       expectClose(fromBackend(result), fixture.expected)
@@ -64,6 +71,23 @@ describe('PGA(2) reference fixtures against ganja.js Cl(2,0,1)', () => {
     const join = fromBackend(regressive(left, right))
     expectClose(vee.map((coefficient) => -coefficient), join as unknown as Pga2Coefficients)
   })
+})
+
+describe('PGA(2) motor refusals against ganja.js Log', () => {
+  // D18: ganja returns a value without a diagnostic where D12 and D16 refuse;
+  // the record keeps the refusal.
+  for (const fixture of PGA2_MOTOR_REFUSAL_FIXTURES) {
+    if (!fixture.ganjaLog) continue
+    it(`${fixture.id}: ganja Log returns a value the record refuses`, () => {
+      const log = fromBackend(toBackend(fixture.value).Log())
+      if (fixture.ganjaLog === 'non-finite') {
+        expect(log.some((coefficient) => Number.isNaN(coefficient))).toBe(true)
+      } else {
+        expectClose(log, fixture.ganjaLog!)
+        expect(fromBackend(new Pga2(log).Exp())).not.toEqual([...fixture.value])
+      }
+    })
+  }
 })
 
 describe('PGA(2) classification fixtures', () => {

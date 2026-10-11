@@ -6,6 +6,7 @@ declare module 'ganja.js' {
     Wedge(other: AlgebraElement): AlgebraElement
     Vee(other: AlgebraElement): AlgebraElement
     Exp(): AlgebraElement
+    Log(): AlgebraElement
     readonly Dual: AlgebraElement
     readonly Reverse: AlgebraElement
   }

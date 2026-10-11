@@ -1,8 +1,9 @@
 /**
  * Independent reference fixtures for the PGA(2) convention, version 1.
  *
- * Every expected value was computed by hand from the decision record
- * (`docs/architecture/pga-2d-convention-decisions.md`) and confirmed by an
+ * Every expected value was computed by hand from the decision records
+ * (`docs/architecture/pga-2d-convention-decisions.md`, and
+ * `pga-2d-motor-logarithm-decisions.md` for `log` and `sqrt`) and confirmed by an
  * eight-coefficient `Cl(2,0,1)` product written for that review. Nothing here
  * depends on an engine or a backend: the fixtures exist before the PGA engine
  * so that the engine, and any reference library used to cross-check it, are
@@ -54,6 +55,17 @@ export const rotorQuarterTurn: Pga2Coefficients = blades({ e: HALF_SQRT2, e12: -
 /** D9: `T(dx, dy) = 1 - (dx/2) e01 - (dy/2) e02`. */
 export const translator = (dx: number, dy: number): Pga2Coefficients =>
   blades({ e: 1, e01: -dx / 2, e02: -dy / 2 })
+/** D9: `M = T(1, 2) * exp(-(pi/4) e12)`, the rotation by `pi/2` about `(-0.5, 1.5)`. */
+export const motorD9: Pga2Coefficients =
+  blades({ e: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 })
+
+/**
+ * `exp(-(alpha/2) P) = cos(alpha/2) - sin(alpha/2) P` for a bivector `P` with
+ * `P * P = -1` (convention section 8): the rotation by `alpha` about `P`.
+ */
+export const rotation = (alpha: number, centre: Pga2Coefficients): Pga2Coefficients =>
+  centre.map((coefficient, index) =>
+    (index === 0 ? Math.cos(alpha / 2) : 0) - Math.sin(alpha / 2) * coefficient) as unknown as Pga2Coefficients
 
 export type Pga2Operation =
   | 'product'
@@ -63,10 +75,13 @@ export type Pga2Operation =
   | 'reverse'
   | 'sandwich'
   | 'exp'
+  | 'log'
+  | 'sqrt'
 
 export type Pga2OperationFixture = Readonly<{
   id: string
   family: 'algebra' | 'incidence' | 'meet' | 'duality' | 'join' | 'versor-even' | 'versor-odd' | 'equivalence'
+    | 'motor-log' | 'motor-sqrt'
   decision: string
   description: string
   operation: Pga2Operation
@@ -262,13 +277,13 @@ export const PGA2_OPERATION_FIXTURES: readonly Pga2OperationFixture[] = [
     id: 'motor-product', family: 'versor-even', decision: 'D9',
     description: 'M = T(1, 2) * exp(-(pi/4) e12)',
     operation: 'product', operands: [translator(1, 2), rotorQuarterTurn],
-    expected: blades({ e: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }),
+    expected: motorD9,
   },
   {
     id: 'motor-action', family: 'versor-even', decision: 'D9',
     description: '(T(1, 2) * exp(-(pi/4) e12)) >>> point(1, 0) = point(1, 3): rotate, then translate',
     operation: 'sandwich',
-    operands: [blades({ e: HALF_SQRT2, e12: -HALF_SQRT2, e01: -1.5 * HALF_SQRT2, e02: -0.5 * HALF_SQRT2 }), point(1, 0)],
+    operands: [motorD9, point(1, 0)],
     expected: point(1, 3),
   },
   // Odd versors
@@ -302,6 +317,85 @@ export const PGA2_OPERATION_FIXTURES: readonly Pga2OperationFixture[] = [
     description: 'G >>> point(0, 1) = -point(1, -1)',
     operation: 'sandwich', operands: [blades({ e2: 1, e012: -0.5 }), point(0, 1)], expected: scale(point(1, -1), -1),
   },
+  // Motor logarithm and square root (motor-logarithm decision record D13, D14)
+  {
+    id: 'log-rotor', family: 'motor-log', decision: 'D13',
+    description: 'log(exp(-(pi/4) e12)) = -(pi/4) e12: the half-angle generator',
+    operation: 'log', operands: [rotorQuarterTurn], expected: blades({ e12: -Math.PI / 4 }),
+  },
+  {
+    id: 'log-rotor-negative-scalar', family: 'motor-log', decision: 'D13',
+    description: 'log(exp(-(3 pi/4) e12)) = -(3 pi/4) e12 although the scalar part is negative',
+    operation: 'log', operands: [rotation(1.5 * Math.PI, blade('e12'))], expected: blades({ e12: -0.75 * Math.PI }),
+  },
+  {
+    id: 'log-rotation-about-point', family: 'motor-log', decision: 'D13',
+    description: 'log(exp(-(pi/2) point(2, 1))) = -(pi/2) point(2, 1): the centre weighted by -alpha/2',
+    operation: 'log', operands: [scale(point(2, 1), -1)], expected: scale(point(2, 1), -Math.PI / 2),
+  },
+  {
+    id: 'log-translator', family: 'motor-log', decision: 'D13',
+    description: 'log(1 - 1.5 e01) = -1.5 e01 = ipoint(0, -1.5), exactly',
+    operation: 'log', operands: [translator(3, 0)], expected: ipoint(0, -1.5),
+  },
+  {
+    id: 'log-general-motor', family: 'motor-log', decision: 'D13',
+    description: 'log(T(1, 2) * exp(-(pi/4) e12)) = -(pi/4) point(-0.5, 1.5)',
+    operation: 'log', operands: [motorD9], expected: scale(point(-0.5, 1.5), -Math.PI / 4),
+  },
+  {
+    id: 'log-principal-branch', family: 'motor-log', decision: 'D13',
+    description: 'log(exp(1.5 pi e12)) = log(-e12) = -(pi/2) e12, not 1.5 pi e12',
+    operation: 'log', operands: [blades({ e12: -1 })], expected: blades({ e12: -Math.PI / 2 }),
+  },
+  {
+    id: 'sqrt-rotor', family: 'motor-sqrt', decision: 'D14',
+    description: 'sqrt(exp(-(pi/4) e12)) = exp(-(pi/8) e12)',
+    operation: 'sqrt', operands: [rotorQuarterTurn], expected: rotation(Math.PI / 4, blade('e12')),
+  },
+  {
+    id: 'sqrt-rotor-negative-scalar', family: 'motor-sqrt', decision: 'D14',
+    description: 'sqrt(exp(-(3 pi/4) e12)) = exp(-(3 pi/8) e12), the principal half',
+    operation: 'sqrt', operands: [rotation(1.5 * Math.PI, blade('e12'))], expected: rotation(0.75 * Math.PI, blade('e12')),
+  },
+  {
+    id: 'sqrt-rotation-about-point', family: 'motor-sqrt', decision: 'D14',
+    description: 'sqrt(-point(2, 1)) = (1 - point(2, 1)) / sqrt(2) = exp(-(pi/4) point(2, 1))',
+    operation: 'sqrt', operands: [scale(point(2, 1), -1)], expected: rotation(Math.PI / 2, point(2, 1)),
+  },
+  {
+    id: 'sqrt-translator', family: 'motor-sqrt', decision: 'D14',
+    description: 'sqrt(1 - 1.5 e01) = 1 - 0.75 e01, half the translation',
+    operation: 'sqrt', operands: [translator(3, 0)], expected: translator(1.5, 0),
+  },
+  {
+    id: 'sqrt-general-motor', family: 'motor-sqrt', decision: 'D14',
+    description: 'sqrt(T(1, 2) * exp(-(pi/4) e12)) = exp(-(pi/8) point(-0.5, 1.5))',
+    operation: 'sqrt', operands: [motorD9], expected: rotation(Math.PI / 4, point(-0.5, 1.5)),
+  },
+]
+
+/**
+ * Arguments that `log` and `sqrt` refuse (D12, D16): non-unit, odd, mixed,
+ * and branch-cut values. `ganjaLog` is what ganja.js `Log` returns without a
+ * diagnostic (`'non-finite'` for NaN coefficients); it must not be adopted.
+ */
+export type Pga2MotorRefusalFixture = Readonly<{
+  id: string
+  function: 'log' | 'sqrt'
+  reason: 'unit-motor' | 'branch-cut'
+  value: Pga2Coefficients
+  ganjaLog?: Pga2Coefficients | 'non-finite'
+}>
+
+export const PGA2_MOTOR_REFUSAL_FIXTURES: readonly Pga2MotorRefusalFixture[] = [
+  { id: 'log-negated-translator', function: 'log', reason: 'branch-cut', value: scale(translator(3, 0), -1), ganjaLog: blades({ e01: 1.5 }) },
+  { id: 'sqrt-negated-translator', function: 'sqrt', reason: 'branch-cut', value: scale(translator(3, 0), -1) },
+  { id: 'log-scaled-rotor', function: 'log', reason: 'unit-motor', value: scale(rotorQuarterTurn, 2), ganjaLog: 'non-finite' },
+  { id: 'log-null-bivector', function: 'log', reason: 'unit-motor', value: blade('e01'), ganjaLog: blade('e01') },
+  { id: 'log-line', function: 'log', reason: 'unit-motor', value: blade('e1') },
+  { id: 'sqrt-line', function: 'sqrt', reason: 'unit-motor', value: line(1, 0, -1) },
+  { id: 'log-mixed', function: 'log', reason: 'unit-motor', value: blades({ e: 1, e1: 1 }) },
 ]
 
 export const PGA2_CLASSIFICATION_FIXTURES: readonly Pga2ClassificationFixture[] = [

@@ -27,6 +27,16 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   read-outs they enable (`norm(A & B)`, `acos(Lu | M)`,
   `atan2((Lu ^ M).e12, Lu | M)`, `(M ^ A).e012`).
 
+- Added the principal logarithm and square root of PGA(2) unit motors,
+  `log(M)` and `sqrt(M)`, as an amendment of PGA convention version 1
+  (section 8.1, PGA-013, PGA-014): the logarithm of a rotation is its centre
+  weighted by minus the half-angle, that of a translator an ideal point, and
+  `exp(t * log(M))` interpolates a motor. Non-unit, odd, and mixed arguments
+  and the branch cut (scalar part −1) report a domain diagnostic instead of
+  the values ganja.js returns; scalar arguments keep the section 10 functions.
+  The PGA showcase gains a rotation about `A` from side `L` to side `M` and a
+  slider that sweeps `B` onto `M`.
+
 ### Document and convention changes
 
 - Canonical format version 5 adds `Appearance.idealPointDisplay` (`vector`,

@@ -3,6 +3,7 @@ import { evaluateDocument } from '../application/evaluateDocument'
 import { expressionDocument, showcaseItems } from '../document/expressionDocument'
 import { executeDocumentCommand } from '../document/documentCommands'
 import { createBuiltinAlgebraRegistry } from './builtinAlgebras'
+import { OPAQUE_INTERPRETATION } from '../geometry/interpretation'
 
 describe('definition showcases', () => {
   const registry = createBuiltinAlgebraRegistry()
@@ -45,6 +46,7 @@ describe('definition showcases', () => {
         ? interpretation.interpretation.describe(item.evaluation.entity) : '?')
     expect(kinds).toEqual([
       'Point', 'Point', 'Point', 'Line', 'Line', 'Scalar', 'Scalar', 'Scalar', 'Scalar', 'Scalar', 'Scalar', 'Line', 'Scalar',
+      'Motor', 'Scalar', 'Point',
     ])
   })
 
@@ -68,5 +70,32 @@ describe('definition showcases', () => {
     expect(scalars.get('area')).toBeCloseTo(-7.5, 12)
     // From L, normal (-1, 4), to the vertical line x = 1, normal (1, 0): cos = -1, sin = -4.
     expect(scalars.get('beta')).toBeCloseTo(Math.atan2(-4, -1), 12)
+  })
+
+  it('PGA showcase turns B about A onto the side AC through exp(t log R)', () => {
+    const definition = registry.definitions().find((candidate) => candidate.algebraId === 'org.multivector.pga')!
+    const resolution = registry.resolve({ algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: {} })
+    if (resolution.status !== 'resolved') throw new Error('unresolved')
+    const engine = resolution.engine
+    const at = (t: string) => {
+      const rows = definition.showcase.map((row) => (row.source.startsWith('t = ') ? { source: `t = ${t}` } : row))
+      const document = { ...expressionDocument(showcaseItems(rows)), algebra: { algebraId: 'org.multivector.pga', definitionVersion: 1, conventionVersion: 1, parameters: { dimension: 2 } } }
+      const values = new Map(evaluateDocument(document, { engine, interpretation: OPAQUE_INTERPRETATION })
+        .flatMap((item) => item.evaluation?.status === 'valid' && item.evaluation.valueType === 'single'
+          ? [[item.item.source.split(' = ')[0], item.evaluation.value] as const] : []))
+      const s = values.get('S')!.coefficients
+      return { x: -s[5] / s[6], y: s[4] / s[6], values }
+    }
+    // R is the rotation about A = (-2, 1) by the signed angle alpha from L to M.
+    const { values } = at('0.5')
+    const log = engine.scalarFunction('log', [values.get('R')!]).coefficients
+    expect(-log[5] / log[6]).toBeCloseTo(-2, 12)
+    expect(log[4] / log[6]).toBeCloseTo(1, 12)
+    expect(log[6]).toBeCloseTo(-values.get('alpha')!.coefficients[0] / 2, 12)
+    expect(at('0')).toMatchObject({ x: expect.closeTo(2, 12), y: expect.closeTo(2, 12) })
+    // At t = 1, S lies on AC (direction (3, -3) from A) at the distance AB from A.
+    const end = at('1')
+    expect(end.x + 2).toBeCloseTo(Math.hypot(4, 1) / Math.SQRT2, 12)
+    expect(end.y - 1).toBeCloseTo(-Math.hypot(4, 1) / Math.SQRT2, 12)
   })
 })
