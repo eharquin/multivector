@@ -9,7 +9,7 @@ VGA-INT-001 through VGA-INT-004
 
 ## Objective
 
-Deliver the first public MultiVector workflow as a narrow vertical slice through
+Deliver the first public GAMUT workflow as a narrow vertical slice through
 VGA(2). The implementation should validate and refine the design rather than
 attempt to complete every planned abstraction before producing a usable result.
 

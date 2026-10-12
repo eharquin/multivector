@@ -1,6 +1,6 @@
-# MultiVector Roadmap
+# GAMUT Roadmap
 
-MultiVector develops stable research workflows through versioned releases. The
+GAMUT develops stable research workflows through versioned releases. The
 [GitHub Project](https://github.com/users/eharquin/projects/3) is the operational
 view of issues and active work; this roadmap describes intended outcomes rather
 than promising dates or complete feature lists.

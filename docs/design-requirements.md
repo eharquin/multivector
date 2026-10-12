@@ -1,4 +1,4 @@
-# MultiVector Design Requirements
+# GAMUT Design Requirements
 
 **Status:** Draft for review
 **Date:** 2026-07-28
@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-MultiVector is a research-driven web application for creating, evaluating,
+GAMUT is a research-driven web application for creating, evaluating,
 visualizing, saving, and sharing reproducible geometric algebra constructions.
 Scientific reproducibility, mathematical correctness, explicit conventions, and
 deterministic documents take priority while the interface remains approachable
@@ -28,7 +28,7 @@ architectural starting point.
   distinguished.
 - **PROD-005:** Scientific conventions shall be documented, versioned, and
   independently tested.
-- **PROD-006:** MultiVector shall be designed as an algebra- and
+- **PROD-006:** GAMUT shall be designed as an algebra- and
   dimension-independent system.
 
 Milestones define incremental delivery profiles and shall not become the
@@ -38,7 +38,7 @@ complete documented user workflow.
 
 ## 3. Scope and progression
 
-MultiVector is planned to progress through the following engineering and product
+GAMUT is planned to progress through the following engineering and product
 milestones:
 
 1. **Language and Document Foundation — Engineering:** Deliver the selected
@@ -114,11 +114,11 @@ visualization, and a required Rust implementation.
   Rust/Wasm backends without changing documents or geometric entities.
 - **TECH-007:** Runtime validation shall complement TypeScript's static type
   checking at external data boundaries.
-- **TECH-008:** The initial source language shall be the MultiVector-owned
+- **TECH-008:** The initial source language shall be the GAMUT-owned
   expression language, and the initial built-in VGA implementation shall use
   ganja.js behind the algebra-engine adapter boundary. Ganja.js values, APIs,
   generated code, serialization, conventions, and failure behavior shall not
-  become part of the document format or MultiVector-owned domain contracts.
+  become part of the document format or GAMUT-owned domain contracts.
   The application shall invoke explicit adapter operations and shall not pass
   document source to ganja.js inline translation.
 
@@ -139,7 +139,7 @@ source -> LanguageFrontend -> dependency plan -> controlled evaluator
 ```
 
 - **ARCH-001:** Backend-native values and APIs shall not cross the engine
-  boundary; only MultiVector-owned values, diagnostics, and capability
+  boundary; only GAMUT-owned values, diagnostics, and capability
   descriptors may cross it.
 - **ARCH-002:** React types shall not appear in the domain model.
 - **ARCH-003:** Visualizers shall not parse expressions, calculate algebra, or
@@ -261,10 +261,10 @@ The normative language is specified in
 - **LANG-007:** The selected language shall define its accepted source forms,
   precedence, name binding, source locations, list behavior, capability access,
   and future-extension boundary independently of backend accidents.
-- **LANG-008:** A language frontend shall return MultiVector-owned declarations,
+- **LANG-008:** A language frontend shall return GAMUT-owned declarations,
   dependency references, source locations, limit charges, and diagnostics.
   Frontend-native tokens or AST nodes shall remain derived internal data.
-- **LANG-009:** `languageVersion` shall select a version of the MultiVector
+- **LANG-009:** `languageVersion` shall select a version of the GAMUT
   expression language. Supporting another source language requires a separately
   approved language-identity, persistence, and migration design.
 
@@ -553,7 +553,7 @@ server or backend implementation.
 
 ## 17. Documentation structure and evolution
 
-Requirements state what MultiVector guarantees. Specifications define precise
+Requirements state what GAMUT guarantees. Specifications define precise
 normative behavior. Architecture documents explain implementation boundaries.
 Milestones compose requirements instead of duplicating them.
 Requirement and acceptance-criterion identifiers follow the

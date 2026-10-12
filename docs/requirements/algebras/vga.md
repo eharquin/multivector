@@ -80,7 +80,7 @@ The requirements in this section have **Milestone** commitment and apply only
 to milestones that explicitly include the standard VGA geometry
 interpretation.
 
-- **VGA-INT-001:** MultiVector shall provide one versioned standard VGA
+- **VGA-INT-001:** GAMUT shall provide one versioned standard VGA
   interpretation independently of the VGA algebra definition.
 - **VGA-INT-002:** In the standard interpretation, pure grade-one values shall
   represent vectors; supported higher grades may represent oriented area and

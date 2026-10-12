@@ -1,8 +1,8 @@
-# Contributing to MultiVector
+# Contributing to GAMUT
 
-Thank you for your interest in MultiVector.
+Thank you for your interest in GAMUT.
 
-MultiVector is currently in its initial design and development phase. Its
+GAMUT is currently in its initial design and development phase. Its
 architecture, expression language, document format, and public APIs are not yet
 stable.
 
@@ -48,7 +48,7 @@ provide reference cases.
 
 ## Code documentation
 
-MultiVector uses TSDoc-compatible comments for exported APIs that express a
+GAMUT uses TSDoc-compatible comments for exported APIs that express a
 domain boundary, mathematical convention, non-obvious invariant, ownership
 rule, or failure contract. Comments should explain intent and constraints that
 the TypeScript signature cannot express; they should not repeat names, types,

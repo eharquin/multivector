@@ -39,7 +39,7 @@ review and before submission.
 
 ## Project-specific publication requirements
 
-These are MultiVector release decisions, not universal JOSS rules:
+These are GAMUT release decisions, not universal JOSS rules:
 
 - VGA(2) and PGA(2) must both be available and accepted.
 - The common architecture must demonstrate algebra registration, convention,
@@ -47,7 +47,7 @@ These are MultiVector release decisions, not universal JOSS rules:
   scattering algebra-specific behavior through the application shell.
 - At least one reproducible research case study per submitted algebra must be
   available.
-- The release must compare MultiVector with MultiVector Studio and other
+- The release must compare GAMUT with MultiVector Studio and other
   relevant geometric algebra libraries and visual tools.
 - The deployed application and local reviewer workflow must exercise the same
   release revision.

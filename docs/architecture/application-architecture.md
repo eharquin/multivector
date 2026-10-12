@@ -271,7 +271,7 @@ coverage a current delivery requirement.
 1. Ganja.js values, typed arrays, generated functions, exceptions, and graphing
    APIs stay inside `src/algebra`. The adapter copies results into owned domain
    values before returning.
-2. Source text is parsed and evaluated by MultiVector code. It is never passed
+2. Source text is parsed and evaluated by GAMUT code. It is never passed
    to a backend evaluator or ganja.js `inline`.
 3. Domain values contain mathematical data, not presentation state or backend
    behavior.

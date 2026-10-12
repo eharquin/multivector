@@ -64,7 +64,7 @@ larger algebraic spaces than VGA(2).
 
 ## 4. Values and operations
 
-- **ALG-010:** Backend values shall be converted to MultiVector-owned values
+- **ALG-010:** Backend values shall be converted to GAMUT-owned values
   before crossing the engine boundary.
 - **ALG-011:** A definition shall advertise supported operations and semantic
   extensions explicitly.
@@ -96,7 +96,7 @@ application capabilities and are not implemented by an engine.
   not cross the engine boundary.
 - **ALG-031:** Owned values shall provide at least IEEE 754 binary64 precision.
   Required precision is part of the versioned convention, never an accidental
-  backend default. Numerical tolerances are MultiVector-owned and shall be
+  backend default. Numerical tolerances are GAMUT-owned and shall be
   magnitude-relative where floating-point noise scales with value magnitude.
   Definitions shall document the absolute floor, relative term, comparison
   formula, and operations to which each tolerance applies, as required by

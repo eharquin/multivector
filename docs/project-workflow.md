@@ -1,7 +1,7 @@
 # Project Workflow
 
-MultiVector uses GitHub issues, the
-[MultiVector GitHub Project](https://github.com/users/eharquin/projects/3),
+GAMUT uses GitHub issues, the
+[GAMUT GitHub Project](https://github.com/users/eharquin/projects/3),
 short-lived branches, pull requests, and review to keep design and
 implementation history understandable. The project is the authoritative view of
 planned and active work; repository milestones track larger delivery outcomes.

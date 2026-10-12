@@ -1,26 +1,35 @@
-# MultiVector
+# GAMUT
 
-**Interactive geometric algebra constructions for research, exploration, and
-learning.**
+**Geometric Algebra Multivector Unveiling Tool**
 
-MultiVector is a browser-based tool for writing multivector expressions and
-turning them into interactive geometric constructions. It is developed as part
-of PhD research and is intended for both geometric-algebra research and
-learning.
+GAMUT (**Geometric Algebra Multivector Unveiling Tool**) is a browser-based
+environment for writing multivector expressions and turning them into
+interactive geometric constructions. It is developed as part of PhD research
+and is intended for geometric-algebra research, exploration, and learning.
 
-> **Project status:** MultiVector is preparing its first `0.1.0` release. The
-> current implemented scope is a two-dimensional vector geometric algebra
-> workflow, VGA(2). Other algebras are future work, and compatibility is not yet
-> guaranteed.
+> **Project status:** Release `0.1.0` shipped under the former product name
+> **MultiVector** and established the VGA(2) workflow and canonical document
+> contract. Current development introduces the GAMUT name and the first PGA(2)
+> workflow while preserving existing documents and browser sessions.
 
 [Open the public application](https://eharquin.github.io/multivector/)
+
+## About the name
+
+The word *gamut* comes from Medieval Latin *gamma ut*, the name of the lowest
+note in the medieval musical system. It later came to mean the full range of
+something. GAMUT aims to reveal the full range of geometric objects encoded by
+multivectors and make their abstract language visible and learnable.
+
+Source: [Oxford Learner's Dictionaries — gamut](https://www.oxfordlearnersdictionaries.com/definition/english/the-gamut).
 
 ## Current capabilities
 
 - Write named scalar and multivector expressions with dependencies, geometric
   products, outer and inner products, duality, grade operations, rotors, lists,
   ranges, indexing, and broadcasting.
-- Visualize and style VGA(2) vectors and bivectors in a navigable viewport.
+- Visualize and style VGA(2) vectors and bivectors, and PGA(2) points, ideal
+  points, and lines, in a navigable viewport.
 - Position and directly manipulate eligible objects with pointer or keyboard
   controls, with undo and redo.
 - Drive constructions with scalar sliders and deterministic playback.
@@ -46,10 +55,10 @@ defines the supported syntax and operations.
 - npm, included with Node.js;
 - a modern desktop browser.
 
-Chrome, Firefox, Edge, and Safari are the browser targets for `0.1.0`. Exact
-support claims will be recorded in the
-[0.1 acceptance record](docs/acceptance/vga-2d-visual-workflow.md) after the
-cross-browser validation is complete.
+Chrome and Firefox on Linux and Safari on macOS were validated for `0.1.0`;
+Edge, touch input, and mobile browsers were not claimed. The exact support
+matrix and evidence are recorded in the
+[0.1 acceptance record](docs/acceptance/vga-2d-visual-workflow.md).
 
 ### Run locally
 
@@ -106,11 +115,13 @@ work, and the [changelog](CHANGELOG.md) for user-visible changes.
 - [Limits and interaction constants](docs/specifications/limits-and-constants.md)
 - [Project workflow](docs/project-workflow.md)
 - [JOSS readiness](docs/publication/joss-readiness.md)
-- [MultiVector GitHub Project](https://github.com/users/eharquin/projects/3)
+- [GAMUT GitHub Project](https://github.com/users/eharquin/projects/3)
 
 ## Contributing and citation
 
-MultiVector is open-source software under the [MIT License](LICENSE). Read the
+GAMUT is open-source software under the [MIT License](LICENSE). Read the
 [contribution guide](CONTRIBUTING.md) before proposing substantial work. If you
-use MultiVector in research, citation metadata is available in
-[`CITATION.cff`](CITATION.cff).
+use GAMUT in research, citation metadata is available in
+[`CITATION.cff`](CITATION.cff). Its `0.1.0` entry intentionally retains the
+historical MultiVector name; the title, version, date, and repository metadata
+will change together for the first release shipped as GAMUT.

@@ -1519,10 +1519,10 @@ function App() {
       const blob = new Blob([source], { type: 'application/json;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      const basename = (expressionDoc.title || 'multivector-document')
-        .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'multivector-document'
+      const basename = (expressionDoc.title || 'gamut-document')
+        .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'gamut-document'
       link.href = url
-      link.download = basename + '.multivector.json'
+      link.download = basename + '.gamut.json'
       link.click()
       URL.revokeObjectURL(url)
       setDocumentDiagnostic(null)
@@ -1656,9 +1656,9 @@ function App() {
         <a
           className="app-title"
           href={import.meta.env.BASE_URL}
-          aria-label="MultiVector home"
+          aria-label="GAMUT home"
         >
-          MultiVector
+          GAMUT
         </a>
         <AlgebraMenu
           badge={algebraDefinition.badge}
@@ -1676,7 +1676,7 @@ function App() {
           ref={importInputRef}
           className="document-file-input"
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,.gamut.json,.multivector.json"
           aria-label="Import document file"
           onChange={importDocument}
         />

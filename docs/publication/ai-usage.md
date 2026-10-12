@@ -25,8 +25,9 @@ judgment to an AI system.
 - Areas: repository inspection, issue and pull-request drafting, implementation
   suggestions, code generation and refactoring, test scaffolding, documentation
   drafting, and verification orchestration.
-- Scope: assistance has been used across early MultiVector development. The Git
-  history and pull requests identify the resulting changes, but do not currently
+- Scope: assistance has been used across the early development of GAMUT,
+  including the period when the product was named MultiVector. The Git history
+  and pull requests identify the resulting changes, but do not currently
   attribute assistance at individual-line granularity.
 - Human review: the maintainer selects scope and design, reviews changes and
   diffs, runs or requires `npm run verify`, controls merges, and remains
