@@ -3,7 +3,7 @@ import { formatRoundTripNumber } from './numberFormat'
 
 /**
  * A backend-independent multivector whose coefficients are owned by
- * MultiVector and stored in the canonical order of its basis.
+ * GAMUT and stored in the canonical order of its basis.
  *
  * Backend element instances must never be stored in this representation.
  */

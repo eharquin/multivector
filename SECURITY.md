@@ -2,9 +2,9 @@
 
 ## Supported versions
 
-MultiVector is under active research development and has not reached a stable
-release. Security fixes are applied to the latest revision of `main`; older
-commits, branches, and locally modified builds are not supported.
+GAMUT is under active research development. Security fixes are applied to the
+latest revision of `main`; older commits, branches, and locally modified builds
+are not supported.
 
 ## Reporting a vulnerability
 

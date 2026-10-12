@@ -1,4 +1,4 @@
-# MultiVector Expression Language
+# GAMUT Expression Language
 
 **Status:** Draft for review
 **Date:** 2026-07-30
@@ -331,7 +331,7 @@ ambiguity with the infix `|` inner product. The evaluator shall not select a
 different norm using a visual or geometric-classification heuristic. An
 undefined norm produces a diagnostic.
 
-Numerical tolerances are owned and tested by MultiVector, recorded through
+Numerical tolerances are owned and tested by GAMUT, recorded through
 `conventionVersion`, and used only where numerical decisions require them. They
 do not redefine the mathematical operation. Precision and tolerance formulas,
 including magnitude-relative terms where noise scales with magnitude, are

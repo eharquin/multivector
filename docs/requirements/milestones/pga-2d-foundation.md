@@ -11,7 +11,7 @@ as exercised by a second definition
 
 ## Objective
 
-Deliver the first projective workflow, PGA(2), as the proof that MultiVector is
+Deliver the first projective workflow, PGA(2), as the proof that GAMUT is
 a multi-algebra environment rather than a VGA application. The milestone is
 judged as much on what it removes from VGA-only composition as on what it adds:
 the same language, document, evaluation, interpretation boundary, and viewport

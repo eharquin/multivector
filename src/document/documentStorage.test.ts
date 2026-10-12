@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { toCanonicalDocument } from './canonicalDocument'
-import { browserDocumentStorage } from './documentStorage'
+import { ACTIVE_DOCUMENT_KEY, browserDocumentStorage } from './documentStorage'
 import { expressionDocument } from './expressionDocument'
 
 describe('document storage', () => {
+  it('retains the historical active-document key across product renames', () => {
+    expect(ACTIVE_DOCUMENT_KEY).toBe('multivector.document.active.v1')
+  })
+
   it('stores and restores a validated canonical revision', () => {
     const values = new Map<string, string>()
     const storage = browserDocumentStorage({

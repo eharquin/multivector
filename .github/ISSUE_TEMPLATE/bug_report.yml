@@ -1,5 +1,5 @@
 name: Bug report
-description: Report reproducible incorrect behavior in MultiVector
+description: Report reproducible incorrect behavior in GAMUT
 title: "Bug: "
 labels:
   - bug
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping improve MultiVector. Do not report security vulnerabilities or private conduct concerns here.
+        Thank you for helping improve GAMUT. Do not report security vulnerabilities or private conduct concerns here.
 
   - type: textarea
     id: summary
@@ -24,7 +24,7 @@ body:
       label: Reproduction
       description: Provide the smallest complete sequence that reproduces the problem.
       placeholder: |
-        1. Open MultiVector
+        1. Open GAMUT
         2. Enter ...
         3. Select ...
         4. Observe ...

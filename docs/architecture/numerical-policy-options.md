@@ -7,7 +7,7 @@
 
 ## 1. Decision to make
 
-MultiVector must distinguish deliberate small mathematical values from
+GAMUT must distinguish deliberate small mathematical values from
 floating-point leakage while supporting algebras with very different numerical
 conditioning. The decision affects:
 

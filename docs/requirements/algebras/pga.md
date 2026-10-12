@@ -84,7 +84,7 @@ milestone:
 The requirements in this section have **Milestone** commitment and apply only
 to milestones that explicitly include the standard PGA interpretation.
 
-- **PGA-INT-001:** MultiVector shall provide one versioned standard PGA(2)
+- **PGA-INT-001:** GAMUT shall provide one versioned standard PGA(2)
   interpretation, `org.multivector.pga-2d`, independently of the PGA algebra
   definition, declaring `model: "plane-based"` in its descriptor.
 - **PGA-INT-002:** In the standard interpretation, grade-1 values shall

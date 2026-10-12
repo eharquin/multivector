@@ -4,6 +4,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -13,10 +14,14 @@ import {
   paletteEntry,
 } from './components/appearancePalette'
 import { CLEAR_HOLD_MS } from './components/ClearExpressionsButton'
+import { toCanonicalDocument } from './document/canonicalDocument'
+import { expressionDocument } from './document/expressionDocument'
 
 afterEach(() => {
   cleanup()
   window.localStorage.clear()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
@@ -41,6 +46,68 @@ function sizeViewportCanvas(canvas: SVGSVGElement): void {
 }
 
 describe('VGA 2D vertical slice', () => {
+  it('presents the product as GAMUT and accepts current and historical JSON filenames', () => {
+    render(<App />)
+
+    expect(screen.getByRole('link', { name: 'GAMUT home' }))
+      .toHaveTextContent('GAMUT')
+    expect(screen.getByLabelText('Import document file')).toHaveAttribute(
+      'accept',
+      'application/json,.json,.gamut.json,.multivector.json',
+    )
+  })
+
+  it('downloads canonical documents with the GAMUT filename suffix', () => {
+    const clickedLinks: HTMLAnchorElement[] = []
+    class TestURL extends URL {
+      static createObjectURL = vi.fn((_blob: Blob) => 'blob:gamut-document')
+      static revokeObjectURL = vi.fn((_url: string) => undefined)
+    }
+    vi.stubGlobal('URL', TestURL)
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clickedLinks.push(this)
+    })
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }))
+
+    expect(clickedLinks).toHaveLength(1)
+    expect(clickedLinks[0].download).toBe('Untitled-document.gamut.json')
+  })
+
+  it('imports a version 0.1 document with the historical filename suffix', async () => {
+    const current = toCanonicalDocument(expressionDocument(
+      [{ id: 'legacy-vector', source: 'Legacy = vector(4, 2)' }],
+      {},
+      { id: 'multivector-0.1.0-export', title: 'Historical export' },
+    ), 'dark')
+    const historical = {
+      ...current,
+      formatVersion: 4,
+      appearance: Object.fromEntries(Object.entries(current.appearance).map(
+        ([id, appearance]) => {
+          const { idealPointDisplay: _idealPointDisplay, ...versionFour } = appearance
+          return [id, versionFour]
+        },
+      )),
+    }
+    const bytes = new TextEncoder().encode(JSON.stringify(historical))
+    const file = {
+      name: 'historical.multivector.json',
+      type: 'application/json',
+      arrayBuffer: async () => bytes.slice().buffer,
+    } as unknown as File
+    render(<App />)
+
+    fireEvent.change(screen.getByLabelText('Import document file'), {
+      target: { files: [file] },
+    })
+
+    await waitFor(() => expect(
+      screen.getByRole('textbox', { name: 'Expression 1' }),
+    ).toHaveValue('Legacy = vector(4, 2)'))
+  })
+
   it('undoes and redoes document edits with controls and standard keyboard shortcuts', () => {
     render(<App />)
     const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
@@ -538,6 +605,7 @@ describe('VGA 2D vertical slice', () => {
     const first = render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Lock viewport' }))
     expect(screen.getByRole('button', { name: 'Undo document change' })).toBeDisabled()
+    expect(window.localStorage.getItem('multivector.viewportLocked')).toBe('true')
     first.unmount()
 
     render(<App />)

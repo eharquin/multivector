@@ -1,11 +1,20 @@
 # Changelog
 
-MultiVector records user-visible and scientific changes here from the start of
+GAMUT records user-visible and scientific changes here from the start of
 its release process. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and planned releases
 use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+### Product identity and compatibility
+
+- Renamed the product from **MultiVector** to **GAMUT — Geometric Algebra
+  Multivector Unveiling Tool**. Mathematical uses of *multivector*, stable
+  `org.multivector.*` identifiers, browser storage keys, the repository slug,
+  and the deployed Pages path remain unchanged.
+- New downloads use `*.gamut.json`; existing `*.multivector.json` documents
+  remain importable without a format or identifier migration.
 
 ### Scientific capabilities
 

@@ -10,7 +10,7 @@ on their own.
 ## Accepted evidence categories
 
 - published articles, preprints, theses, posters, talks, or course/research
-  material that use MultiVector;
+  material that use GAMUT;
 - reproducible analyses, constructions, figures, or benchmarks produced with a
   named release;
 - documented adoption, evaluation, or integration by a group outside the
@@ -30,10 +30,10 @@ actually occurs.
 
 - Category:
 - People or group:
-- MultiVector release/commit:
+- GAMUT release/commit:
 - Research question or workflow:
 - Public evidence URL or repository path:
-- Result enabled by MultiVector:
+- Result enabled by GAMUT:
 - Product or design change caused by this use, if any:
 - Permission to name external users publicly:
 - Verification owner and date:

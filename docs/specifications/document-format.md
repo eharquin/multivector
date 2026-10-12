@@ -1,4 +1,4 @@
-# MultiVector Document Format
+# GAMUT Document Format
 
 **Status:** Draft for review
 **Date:** 2026-07-30
@@ -15,6 +15,12 @@ imported, exported, shared, and example documents use this structure.
 Stored source is authoritative. Tokens, abstract syntax trees, evaluated values,
 render primitives, active playback, transient selection, focus, dialog state,
 and undo or redo stacks are derived or session state and are never serialized.
+
+Persisted reverse-DNS identifiers such as `org.multivector.vga`,
+`org.multivector.pga`, and their interpretation and visualizer identifiers are
+stable opaque protocol values. Their namespace records the project's history
+and is independent of the current product name. A product rename alone shall
+never change them or require a document-format migration.
 
 ### Current implementation subset
 

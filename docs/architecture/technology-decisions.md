@@ -36,12 +36,33 @@ verification and GitHub Pages deployment. Workflows shall invoke the same
 project-owned verification and build commands used locally. This platform may
 be replaced without changing TEST-007 through TEST-011.
 
+## Product identity and compatibility
+
+**Decision status:** Accepted
+
+The product name is **GAMUT — Geometric Algebra Multivector Unveiling Tool**.
+Release `0.1.0` and its durable evidence retain the historical MultiVector
+name. Living product material uses GAMUT, while *multivector* remains the
+mathematical term and MultiVector Studio remains the predecessor prototype's
+proper name.
+
+The rename does not change the canonical `org.multivector.*` namespaces,
+browser storage keys `multivector.document.active.v1` and
+`multivector.viewportLocked`, or any document-format version. New exports use
+the `.gamut.json` suffix and `gamut-document` fallback basename; imports remain
+filename-independent and accept historical `.multivector.json` downloads.
+
+The repository stays at `eharquin/multivector`, the Vite base stays
+`/multivector/`, and the public GitHub Pages URL remains stable. Any later
+repository and Pages migration is a separate infrastructure decision tracked
+by issue #193.
+
 ## Initial language and algebra runtime
 
 **Decision status:** Accepted
 
 The initial source language is the
-[MultiVector expression language](../specifications/language.md). MultiVector
+[GAMUT expression language](../specifications/language.md). GAMUT
 owns its tokenizer, parser, AST, dependency analysis, evaluator semantics,
 diagnostics, limits, source locations, and versioning. Python syntax and a
 bundled Python runtime are not part of the initial production design.
@@ -51,12 +72,12 @@ choice for the built-in VGA engine. It is integrated exclusively through the
 algebra-engine adapter governed by TECH-005, TECH-006, TECH-008, ARCH-001, and
 the algebra-definition contract.
 
-MultiVector owns the public value and list representations, capability
+GAMUT owns the public value and list representations, capability
 descriptors, diagnostics, serialization, numerical conventions, dependency
 behavior, resource accounting, and conformance tests. Ganja.js classes, typed
 arrays, methods, generated functions, serialization, exceptions, and graphing
 APIs shall not cross the engine boundary. Document source is evaluated by the
-MultiVector evaluator and shall never be passed to ganja.js `inline`.
+GAMUT evaluator and shall never be passed to ganja.js `inline`.
 
 MultiVector Studio demonstrates broad behavioral coverage with ganja.js, but it
 allows ganja.js values and coefficient layout to enter evaluation,
@@ -84,7 +105,7 @@ TEST-003; ganja.js shall not be its own sole oracle. Kingdon may be used as an
 additional development-time differential oracle for selected algebra cases,
 but it is neither a production dependency nor a normative authority. A
 disagreement between libraries shall be resolved against the versioned
-MultiVector convention and independent mathematical reference, not by backend
+GAMUT convention and independent mathematical reference, not by backend
 preference.
 
 ## Review triggers
