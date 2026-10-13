@@ -43,7 +43,7 @@ export type UnaryExpressionNode = Readonly<{
 
 export type BinaryExpressionNode = Readonly<{
   kind: 'binary-expression'
-  operator: '+' | '-' | '*' | '/' | '**' | '^' | '|' | '&' | '>>>'
+  operator: '+' | '-' | '*' | '/' | '%' | '**' | '^' | '|' | '&' | '>>>'
   left: SurfaceExpressionNode
   right: SurfaceExpressionNode
   implicit: boolean
@@ -149,6 +149,7 @@ export type CoreExpressionNode =
           | 'add'
           | 'multiply'
           | 'divide'
+          | 'modulo'
           | 'outer'
           | 'inner'
           | 'regressive'

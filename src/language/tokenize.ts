@@ -13,6 +13,7 @@ export type TokenKind =
   | 'minus'
   | 'star'
   | 'slash'
+  | 'percent'
   | 'power'
   | 'sandwich'
   | 'caret'
@@ -146,6 +147,7 @@ export function tokenize(source: string): TokenizeResult {
       '-': 'minus',
       '*': 'star',
       '/': 'slash',
+      '%': 'percent',
       '^': 'caret',
       '|': 'pipe',
       '&': 'ampersand',

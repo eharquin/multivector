@@ -220,7 +220,9 @@ class Parser {
     if (!left.ok) return left
 
     while (true) {
-      const explicit = this.consume('star') ?? this.consume('slash')
+      const explicit = this.consume('star') ??
+        this.consume('slash') ??
+        this.consume('percent')
       const implicit: boolean =
         !explicit &&
         isImplicitCoefficient(left.node) &&
@@ -236,7 +238,12 @@ class Parser {
         ok: true,
         node: {
           kind: 'binary-expression',
-          operator: explicit?.kind === 'slash' ? '/' : '*',
+          operator:
+            explicit?.kind === 'slash'
+              ? '/'
+              : explicit?.kind === 'percent'
+                ? '%'
+                : '*',
           left: left.node,
           right: right.node,
           implicit,

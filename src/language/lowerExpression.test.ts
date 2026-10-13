@@ -47,6 +47,15 @@ describe('surface-to-core lowering', () => {
     })
   })
 
+  it('lowers scalar modulo to its common core operation', () => {
+    expect(lowerExpression(parse('10 % 4'))).toMatchObject({
+      kind: 'modulo',
+      left: { kind: 'scalar', value: 10 },
+      right: { kind: 'scalar', value: 4 },
+      origin: { start: 0, end: 6 },
+    })
+  })
+
   it('keeps blade names, permuted or not, for resolution against the active basis', () => {
     expect(lowerExpression(parse('e21'))).toEqual({
       kind: 'basis-blade',

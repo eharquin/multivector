@@ -158,6 +158,14 @@ function evaluateExpressionUnchecked(
       return binary(expression, evaluate(expression.left), evaluate(expression.right), engine.multiply, budget)
     case 'divide':
       return binary(expression, evaluate(expression.left), evaluate(expression.right), engine.divide, budget)
+    case 'modulo':
+      return binary(
+        expression,
+        evaluate(expression.left),
+        evaluate(expression.right),
+        (left, right) => scalarModulo(left, right, engine),
+        budget,
+      )
     case 'sandwich':
       return binary(expression, evaluate(expression.left), evaluate(expression.right), engine.sandwich, budget)
     case 'power': {
@@ -248,6 +256,32 @@ function scalarBoundary(
     )
   }
   return scalarMultivectorBoundary(value, expression, label)
+}
+
+function scalarModulo(
+  left: OwnedMultivector,
+  right: OwnedMultivector,
+  engine: AlgebraEngine,
+): OwnedMultivector {
+  if (left.coefficients.slice(1).some((coefficient) => coefficient !== 0)) {
+    throw new AlgebraOperationError(
+      'ALG_DOMAIN', 'The left operand of modulo must be scalar.',
+    )
+  }
+  if (right.coefficients.slice(1).some((coefficient) => coefficient !== 0)) {
+    throw new AlgebraOperationError(
+      'ALG_DOMAIN', 'The right operand of modulo must be scalar.',
+    )
+  }
+  const dividend = left.coefficients[0]
+  const modulus = right.coefficients[0]
+  if (modulus <= 0) {
+    throw new AlgebraOperationError(
+      'ALG_DOMAIN', 'The right operand of modulo must be greater than zero.',
+    )
+  }
+  const remainder = dividend % modulus
+  return engine.scalar(remainder < 0 ? (remainder + modulus) % modulus : remainder)
 }
 
 function unary(

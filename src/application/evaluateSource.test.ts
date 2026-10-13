@@ -1,7 +1,9 @@
 import { VGA_2D_BASIS } from '../algebra/vgaEngine'
 import { describe, expect, it } from 'vitest'
 import { createVga2Engine } from '../algebra/vgaEngine'
+import { createPga2Engine } from '../algebra/pgaEngine'
 import { VGA_2D_INTERPRETATION } from '../geometry/vga2Interpretation'
+import { PGA_2D_INTERPRETATION } from '../geometry/pga2Interpretation'
 import type { Vector2dEntity } from '../geometry/vga2Interpretation'
 import { evaluateSource } from './evaluateSource'
 import { ownedList, type LanguageValue } from '../domain/languageValue'
@@ -303,6 +305,61 @@ describe('source evaluation pipeline', () => {
     expect(validValue('sqrt([1, 4, 9])[2]').coefficients[0]).toBe(3)
     expect(validValue('max([1, 5], 3)[1]').coefficients[0]).toBe(5)
     expect(validValue('atan2([1, -1], [1, 1])[1]').coefficients[0]).toBeCloseTo(-Math.PI / 4, 14)
+  })
+
+  it.each([
+    ['10 % 2', 0],
+    ['10 % 4', 2],
+    ['-1 % 5', 4],
+    ['5.5 % 2', 1.5],
+  ])('evaluates Euclidean scalar modulo %s', (source, expected) => {
+    expect(validValue(source).coefficients[0]).toBe(expected)
+  })
+
+  it('canonicalizes a negative-zero modulo result', () => {
+    expect(Object.is(validValue('-5 % 5').coefficients[0], -0)).toBe(false)
+  })
+
+  it('evaluates modulo through the common language layer in VGA and PGA', () => {
+    const pgaContext = {
+      engine: createPga2Engine(),
+      interpretation: PGA_2D_INTERPRETATION,
+    }
+
+    expect(evaluateSource('10 % 4', context)).toMatchObject({
+      status: 'valid', inspection: '2', value: { coefficients: [2, 0, 0, 0] },
+    })
+    expect(evaluateSource('10 % 4', pgaContext)).toMatchObject({
+      status: 'valid',
+      inspection: '2',
+      value: { coefficients: [2, 0, 0, 0, 0, 0, 0, 0] },
+    })
+  })
+
+  it('broadcasts modulo over values and singleton lists', () => {
+    expect(evaluateSource('[10, 11] % 4', context)).toMatchObject({
+      status: 'valid', inspection: '[2, 3]',
+    })
+    expect(evaluateSource('[10, 11] % [3]', context)).toMatchObject({
+      status: 'valid', inspection: '[1, 2]',
+    })
+  })
+
+  it.each(['10 % 0', '10 % -2', 'e1 % 2', '2 % e1'])
+    ('reports the scalar modulo domain failure of %s', (source) => {
+      expect(evaluateSource(source, context)).toMatchObject({
+        status: 'invalid', diagnostic: { code: 'ALG_DOMAIN' },
+      })
+    })
+
+  it('identifies a failing modulo list element', () => {
+    expect(evaluateSource('[10, 11] % [3, 0]', context)).toMatchObject({
+      status: 'invalid',
+      diagnostic: {
+        code: 'ALG_DOMAIN',
+        message: expect.stringContaining('List element 1'),
+      },
+    })
   })
 
   it('reports singular and scalar-domain failures with source spans', () => {

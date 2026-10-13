@@ -92,6 +92,9 @@ export function lowerExpression(
       if (expression.operator === '*') {
         return multiply(left, right, expression.span)
       }
+      if (expression.operator === '%') {
+        return { kind: 'modulo', left, right, origin: expression.span }
+      }
       if (expression.operator === '/' || expression.operator === '>>>') {
         return {
           kind: expression.operator === '/' ? 'divide' : 'sandwich',
