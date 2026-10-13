@@ -2433,6 +2433,7 @@ describe('VGA 2D vertical slice', () => {
     expect(dialog).toHaveTextContent('a % m')
     expect(dialog).toHaveTextContent('A.dual')
     expect(dialog).toHaveTextContent('V = (2, 1)')
+    expect(dialog).toHaveTextContent('L[[2, 0, 2]]')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 

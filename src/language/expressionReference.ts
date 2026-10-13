@@ -20,6 +20,7 @@ export const EXPRESSION_REFERENCE = Object.freeze([
       ['[1...5]', 'inclusive unit-step integer range'],
       ['[1, 3...7]', 'integer range with an explicit next term'],
       ['L[0]', 'zero-based list indexing'],
+      ['L[[2, 0, 2]]', 'gather indexing; order and duplicates are preserved'],
       ['L + A', 'broadcast one value over a list'],
       ['L + M', 'elementwise or singleton-list broadcasting'],
     ],

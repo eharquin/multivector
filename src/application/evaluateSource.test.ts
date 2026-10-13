@@ -109,6 +109,59 @@ describe('source evaluation pipeline', () => {
       },
     })
   })
+
+  it('gathers list elements in index-list order with stable distinct identities', () => {
+    const first = evaluateSource('[10, 20, 30, 40][[3, 1, 1]]', context, 'gather')
+    const second = evaluateSource('[10, 20, 30, 40][[3, 1, 1]]', context, 'gather')
+
+    expect(first).toMatchObject({
+      status: 'valid', valueType: 'list', inspection: '[40, 20, 20]',
+    })
+    if (first.status !== 'valid' || first.valueType !== 'list' ||
+        second.status !== 'valid' || second.valueType !== 'list') return
+    const firstIds = first.value.elements.map((element) => element.id)
+    expect(new Set(firstIds)).toHaveLength(3)
+    expect(firstIds).toEqual(second.value.elements.map((element) => element.id))
+  })
+
+  it('supports range and empty gather indices', () => {
+    expect(evaluateSource('[10, 20, 30, 40][[0...2]]', context)).toMatchObject({
+      status: 'valid', valueType: 'list', inspection: '[10, 20, 30]',
+    })
+    expect(evaluateSource('[10, 20][[]]', context)).toMatchObject({
+      status: 'valid', valueType: 'list', inspection: '[]',
+    })
+  })
+
+  it('evaluates gather indexing through the common language layer in VGA and PGA', () => {
+    const pgaContext = {
+      engine: createPga2Engine(),
+      interpretation: PGA_2D_INTERPRETATION,
+    }
+
+    expect(evaluateSource('[10, 20][[1, 0]]', context)).toMatchObject({
+      status: 'valid', inspection: '[20, 10]',
+    })
+    expect(evaluateSource('[10, 20][[1, 0]]', pgaContext)).toMatchObject({
+      status: 'valid', inspection: '[20, 10]',
+    })
+  })
+
+  it.each([
+    ['[10, 20][[0, -1]]', 'LANG_INDEX_DOMAIN'],
+    ['[10, 20][[0, 0.5]]', 'LANG_INDEX_DOMAIN'],
+    ['[10, 20][[0, e1]]', 'ALG_DOMAIN'],
+    ['[10, 20][[0, 2]]', 'LANG_INDEX_RANGE'],
+  ])('reports the failing position in gather index %s', (source, code) => {
+    expect(evaluateSource(source, context)).toMatchObject({
+      status: 'invalid',
+      diagnostic: {
+        code,
+        message: expect.stringContaining('Index-list element 1'),
+      },
+    })
+  })
+
   it.each([
     ['vector(1, 2)', 'e1 + 2e2'],
     ['vector(3, -4)', '3e1 - 4e2'],
