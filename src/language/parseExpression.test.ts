@@ -318,6 +318,40 @@ describe('minimal expression parser', () => {
     })
   })
 
+  it('parses modulo with multiplicative precedence and left associativity', () => {
+    expect(parseExpression('A + B % C * D / E')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'binary-expression',
+        operator: '+',
+        right: {
+          kind: 'binary-expression',
+          operator: '/',
+          left: {
+            kind: 'binary-expression',
+            operator: '*',
+            left: {
+              kind: 'binary-expression',
+              operator: '%',
+              left: { kind: 'reference', name: 'B' },
+              right: { kind: 'reference', name: 'C' },
+            },
+            right: { kind: 'reference', name: 'D' },
+          },
+          right: { kind: 'reference', name: 'E' },
+        },
+      },
+    })
+    expect(parseExpression('A % B % C')).toMatchObject({
+      ok: true,
+      expression: {
+        operator: '%',
+        left: { operator: '%' },
+        right: { kind: 'reference', name: 'C' },
+      },
+    })
+  })
+
   it('accepts a parenthesized scalar coefficient before a blade', () => {
     expect(parseExpression('exp(-(pi/4)e12)')).toMatchObject({
       ok: true,

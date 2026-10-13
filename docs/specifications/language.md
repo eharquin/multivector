@@ -250,6 +250,7 @@ The initial language provides:
 | `A + B`, `A - B`      | addition and subtraction                       |
 | `A * B`               | geometric product                              |
 | `A / B`               | `A * inverse(B)` when the inverse exists       |
+| `a % m`               | Euclidean scalar modulo for positive `m`       |
 | `A ^ B`               | outer product                                  |
 | `A & B`               | regressive product when defined                |
 | `A \| B`              | inner product defined by the active convention |
@@ -270,6 +271,14 @@ The initial language provides:
 a finite integer scalar. The Studio-only `A^-1` spelling and the `§` commutator
 operator are not part of the initial language.
 
+Modulo is a common language operation, not an algebra-specific capability. Both
+operands shall be finite pure grade-zero values and the modulus shall be
+strictly positive. For `a % m`, the result is the grade-zero value of the active
+algebra defined by `a - m * floor(a / m)`, so `10 % 2 == 0`, `10 % 4 == 2`,
+and `-1 % 5 == 4`. A zero or negative modulus and a non-scalar operand produce
+a structured domain diagnostic. Modulo follows the binary list-broadcasting
+rules of section 11.
+
 Unsupported or undefined operations produce structured diagnostics and never a
 silent `null` or approximate substitute.
 
@@ -284,7 +293,7 @@ From strongest to weakest, precedence is:
 2. power `**`;
 3. unary `!`, `~`, `-`, and `+`;
 4. `^`, `&`, `|`, and `<<`;
-5. `*` and `/`;
+5. `*`, `/`, and `%`;
 6. `>>>`;
 7. `+` and `-`.
 

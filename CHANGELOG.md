@@ -18,6 +18,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Scientific capabilities
 
+- Added `%` as a common Euclidean scalar modulo operator in every registered
+  algebra. It has the precedence and left associativity of `*` and `/`,
+  broadcasts over lists, returns a grade-zero value, and reports a domain
+  diagnostic for non-scalar operands or a non-positive modulus.
+
 - Added the plane-based PGA(2) algebra `org.multivector.pga` under
   [PGA convention version 1](docs/specifications/pga-conventions.md): points,
   ideal points, and lines with `point`, `ipoint`, and `line`; meet, join

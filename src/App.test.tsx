@@ -2187,6 +2187,7 @@ describe('VGA 2D vertical slice', () => {
     })
     expect(dialog).toHaveTextContent('Operators')
     expect(dialog).toHaveTextContent('A & B')
+    expect(dialog).toHaveTextContent('a % m')
     expect(dialog).toHaveTextContent('A.dual')
     expect(dialog).toHaveTextContent('V = (2, 1)')
 

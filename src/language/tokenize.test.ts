@@ -78,4 +78,16 @@ describe('expression tokenizer', () => {
       ],
     })
   })
+
+  it('recognizes the scalar modulo operator with its source span', () => {
+    expect(tokenize('10 % 4')).toMatchObject({
+      ok: true,
+      tokens: [
+        { kind: 'number', text: '10', span: { start: 0, end: 2 } },
+        { kind: 'percent', text: '%', span: { start: 3, end: 4 } },
+        { kind: 'number', text: '4', span: { start: 5, end: 6 } },
+        { kind: 'end' },
+      ],
+    })
+  })
 })
