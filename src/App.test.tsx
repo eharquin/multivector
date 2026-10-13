@@ -1324,6 +1324,118 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('Scalar animation cancelled.')).toBeInTheDocument()
   })
 
+  it('refreshes dependent scalar animation bounds and stops on invalid bounds', () => {
+    vi.useFakeTimers()
+    render(<App />)
+
+    const samplingSource = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Expression 1',
+    })
+    fireEvent.change(samplingSource, { target: { value: 'sampling = 30' } })
+    const samplingRow = samplingSource.closest('.expression-item') as HTMLElement
+    fireEvent.change(within(samplingRow).getByRole('textbox', {
+      name: 'Minimum source',
+    }), { target: { value: '1' } })
+    fireEvent.change(within(samplingRow).getByRole('textbox', {
+      name: 'Maximum source',
+    }), { target: { value: '30' } })
+    fireEvent.change(within(samplingRow).getByRole('textbox', {
+      name: 'Step source',
+    }), { target: { value: '1' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const animatedSource = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Expression 2',
+    })
+    fireEvent.change(animatedSource, { target: { value: 'M = 1' } })
+    const animatedRow = animatedSource.closest('.expression-item') as HTMLElement
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Minimum source',
+    }), { target: { value: '0' } })
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Maximum source',
+    }), { target: { value: 'sampling - 1' } })
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Step source',
+    }), { target: { value: '1' } })
+
+    fireEvent.click(within(animatedRow).getByRole('button', {
+      name: 'Open Scalar menu for M',
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Loop' }))
+    fireEvent.click(within(animatedRow).getByRole('button', {
+      name: 'Play scalar animation',
+    }))
+    act(() => vi.advanceTimersByTime(1000))
+    expect(Number(animatedSource.value.split('=')[1])).toBeGreaterThan(12)
+
+    fireEvent.change(within(samplingRow).getByRole('slider', {
+      name: 'Value for sampling',
+    }), { target: { value: '13' } })
+    act(() => vi.advanceTimersByTime(20))
+    expect(Number(animatedSource.value.split('=')[1])).toBeLessThanOrEqual(12)
+
+    fireEvent.change(samplingSource, { target: { value: 'sampling = e1' } })
+    act(() => vi.advanceTimersByTime(20))
+    expect(screen.getByText(
+      'Scalar animation stopped because its interval became invalid.',
+    )).toBeInTheDocument()
+    expect(within(animatedRow).getByRole('button', {
+      name: 'Play scalar animation',
+    })).toBeDisabled()
+  })
+
+  it('refreshes minimum, maximum, and step dependencies during playback', () => {
+    vi.useFakeTimers()
+    render(<App />)
+
+    const sources = ['lower = 0', 'upper = 20', 'increment = 1', 'M = 5']
+    const inputs: HTMLInputElement[] = []
+    sources.forEach((source, index) => {
+      if (index > 0) {
+        fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+      }
+      const input = screen.getByRole<HTMLInputElement>('textbox', {
+        name: `Expression ${index + 1}`,
+      })
+      fireEvent.change(input, { target: { value: source } })
+      inputs.push(input)
+    })
+
+    const animatedSource = inputs[3]
+    const animatedRow = animatedSource.closest('.expression-item') as HTMLElement
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Minimum source',
+    }), { target: { value: 'lower' } })
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Maximum source',
+    }), { target: { value: 'upper' } })
+    fireEvent.change(within(animatedRow).getByRole('textbox', {
+      name: 'Step source',
+    }), { target: { value: 'increment' } })
+    fireEvent.click(within(animatedRow).getByRole('button', {
+      name: 'Open Scalar menu for M',
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Loop' }))
+    fireEvent.click(within(animatedRow).getByRole('button', {
+      name: 'Play scalar animation',
+    }))
+    act(() => vi.advanceTimersByTime(500))
+
+    fireEvent.change(inputs[0], { target: { value: 'lower = 4' } })
+    fireEvent.change(inputs[1], { target: { value: 'upper = 8' } })
+    fireEvent.change(inputs[2], { target: { value: 'increment = 0.5' } })
+    act(() => vi.advanceTimersByTime(20))
+
+    const value = Number(animatedSource.value.split('=')[1])
+    expect(value).toBeGreaterThanOrEqual(4)
+    expect(value).toBeLessThanOrEqual(8)
+    expect((value - 4) / 0.5).toBe(Math.round((value - 4) / 0.5))
+    expect(within(animatedRow).getByRole('button', {
+      name: 'Pause scalar animation',
+    })).toBeInTheDocument()
+  })
+
   it('opens display settings, restores focus on close, and records no history', () => {
     render(<App />)
     const undo = screen.getByRole('button', { name: 'Undo document change' })
