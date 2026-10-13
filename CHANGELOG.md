@@ -18,6 +18,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Scientific capabilities
 
+- Added gather indexing for lists. `L[I]` accepts literal, referenced, range,
+  broadcast, and otherwise computed index lists; it preserves order and
+  duplicates, returns `[]` for an empty index list, and reports the position of
+  an invalid index without returning a partial result.
+
 - Added `%` as a common Euclidean scalar modulo operator in every registered
   algebra. It has the precedence and left associativity of `*` and `/`,
   broadcasts over lists, returns a grade-zero value, and reports a domain

@@ -34,6 +34,17 @@ describe('minimal expression parser', () => {
         property: 'dual',
       },
     })
+    expect(parseExpression('L[[2, 0, 2]]')).toMatchObject({
+      ok: true,
+      expression: {
+        kind: 'index-expression',
+        object: { kind: 'reference', name: 'L' },
+        index: {
+          kind: 'list-expression',
+          elements: [{ value: 2 }, { value: 0 }, { value: 2 }],
+        },
+      },
+    })
   })
 
   it('rejects list elisions', () => {

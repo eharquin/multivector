@@ -208,6 +208,48 @@ describe('document dependency evaluation', () => {
     })
   })
 
+  it('gathers through referenced and computed index lists', () => {
+    const results = evaluate(
+      'List = [10, 20, 30, 40]',
+      'sampling = 4',
+      'index = 1',
+      'T = [0, 1, 2, 3]',
+      'Selected = List[(index - T) % sampling]',
+      'I = [3, 1, 1]',
+      'Repeated = List[I]',
+    )
+
+    expect(results[4].evaluation).toMatchObject({
+      status: 'valid', valueType: 'list', inspection: '[20, 10, 40, 30]',
+    })
+    expect(results[6].evaluation).toMatchObject({
+      status: 'valid', valueType: 'list', inspection: '[40, 20, 20]',
+    })
+  })
+
+  it('preserves selected element positions through gather indexing', () => {
+    const results = evaluateItems([
+      { id: 'vector-1', source: 'V1 = e1', positionSource: '(1, 2)' },
+      { id: 'vector-2', source: 'V2 = 2e2', positionSource: '(-1, 3)' },
+      { id: 'vectors', source: 'V = [V1, V2]' },
+      { id: 'gather', source: 'G = V[[1, 0, 1]]' },
+      { id: 'positions', source: 'P = G.position' },
+    ])
+
+    expect(results[3].evaluation).toMatchObject({
+      status: 'valid',
+      inspection: '[2e2, e1, 2e2]',
+      elements: [
+        { primitive: { start: { x: -1, y: 3 }, end: { x: -1, y: 5 } } },
+        { primitive: { start: { x: 1, y: 2 }, end: { x: 2, y: 2 } } },
+        { primitive: { start: { x: -1, y: 3 }, end: { x: -1, y: 5 } } },
+      ],
+    })
+    expect(results[4].evaluation).toMatchObject({
+      status: 'valid', inspection: '[-e1 + 3e2, e1 + 2e2, -e1 + 3e2]',
+    })
+  })
+
   it('reports undefined names without invalidating unrelated rows', () => {
     const results = evaluate('A = Missing + 1', 'V = e2')
 

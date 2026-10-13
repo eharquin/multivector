@@ -1,6 +1,6 @@
 import { AlgebraOperationError, type AlgebraEngine } from '../algebra/algebraEngine'
 import { permutedBlade } from '../domain/algebraBasis'
-import type { OwnedMultivector } from '../domain/multivector'
+import { ownedMultivector, type OwnedMultivector } from '../domain/multivector'
 import {
   elementIdentity,
   MAX_GENERATED_VALUES,
@@ -136,21 +136,28 @@ function evaluateExpressionUnchecked(
           'LANG_INDEX_TYPE', 'Only a list can be indexed.', expression.object.origin,
         )
       }
-      const index = scalarBoundary(evaluate(expression.index), expression.index, 'A list index')
-      if (!Number.isInteger(index) || index < 0) {
-        throw new ExpressionEvaluationError(
-          'LANG_INDEX_DOMAIN', 'A list index must be a non-negative integer.', expression.index.origin,
+      const indexValue = evaluate(expression.index)
+      if (indexValue.kind === 'multivector') {
+        const index = validatedListIndex(
+          indexValue, object.elements.length, expression.index,
+        )
+        return retainElementIdentity(
+          object.elements[index].value,
+          object.elements[index].id,
         )
       }
-      if (index >= object.elements.length) {
-        throw new ExpressionEvaluationError(
-          'LANG_INDEX_RANGE', `List index ${index} is out of range for ${object.elements.length} elements.`, expression.index.origin,
+      chargeElements(budget, indexValue.elements.length, expression)
+      return ownedList(indexValue.elements.map((indexElement, position) => {
+        const index = validatedListIndex(
+          indexElement.value, object.elements.length, expression.index, position,
         )
-      }
-      return retainElementIdentity(
-        object.elements[index].value,
-        object.elements[index].id,
-      )
+        const selected = object.elements[index]
+        return {
+          id: `${scope}:gather:${expression.origin.start}:${expression.origin.end}:${position}:${indexElement.id}:${selected.id}`,
+          value: ownedMultivector(selected.value.coefficients, selected.value.basis),
+          sources: [selected.id],
+        }
+      }))
     }
     case 'add':
       return binary(expression, evaluate(expression.left), evaluate(expression.right), engine.add, budget)
@@ -256,6 +263,36 @@ function scalarBoundary(
     )
   }
   return scalarMultivectorBoundary(value, expression, label)
+}
+
+function validatedListIndex(
+  value: OwnedMultivector,
+  length: number,
+  expression: CoreExpressionNode,
+  position?: number,
+): number {
+  const positionPrefix = position === undefined ? '' : `Index-list element ${position}: `
+  if (value.coefficients.slice(1).some((coefficient) => coefficient !== 0)) {
+    throw new ExpressionEvaluationError(
+      'ALG_DOMAIN', `${positionPrefix}A list index must be scalar.`, expression.origin,
+    )
+  }
+  const index = value.coefficients[0]
+  if (!Number.isInteger(index) || index < 0) {
+    throw new ExpressionEvaluationError(
+      'LANG_INDEX_DOMAIN',
+      `${positionPrefix}A list index must be a non-negative integer.`,
+      expression.origin,
+    )
+  }
+  if (index >= length) {
+    throw new ExpressionEvaluationError(
+      'LANG_INDEX_RANGE',
+      `${positionPrefix}List index ${index} is out of range for ${length} elements.`,
+      expression.origin,
+    )
+  }
+  return index
 }
 
 function scalarModulo(

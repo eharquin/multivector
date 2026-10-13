@@ -265,7 +265,7 @@ The initial language provides:
 | `A.inverse`           | inverse when it exists                         |
 | `A.e1`                | blade coefficient                              |
 | `A.g1`                | grade projection                               |
-| `L[i]`                | list indexing                                  |
+| `L[i]`, `L[I]`        | scalar and gather list indexing                |
 
 `A**0` is scalar one and `A**-1` is the inverse. A multivector exponent shall be
 a finite integer scalar. The Studio-only `A^-1` spelling and the `§` commutator
@@ -388,8 +388,16 @@ the initial scope.
 fractional, and out-of-range indices are errors. Indexing is zero-based and
 returns the selected multivector, not a singleton list. Its evaluated-item record
 retains the element identity and associated non-language metadata without adding
-either to the multivector. Indexing a non-list is a type error. Slices and
-negative-from-end indexing are not supported in the initial scope.
+either to the multivector.
+
+`L[I]`, where `I` evaluates to a list, performs gather indexing and returns a
+list. Each member of `I` shall satisfy the same index rules as `i`; `[]` returns
+`[]`. The result preserves index order and duplicates. Its elements receive
+stable identities per gathered occurrence and retain the selected elements as
+metadata sources. An invalid member fails the complete expression and the
+diagnostic identifies its zero-based position in `I`. Indexing a non-list is a
+type error. Slices and negative-from-end indexing are not supported in the
+initial scope.
 
 ## 12. Ranges
 
