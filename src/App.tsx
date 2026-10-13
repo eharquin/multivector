@@ -128,6 +128,18 @@ type ActiveScalarPlayback = Readonly<{
 }>
 type ManipulationKind = 'base' | 'head' | 'line' | 'normal'
 
+function playbackParametersEqual(
+  left: PlaybackParameters,
+  right: PlaybackParameters,
+): boolean {
+  return left.minimum === right.minimum &&
+    left.maximum === right.maximum &&
+    left.step === right.step &&
+    left.animation.mode === right.animation.mode &&
+    left.animation.direction === right.animation.direction &&
+    left.animation.durationSeconds === right.animation.durationSeconds
+}
+
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
 }
@@ -1086,6 +1098,35 @@ function App() {
       }`,
     )
   }
+
+  useEffect(() => {
+    if (!activePlayback) return
+    const item = expressionDoc.items.find(
+      (candidate) => candidate.id === activePlayback.itemId,
+    )
+    const control = item?.control
+    if (!control || control.mode !== 'slider') return
+    const evaluation = scalarControlEvaluations.get(activePlayback.itemId)
+    if (!evaluation || evaluation.status === 'invalid') {
+      pausedPlayback.current = null
+      dispatchHistory({ type: 'commit-transaction' })
+      setPlaybackAnnouncement(
+        'Scalar animation stopped because its interval became invalid.',
+      )
+      setActivePlayback(null)
+      return
+    }
+    const parameters: PlaybackParameters = {
+      minimum: evaluation.minimum!,
+      maximum: evaluation.maximum!,
+      step: evaluation.step!,
+      animation: control.animation ?? DEFAULT_SCALAR_ANIMATION,
+    }
+    if (playbackParametersEqual(activePlayback.parameters, parameters)) return
+    setActivePlayback((current) => current?.itemId === activePlayback.itemId
+      ? { ...current, parameters }
+      : current)
+  }, [activePlayback, expressionDoc.items, scalarControlEvaluations])
 
   useEffect(() => {
     if (!activePlayback) return
