@@ -122,10 +122,12 @@ type EditorFocus = Readonly<{
 }>
 type ActiveScalarPlayback = Readonly<{
   itemId: string
+  name: string
   startedAt: number
   offsetMilliseconds: number
   parameters: PlaybackParameters
 }>
+type PausedScalarPlayback = Omit<ActiveScalarPlayback, 'startedAt'>
 type ManipulationKind = 'base' | 'head' | 'line' | 'normal'
 
 function playbackParametersEqual(
@@ -142,6 +144,16 @@ function playbackParametersEqual(
 
 function declaredName(source: string): string | null {
   return /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(source)?.[1] ?? null
+}
+
+function naturalList(values: readonly string[]): string {
+  if (values.length < 2) return values[0] ?? ''
+  if (values.length === 2) return `${values[0]} and ${values[1]}`
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
+}
+
+function animationSubject(names: readonly string[]): string {
+  return `${naturalList(names)} animation${names.length === 1 ? '' : 's'}`
 }
 
 const defaultViewport: Viewport2d = {
@@ -249,11 +261,9 @@ function App() {
   const pendingTraversal = useRef(false)
   const removedEditorFallbacks = useRef(new Map<string, EditorFocus>())
   const viewportCreatedItemIds = useRef(new Set<string>())
-  const pausedPlayback = useRef<Readonly<{
-    itemId: string
-    offsetMilliseconds: number
-    parameters: PlaybackParameters
-  }> | null>(null)
+  const pausedPlaybacks = useRef(new Map<string, PausedScalarPlayback>())
+  /** Names every slider whose value belongs to the open playback transaction. */
+  const playbackSessionNames = useRef(new Map<string, string>())
   const addButtonRef = useRef<HTMLButtonElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const algebraInfoButtonRef = useRef<HTMLButtonElement>(null)
@@ -351,7 +361,9 @@ function App() {
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [anchorPreview, setAnchorPreview] = useState<AnchorCandidate | null>(null)
   const [viewportLocked, setViewportLocked] = useState(restoredViewportLock)
-  const [activePlayback, setActivePlayback] = useState<ActiveScalarPlayback | null>(null)
+  const [activePlaybacks, setActivePlaybacks] = useState<
+    ReadonlyMap<string, ActiveScalarPlayback>
+  >(() => new Map())
   const [playbackAnnouncement, setPlaybackAnnouncement] = useState('')
   const [reducedMotion, setReducedMotion] = useState(
     () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
@@ -1055,35 +1067,67 @@ function App() {
     [evaluatedItems],
   )
 
-  const stopPlayback = useCallback((cancel = false) => {
-    if (!activePlayback) return
-    pausedPlayback.current = cancel ? null : {
-      itemId: activePlayback.itemId,
+  const stopPlayback = useCallback((itemId: string) => {
+    const playback = activePlaybacks.get(itemId)
+    if (!playback) return
+    pausedPlaybacks.current.set(itemId, {
+      itemId,
+      name: playback.name,
       offsetMilliseconds:
-        performance.now() - activePlayback.startedAt + activePlayback.offsetMilliseconds,
-      parameters: activePlayback.parameters,
+        performance.now() - playback.startedAt + playback.offsetMilliseconds,
+      parameters: playback.parameters,
+    })
+    const next = new Map(activePlaybacks)
+    next.delete(itemId)
+    if (next.size === 0) {
+      dispatchHistory({ type: 'commit-transaction' })
+      playbackSessionNames.current.clear()
     }
-    dispatchHistory({ type: cancel ? 'cancel-transaction' : 'commit-transaction' })
-    setPlaybackAnnouncement(cancel ? 'Scalar animation cancelled.' : 'Scalar animation paused.')
-    setActivePlayback(null)
-  }, [activePlayback])
+    setPlaybackAnnouncement(`${playback.name} animation paused.`)
+    setActivePlaybacks(next)
+  }, [activePlaybacks])
+
+  const stopAllPlaybacks = useCallback(() => {
+    if (activePlaybacks.size === 0) return
+    const names = [...activePlaybacks.values()].map((playback) => playback.name)
+    dispatchHistory({ type: 'commit-transaction' })
+    pausedPlaybacks.current.clear()
+    playbackSessionNames.current.clear()
+    setPlaybackAnnouncement(`${animationSubject(names)} stopped.`)
+    setActivePlaybacks(new Map())
+  }, [activePlaybacks])
+
+  const cancelPlaybackSession = useCallback(() => {
+    if (activePlaybacks.size === 0) return
+    const names = [...playbackSessionNames.current.values()]
+    for (const itemId of playbackSessionNames.current.keys()) {
+      pausedPlaybacks.current.delete(itemId)
+    }
+    playbackSessionNames.current.clear()
+    dispatchHistory({ type: 'cancel-transaction' })
+    setPlaybackAnnouncement(`${animationSubject(names)} cancelled.`)
+    setActivePlaybacks(new Map())
+  }, [activePlaybacks])
 
   const startPlayback = (
     item: ExpressionItem,
     parameters: PlaybackParameters,
     currentValue: number,
   ) => {
-    if (activePlayback) dispatchHistory({ type: 'commit-transaction' })
-    dispatchHistory({ type: 'boundary' })
-    dispatchHistory({ type: 'begin-transaction' })
+    if (activePlaybacks.size === 0) {
+      dispatchHistory({ type: 'boundary' })
+      dispatchHistory({ type: 'begin-transaction' })
+      playbackSessionNames.current.clear()
+    }
     const currentOffset = scalarPlaybackOffset(parameters, currentValue)
     const duration = parameters.animation.durationSeconds * 1000
-    const resumable = pausedPlayback.current?.itemId === item.id
-      ? pausedPlayback.current
-      : null
-    pausedPlayback.current = null
-    setActivePlayback({
+    const resumable = pausedPlaybacks.current.get(item.id) ?? null
+    pausedPlaybacks.current.delete(item.id)
+    const name = declaredName(item.source) ?? 'Scalar'
+    playbackSessionNames.current.set(item.id, name)
+    setActivePlaybacks((current) => new Map(current).set(item.id, {
       itemId: item.id,
+      name,
       startedAt: performance.now(),
       offsetMilliseconds: resumable?.offsetMilliseconds ?? (
         parameters.animation.mode === 'once' && currentOffset >= duration
@@ -1091,78 +1135,111 @@ function App() {
           : currentOffset
       ),
       parameters,
-    })
+    }))
     setPlaybackAnnouncement(
-      `${declaredName(item.source) ?? 'Scalar'} animation started.${
+      `${name} animation started.${
         reducedMotion ? ' Reduced motion preference is active.' : ''
       }`,
     )
   }
 
   useEffect(() => {
-    if (!activePlayback) return
-    const item = expressionDoc.items.find(
-      (candidate) => candidate.id === activePlayback.itemId,
-    )
-    const control = item?.control
-    if (!control || control.mode !== 'slider') return
-    const evaluation = scalarControlEvaluations.get(activePlayback.itemId)
-    if (!evaluation || evaluation.status === 'invalid') {
-      pausedPlayback.current = null
-      dispatchHistory({ type: 'commit-transaction' })
-      setPlaybackAnnouncement(
-        'Scalar animation stopped because its interval became invalid.',
-      )
-      setActivePlayback(null)
-      return
+    if (activePlaybacks.size === 0) return
+    const next = new Map(activePlaybacks)
+    const stopped: ActiveScalarPlayback[] = []
+    let changed = false
+    for (const [itemId, playback] of activePlaybacks) {
+      const item = expressionDoc.items.find((candidate) => candidate.id === itemId)
+      if (!item) {
+        next.delete(itemId)
+        pausedPlaybacks.current.delete(itemId)
+        stopped.push(playback)
+        changed = true
+        continue
+      }
+      const control = item?.control
+      if (!control) continue
+      const evaluation = scalarControlEvaluations.get(itemId)
+      if (control.mode !== 'slider' ||
+          !evaluation || evaluation.status === 'invalid') {
+        next.delete(itemId)
+        pausedPlaybacks.current.delete(itemId)
+        stopped.push(playback)
+        changed = true
+        continue
+      }
+      const parameters: PlaybackParameters = {
+        minimum: evaluation.minimum!,
+        maximum: evaluation.maximum!,
+        step: evaluation.step!,
+        animation: control.animation ?? DEFAULT_SCALAR_ANIMATION,
+      }
+      if (!playbackParametersEqual(playback.parameters, parameters)) {
+        next.set(itemId, { ...playback, parameters })
+        changed = true
+      }
     }
-    const parameters: PlaybackParameters = {
-      minimum: evaluation.minimum!,
-      maximum: evaluation.maximum!,
-      step: evaluation.step!,
-      animation: control.animation ?? DEFAULT_SCALAR_ANIMATION,
+    if (!changed) return
+    if (stopped.length > 0) {
+      const names = stopped.map((playback) => playback.name)
+      setPlaybackAnnouncement(stopped.length === 1
+        ? `${names[0]} animation stopped because its interval became invalid.`
+        : `${naturalList(names)} animations stopped because their intervals became invalid.`)
+      if (next.size === 0) {
+        dispatchHistory({ type: 'commit-transaction' })
+        playbackSessionNames.current.clear()
+      }
     }
-    if (playbackParametersEqual(activePlayback.parameters, parameters)) return
-    setActivePlayback((current) => current?.itemId === activePlayback.itemId
-      ? { ...current, parameters }
-      : current)
-  }, [activePlayback, expressionDoc.items, scalarControlEvaluations])
+    setActivePlaybacks(next)
+  }, [activePlaybacks, expressionDoc.items, scalarControlEvaluations])
 
   useEffect(() => {
-    if (!activePlayback) return
+    if (activePlaybacks.size === 0) return
     let frame = 0
     const tick = (now: number) => {
-      const playback = scalarPlaybackFrame(
-        activePlayback.parameters,
-        now - activePlayback.startedAt + activePlayback.offsetMilliseconds,
-      )
-      executeCommand({
-        kind: 'set-scalar-value', itemId: activePlayback.itemId,
-        value: playback.value,
-      })
-      if (playback.completed) {
-        pausedPlayback.current = null
-        dispatchHistory({ type: 'commit-transaction' })
-        setPlaybackAnnouncement('Scalar animation completed.')
-        setActivePlayback(null)
+      const completed: ActiveScalarPlayback[] = []
+      for (const playback of activePlaybacks.values()) {
+        const result = scalarPlaybackFrame(
+          playback.parameters,
+          now - playback.startedAt + playback.offsetMilliseconds,
+        )
+        executeCommand({
+          kind: 'set-scalar-value', itemId: playback.itemId,
+          value: result.value,
+        })
+        if (result.completed) completed.push(playback)
+      }
+      if (completed.length > 0) {
+        const next = new Map(activePlaybacks)
+        for (const playback of completed) {
+          next.delete(playback.itemId)
+          pausedPlaybacks.current.delete(playback.itemId)
+        }
+        const names = completed.map((playback) => playback.name)
+        setPlaybackAnnouncement(`${animationSubject(names)} completed.`)
+        if (next.size === 0) {
+          dispatchHistory({ type: 'commit-transaction' })
+          playbackSessionNames.current.clear()
+        }
+        setActivePlaybacks(next)
         return
       }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [activePlayback, executeCommand])
+  }, [activePlaybacks, executeCommand])
 
   useEffect(() => {
-    if (!activePlayback) return
+    if (activePlaybacks.size === 0) return
     const cancel = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
-      stopPlayback(true)
+      cancelPlaybackSession()
     }
     window.addEventListener('keydown', cancel)
     return () => window.removeEventListener('keydown', cancel)
-  }, [activePlayback, stopPlayback])
+  }, [activePlaybacks, cancelPlaybackSession])
   useEffect(() => {
     const cancel = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape') return
@@ -1524,7 +1601,7 @@ function App() {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    if (activePlayback) stopPlayback()
+    if (activePlaybacks.size > 0) stopAllPlaybacks()
     try {
       const parsed = parseCanonicalDocumentBytes(new Uint8Array(await file.arrayBuffer()))
       const collision = parsed.id === expressionDoc.id
@@ -1577,7 +1654,7 @@ function App() {
   }
 
   const removeExpression = (id: string) => {
-    if (activePlayback?.itemId === id) stopPlayback()
+    if (activePlaybacks.has(id)) stopPlayback(id)
     const index = expressionDoc.items.findIndex((item) => item.id === id)
     const neighbor =
       expressionDoc.items[index - 1] ??
@@ -1611,7 +1688,7 @@ function App() {
     if (clearing && !window.confirm(
       `Switching to ${definition.badge} replaces every expression of this document with its example. Continue?`,
     )) return
-    if (activePlayback) stopPlayback()
+    if (activePlaybacks.size > 0) stopAllPlaybacks()
     setAppearanceItemId(null)
     setExpandedListIds(new Set())
     dispatchHistory({ type: 'begin-transaction' })
@@ -1635,7 +1712,7 @@ function App() {
   }
 
   const clearAllExpressions = () => {
-    if (activePlayback) stopPlayback()
+    if (activePlaybacks.size > 0) stopAllPlaybacks()
     setAppearanceItemId(null)
     setExpandedListIds(new Set())
     executeCommand({ kind: 'clear-items' })
@@ -1865,7 +1942,7 @@ function App() {
                     animation: effectiveControl.animation ?? DEFAULT_SCALAR_ANIMATION,
                   }
                 : null
-              const isPlaying = activePlayback?.itemId === item.id
+              const isPlaying = activePlaybacks.has(item.id)
               const empty = item.source.trim() === ''
               const listExpanded = expandedListIds.has(item.id)
               const listDetailsId = `list-details-${item.id}`
@@ -1905,7 +1982,7 @@ function App() {
                           aria-label={isPlaying ? 'Pause scalar animation' : 'Play scalar animation'}
                           disabled={!scalarEdit || !playbackParameters}
                           onClick={() => isPlaying
-                            ? stopPlayback()
+                            ? stopPlayback(item.id)
                             : startPlayback(item, playbackParameters!, scalarEdit!.value)}
                         >{isPlaying
                           ? <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
@@ -1971,8 +2048,8 @@ function App() {
                           aria-label={`${annotation ? 'Annotation' : 'Expression'} ${position}`}
                           value={item.source}
                           onChange={(event) => {
-                            if (isPlaying) stopPlayback()
-                            pausedPlayback.current = null
+                            if (isPlaying) stopPlayback(item.id)
+                            pausedPlaybacks.current.delete(item.id)
                             executeCommand({
                               kind: 'update-source', itemId: item.id,
                               source: event.target.value,
@@ -2126,7 +2203,7 @@ function App() {
                             onPointerCancel={() => dispatchHistory({ type: 'cancel-transaction' })}
                             onBlur={() => dispatchHistory({ type: 'boundary' })}
                             onChange={(event) => {
-                              pausedPlayback.current = null
+                              pausedPlaybacks.current.delete(item.id)
                               executeCommand({
                                 kind: 'set-scalar-value', itemId: item.id,
                                 value: snapToControlBounds(
@@ -2170,8 +2247,8 @@ function App() {
                                   ].status === 'invalid'}
                                   onBlur={() => dispatchHistory({ type: 'boundary' })}
                                   onChange={(event) => {
-                                    if (isPlaying) stopPlayback()
-                                    pausedPlayback.current = null
+                                    if (isPlaying) stopPlayback(item.id)
+                                    pausedPlaybacks.current.delete(item.id)
                                     executeCommand({
                                       kind: 'update-control', itemId: item.id,
                                       control: { ...effectiveControl, [property]: event.target.value },
@@ -2354,8 +2431,8 @@ function App() {
                         kind: 'update-appearance', itemId: item.id, appearance: { idealPointDisplay },
                       })}
                       onControlChange={(control) => {
-                        if (isPlaying) stopPlayback()
-                        pausedPlayback.current = null
+                        if (isPlaying) stopPlayback(item.id)
+                        pausedPlaybacks.current.delete(item.id)
                         executeCommand({ kind: 'update-control', itemId: item.id, control })
                       }}
                       onClose={closeAppearance}

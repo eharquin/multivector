@@ -1321,7 +1321,125 @@ describe('VGA 2D vertical slice', () => {
     expect(source).not.toHaveValue('a = 2')
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(source).toHaveValue('a = 2')
-    expect(screen.getByText('Scalar animation cancelled.')).toBeInTheDocument()
+    expect(screen.getByText('a animation cancelled.')).toBeInTheDocument()
+  })
+
+  it('plays multiple scalar animations and pauses or resumes each independently', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'a = 1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const second = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'b = 2' } })
+    const firstRow = first.closest('.expression-item') as HTMLElement
+    const secondRow = second.closest('.expression-item') as HTMLElement
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Play scalar animation' }))
+    expect(within(firstRow).getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
+    expect(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(500))
+    expect(first).not.toHaveValue('a = 1')
+    expect(second).not.toHaveValue('b = 2')
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Pause scalar animation' }))
+    const pausedFirst = first.value
+    const movingSecond = second.value
+    act(() => vi.advanceTimersByTime(250))
+    expect(first).toHaveValue(pausedFirst)
+    expect(second).not.toHaveValue(movingSecond)
+    expect(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+    act(() => vi.advanceTimersByTime(250))
+    expect(first).not.toHaveValue(pausedFirst)
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Pause scalar animation' }))
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(first).toHaveValue('a = 1')
+    expect(second).toHaveValue('b = 2')
+  })
+
+  it('keeps other scalar animations running when one completes', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'a = 1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const second = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'b = 2' } })
+    const firstRow = first.closest('.expression-item') as HTMLElement
+    const secondRow = second.closest('.expression-item') as HTMLElement
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Open Scalar menu for a' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Once' }))
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Play scalar animation' }))
+    act(() => vi.advanceTimersByTime(2100))
+
+    expect(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+      .toBeInTheDocument()
+    expect(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
+    expect(screen.getByText('a animation completed.')).toBeInTheDocument()
+
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo document change' }))
+    expect(first).toHaveValue('a = 1')
+    expect(second).toHaveValue('b = 2')
+  })
+
+  it('cancels all concurrent scalar animations through Escape', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'a = 1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const second = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'b = 2' } })
+    const firstRow = first.closest('.expression-item') as HTMLElement
+    const secondRow = second.closest('.expression-item') as HTMLElement
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Play scalar animation' }))
+    act(() => vi.advanceTimersByTime(500))
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(first).toHaveValue('a = 1')
+    expect(second).toHaveValue('b = 2')
+    expect(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+      .toBeInTheDocument()
+    expect(within(secondRow).getByRole('button', { name: 'Play scalar animation' }))
+      .toBeInTheDocument()
+    expect(screen.getByText('a and b animations cancelled.')).toBeInTheDocument()
+  })
+
+  it('keeps other scalar animations running when one animated row is removed', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const first = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'a = 1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const second = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'b = 2' } })
+    const firstRow = first.closest('.expression-item') as HTMLElement
+    const secondRow = second.closest('.expression-item') as HTMLElement
+
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Play scalar animation' }))
+    fireEvent.click(within(secondRow).getByRole('button', { name: 'Play scalar animation' }))
+    fireEvent.click(within(firstRow).getByRole('button', { name: 'Delete expression 1' }))
+    act(() => vi.advanceTimersByTime(250))
+
+    expect(screen.queryByDisplayValue(/a =/)).not.toBeInTheDocument()
+    expect(second).not.toHaveValue('b = 2')
+    expect(within(secondRow).getByRole('button', { name: 'Pause scalar animation' }))
+      .toBeInTheDocument()
   })
 
   it('refreshes dependent scalar animation bounds and stops on invalid bounds', () => {
@@ -1359,11 +1477,21 @@ describe('VGA 2D vertical slice', () => {
       name: 'Step source',
     }), { target: { value: '1' } })
 
+    fireEvent.click(screen.getByRole('button', { name: 'Add expression' }))
+    const independentSource = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Expression 3',
+    })
+    fireEvent.change(independentSource, { target: { value: 'N = 2' } })
+    const independentRow = independentSource.closest('.expression-item') as HTMLElement
+
     fireEvent.click(within(animatedRow).getByRole('button', {
       name: 'Open Scalar menu for M',
     }))
     fireEvent.click(screen.getByRole('button', { name: 'Loop' }))
     fireEvent.click(within(animatedRow).getByRole('button', {
+      name: 'Play scalar animation',
+    }))
+    fireEvent.click(within(independentRow).getByRole('button', {
       name: 'Play scalar animation',
     }))
     act(() => vi.advanceTimersByTime(1000))
@@ -1378,11 +1506,14 @@ describe('VGA 2D vertical slice', () => {
     fireEvent.change(samplingSource, { target: { value: 'sampling = e1' } })
     act(() => vi.advanceTimersByTime(20))
     expect(screen.getByText(
-      'Scalar animation stopped because its interval became invalid.',
+      'M animation stopped because its interval became invalid.',
     )).toBeInTheDocument()
     expect(within(animatedRow).getByRole('button', {
       name: 'Play scalar animation',
     })).toBeDisabled()
+    expect(within(independentRow).getByRole('button', {
+      name: 'Pause scalar animation',
+    })).toBeInTheDocument()
   })
 
   it('refreshes minimum, maximum, and step dependencies during playback', () => {

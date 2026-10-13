@@ -58,6 +58,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Interface and accessibility
 
+- Scalar sliders can now animate concurrently through one shared animation
+  loop. Each slider pauses, resumes, completes, or stops independently;
+  concurrent motion remains one coherent history transaction, and Escape
+  cancels the complete active playback session.
+
 - Added algebra selection from the header capsule: its badge opens a menu of
   registered algebras, its `i` segment the algebra information; switching
   replaces the document with the selected algebra's showcase after
