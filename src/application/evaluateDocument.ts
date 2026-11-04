@@ -6,7 +6,6 @@ import type {
 import type { SourceSpan } from '../domain/diagnostic'
 import {
   inspectMultivector,
-  ownedMultivector,
   type OwnedMultivector,
 } from '../domain/multivector'
 import {
@@ -449,7 +448,7 @@ export function evaluateDocument(
           return {
             id: element.id,
             sources: element.sources,
-            value: ownedMultivector([0, position.x, position.y, 0], engine.basis),
+            value: interpretation.positionValue(position, engine.basis),
           }
         }))
       }

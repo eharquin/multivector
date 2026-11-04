@@ -144,6 +144,14 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   canvas after a pointer drag, on the moved handle after an arrow-key move —
   instead of jumping to the last edited expression.
 
+### Corrections
+
+- Reading `position` or `head` on a PGA list, such as `L.position` for
+  `L = [e01, e02]`, no longer blanks the application: inherited list
+  positions are built in the active algebra's basis.
+- List inspections name the blades of the active algebra, so a PGA list reads
+  `[2e01 - e02 + e12, e12]` instead of showing `undefined` terms.
+
 ## 0.1.0 - 2026-09-13
 
 First stable release. Tag
