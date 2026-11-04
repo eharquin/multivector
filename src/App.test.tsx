@@ -86,7 +86,7 @@ describe('VGA 2D vertical slice', () => {
       formatVersion: 4,
       appearance: Object.fromEntries(Object.entries(current.appearance).map(
         ([id, appearance]) => {
-          const { idealPointDisplay: _idealPointDisplay, ...versionFour } = appearance
+          const { idealPointDisplay: _idealPointDisplay, pointListDisplay: _pointListDisplay, pointMarkersVisible: _pointMarkersVisible, ...versionFour } = appearance
           return [id, versionFour]
         },
       )),
@@ -2442,6 +2442,18 @@ describe('VGA 2D vertical slice', () => {
   })
 })
 
+describe('point-list connection eligibility outside PGA', () => {
+  it('offers no connection for a list of VGA vectors', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: 'Z = [e1, e2]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (2) menu for Z' }))
+    expect(screen.getByRole('switch', { name: 'Visible' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Point list display' })).not.toBeInTheDocument()
+    expect(document.querySelector('.point-list-connection')).toBeNull()
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+})
+
 describe('PGA 2D foundation workflow', () => {
   function selectPga() {
     render(<App />)
@@ -2484,6 +2496,240 @@ describe('PGA 2D foundation workflow', () => {
     expect(screen.getByLabelText('I')).toHaveClass('line-at-infinity')
     expect(screen.getByRole('button', { name: 'Move P' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Move head of P' })).not.toBeInTheDocument()
+  })
+
+  it('connects a point list as an open polyline or a closed loop', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = [point(0, 0), point(1, 0), point(1, 1)]' } })
+    const connection = () => document.querySelector('.point-list-connection')
+    const segmentCount = () => connection()?.getAttribute('d')?.match(/M/g)?.length ?? 0
+
+    // No connection is the default: markers only.
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (3) menu for P' }))
+    const display = screen.getByRole('group', { name: 'Point list display' })
+    expect(within(display).getByRole('button', { name: 'No connection' })).toHaveAttribute('aria-pressed', 'true')
+    expect(connection()).toBeNull()
+
+    fireEvent.click(within(display).getByRole('button', { name: 'Open polyline' }))
+    expect(segmentCount()).toBe(2)
+    expect(screen.getAllByLabelText(/^P\[\d\]$/)).toHaveLength(3)
+    fireEvent.click(within(display).getByRole('button', { name: 'Closed loop' }))
+    expect(segmentCount()).toBe(3)
+    // The segments take the item's color, like the markers.
+    const markerColor = (screen.getByLabelText('P[0]').parentElement as HTMLElement).style.color
+    expect((connection() as SVGElement).style.color).toBe(markerColor)
+
+    // Undo and redo traverse the display change.
+    const history = screen.getByRole('group', { name: 'Expression history' })
+    fireEvent.click(within(history).getByRole('button', { name: 'Undo document change' }))
+    expect(segmentCount()).toBe(2)
+    fireEvent.click(within(history).getByRole('button', { name: 'Redo document change' }))
+    expect(segmentCount()).toBe(3)
+
+    // Hiding the item hides markers and segments together.
+    fireEvent.click(screen.getByRole('switch', { name: 'Visible' }))
+    expect(connection()).toBeNull()
+    expect(screen.queryByLabelText('P[0]')).not.toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('draws a connected point list as segments alone, keeping its labels', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = [point(0, 0), point(1, 0), point(1, 1)]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (3) menu for P' }))
+    const markers = screen.getByRole('switch', { name: 'Show point markers' })
+    // Hiding markers only makes sense once the points are connected.
+    expect(markers).toBeChecked()
+    expect(markers).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Closed loop' }))
+    expect(markers).toBeEnabled()
+    fireEvent.click(markers)
+    expect(markers).not.toBeChecked()
+    expect(screen.queryByLabelText(/^P\[\d\]$/)).not.toBeInTheDocument()
+    expect(document.querySelector('.point-list-connection')!.getAttribute('d')!.match(/M/g)).toHaveLength(3)
+    fireEvent.click(screen.getByRole('switch', { name: 'Show label' }))
+    expect(document.querySelectorAll('.object-label')).toHaveLength(3)
+
+    // Without a connection, markers return, whatever the stored marker visibility.
+    fireEvent.click(screen.getByRole('button', { name: 'No connection' }))
+    expect(markers).toBeDisabled()
+    expect(markers).toBeChecked()
+    expect(screen.getAllByLabelText(/^P\[\d\]$/)).toHaveLength(3)
+    expect(document.querySelector('.point-list-connection')).toBeNull()
+
+    // Undo restores the segments-only display.
+    const history = screen.getByRole('group', { name: 'Expression history' })
+    fireEvent.click(within(history).getByRole('button', { name: 'Undo document change' }))
+    expect(screen.queryByLabelText(/^P\[\d\]$/)).not.toBeInTheDocument()
+    expect(document.querySelector('.point-list-connection')).not.toBeNull()
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('connects points in evaluated order and offers connections only for point lists', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = point([0...3], [0, 1, 0, 1])' } })
+    fireEvent.keyDown(first, { key: 'Enter' })
+    const second = screen.getByRole('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'Q = P[[3, 0, 0, 2]]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (4) menu for Q' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open polyline' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    // Gathered order, including the repeated point, gives the segment order.
+    const marker = (name: string) => {
+      const circle = screen.getByLabelText(name)
+      return `${circle.getAttribute('cx')} ${circle.getAttribute('cy')}`
+    }
+    const path = document.querySelector('.point-list-connection')!.getAttribute('d')!
+    expect(path).toBe([
+      `M ${marker('Q[0]')} L ${marker('Q[1]')}`,
+      `M ${marker('Q[1]')} L ${marker('Q[2]')}`,
+      `M ${marker('Q[2]')} L ${marker('Q[3]')}`,
+    ].join(' '))
+    expect(path).not.toMatch(/NaN|Infinity/)
+
+    // Mixed lists, empty lists, and other lists do not offer connected modes.
+    for (const source of ['M = [point(0, 0), line(1, 0, 0)]', 'E = []', 'D = [ipoint(1, 0), ipoint(0, 1)]']) {
+      fireEvent.change(second, { target: { value: source } })
+      const name = source.slice(0, 1)
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`^Open .* menu for ${name}$`) }))
+      expect(screen.queryByRole('group', { name: 'Point list display' })).not.toBeInTheDocument()
+      fireEvent.keyDown(document, { key: 'Escape' })
+    }
+  })
+
+  it('joins finite points to an ideal point with rays in its direction', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = [point(-1, 0), e01, point(1, 0)]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (3) menu for L' }))
+    const display = screen.getByRole('group', { name: 'Point list display' })
+    const marker = (name: string) => {
+      const circle = screen.getByLabelText(name)
+      return { x: circle.getAttribute('cx'), y: circle.getAttribute('cy') }
+    }
+    const links = () => document.querySelector('.point-list-connection')!.getAttribute('d')!
+      .split('M').slice(1).map((link) => link.trim().split(/\s+/))
+
+    // Open polyline: the vertical rays from L[0] and L[2] towards e01, upwards.
+    fireEvent.click(within(display).getByRole('button', { name: 'Open polyline' }))
+    const [a, b] = [marker('L[0]'), marker('L[2]')]
+    const rays = links()
+    expect(rays).toHaveLength(2)
+    for (const [ray, origin] of [[rays[0], a], [rays[1], b]] as const) {
+      expect(ray.slice(0, 2)).toEqual([origin.x, origin.y])
+      expect(ray[3]).toBe(origin.x)
+      expect(Number(ray[4])).toBeLessThan(Number(origin.y))
+    }
+    // Closed loop adds the segment from L[2] back to L[0].
+    fireEvent.click(within(display).getByRole('button', { name: 'Closed loop' }))
+    expect(links()).toHaveLength(3)
+    expect(links()[2]).toEqual([b.x, b.y, 'L', a.x, a.y])
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('moves the links with a referenced point, list elements having no handle', () => {
+    selectPga()
+    const rows = ['A = point(0, 0)', 'B = point(1, 0)', 'L = [A, B]']
+    rows.forEach((source, index) => {
+      const row = screen.getByRole('textbox', { name: `Expression ${index + 1}` })
+      fireEvent.change(row, { target: { value: source } })
+      if (index < rows.length - 1) fireEvent.keyDown(row, { key: 'Enter' })
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (2) menu for L' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open polyline' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    const path = () => document.querySelector('.point-list-connection')!.getAttribute('d')
+    const marker = (name: string) => {
+      const circle = screen.getByLabelText(name)
+      return `${circle.getAttribute('cx')} ${circle.getAttribute('cy')}`
+    }
+    const before = path()
+    expect(before).toBe(`M ${marker('L[0]')} L ${marker('L[1]')}`)
+    expect(screen.queryByRole('button', { name: /^Move L\[/ })).not.toBeInTheDocument()
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move B' }), { key: 'ArrowRight', shiftKey: true })
+    expect(screen.getByRole('textbox', { name: 'Expression 2' })).toHaveValue('B = point(2, 0)')
+    expect(path()).not.toBe(before)
+    expect(path()).toBe(`M ${marker('L[0]')} L ${marker('L[1]')}`)
+  })
+
+  it('drops and restores a stored connection as the list leaves and regains eligibility', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    const points = 'P = [point(0, 0), point(1, 0), point(1, 1)]'
+    fireEvent.change(first, { target: { value: points } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (3) menu for P' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Closed loop' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Show point markers' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByLabelText(/^P\[\d\]$/)).not.toBeInTheDocument()
+
+    // A mixed list neither connects nor hides its markers, whatever is stored.
+    fireEvent.change(first, { target: { value: 'P = [point(0, 0), line(1, 0, 0)]' } })
+    expect(document.querySelector('.point-list-connection')).toBeNull()
+    expect(screen.getByLabelText('P[0]')).toHaveClass('point-marker')
+    expect(screen.getByLabelText('P[1]')).toHaveClass('unbounded-line')
+
+    // Back to points only: the stored closed loop without markers returns.
+    fireEvent.change(first, { target: { value: points } })
+    expect(document.querySelector('.point-list-connection')!.getAttribute('d')!.match(/M/g)).toHaveLength(3)
+    expect(screen.queryByLabelText(/^P\[\d\]$/)).not.toBeInTheDocument()
+  })
+
+  it('hides the ideal points of a connected list along with its markers', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = [point(-1, 0), e01, point(1, 0)]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (3) menu for L' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open polyline' }))
+    expect(screen.getByLabelText('L[1]')).toHaveClass('vector')
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Show point markers' }))
+    expect(screen.queryByLabelText(/^L\[\d\]$/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('L[1] at infinity')).not.toBeInTheDocument()
+    expect(document.querySelector('.point-list-connection')!.getAttribute('d')!.match(/M/g)).toHaveLength(2)
+
+    // Without a connection, the ideal point is drawn again.
+    fireEvent.click(screen.getByRole('button', { name: 'No connection' }))
+    expect(screen.getByLabelText('L[1]')).toHaveClass('vector')
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('offers no connection for a single point', () => {
+    selectPga()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: 'P = point(1, 2)' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Open .* menu for P$/ }))
+    expect(screen.queryByRole('group', { name: 'Point list display' })).not.toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('connects only the rendered prefix of a truncated point list', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'P = point([0...1199], 0)' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (1200) menu for P' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Closed loop' }))
+    expect(document.querySelector('.point-list-connection')!.getAttribute('d')!.match(/M/g)).toHaveLength(1_000)
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('draws no connection for a singleton point list', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'S = [point(1, 1)]' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open List (1) menu for S' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Closed loop' }))
+    expect(document.querySelector('.point-list-connection')).toBeNull()
+    expect(screen.getByLabelText('S[0]')).toHaveClass('point-marker')
+    // Two points close to a single visible segment.
+    fireEvent.change(first, { target: { value: 'S = [point(1, 1), point(2, 1)]' } })
+    expect(document.querySelector('.point-list-connection')!.getAttribute('d')!.match(/M/g)).toHaveLength(1)
+    fireEvent.keyDown(document, { key: 'Escape' })
   })
 
   it('positions an ideal point, drags its head and base, and switches its display', () => {

@@ -60,9 +60,19 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Canonical format version 5 adds `Appearance.idealPointDisplay` (`vector`,
   `ideal`, `both`); version 4 documents migrate with `vector`.
+- Canonical format version 6 adds `Appearance.pointListDisplay` (`none`,
+  `open-polyline`, `closed-loop`) and `Appearance.pointMarkersVisible`;
+  version 5 documents migrate with `none` and visible markers.
 
 ### Interface and accessibility
 
+- A list of points can be connected as an open polyline or a closed loop
+  from its appearance menu. Links join consecutive points in evaluated list
+  order: a segment between two finite points, and the ray from a finite point
+  towards an ideal point's direction. They keep the labels and follow the
+  item's visibility and color; the point markers, ideal points included, can
+  be hidden to show the links alone. Lists holding other entities
+  keep independent markers.
 - Scalar sliders can now animate concurrently through one shared animation
   loop. Each slider pauses, resumes, completes, or stops independently;
   concurrent motion remains one coherent history transaction, and Escape

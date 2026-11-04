@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { RAMP_ORDER, STUDIO_COLORS } from './appearancePalette'
 import { popoverPosition } from './popoverPosition'
-import type { ExpressionControl } from '../document/expressionDocument'
+import type { ExpressionControl, PointListDisplay } from '../document/expressionDocument'
 
 const POPOVER_WIDTH = 272
 const POPOVER_HEIGHT = 300
@@ -18,6 +18,10 @@ type AppearancePopoverProps = Readonly<{
   bivectorShape?: 'from-vectors' | 'disk' | 'square'
   parallelogramAvailable?: boolean
   idealPointDisplay?: 'vector' | 'ideal' | 'both'
+  pointListDisplay?: PointListDisplay
+  /** The evaluated item is a list of finite and ideal points holding at least one finite point. */
+  pointListDisplayAvailable?: boolean
+  pointMarkersVisible?: boolean
   colorOnly?: boolean
   control?: ExpressionControl
   reducedMotion?: boolean
@@ -30,6 +34,8 @@ type AppearancePopoverProps = Readonly<{
   onOrientationVisibleChange?(visible: boolean): void
   onBivectorShapeChange?(shape: 'from-vectors' | 'disk' | 'square'): void
   onIdealPointDisplayChange?(display: 'vector' | 'ideal' | 'both'): void
+  onPointListDisplayChange?(display: PointListDisplay): void
+  onPointMarkersVisibleChange?(visible: boolean): void
   onControlChange?(control: ExpressionControl): void
   onClose(): void
 }>
@@ -45,6 +51,9 @@ export function AppearancePopover({
   bivectorShape = 'from-vectors',
   parallelogramAvailable = false,
   idealPointDisplay = 'vector',
+  pointListDisplay = 'none',
+  pointListDisplayAvailable = false,
+  pointMarkersVisible = true,
   colorOnly = false,
   control,
   reducedMotion = false,
@@ -57,6 +66,8 @@ export function AppearancePopover({
   onOrientationVisibleChange,
   onBivectorShapeChange,
   onIdealPointDisplayChange,
+  onPointListDisplayChange,
+  onPointMarkersVisibleChange,
   onControlChange,
   onClose,
 }: AppearancePopoverProps) {
@@ -190,6 +201,38 @@ export function AppearancePopover({
               <svg viewBox="0 0 28 22" aria-hidden="true"><ellipse cx="14" cy="11" rx="11" ry="8" fill="none" strokeDasharray="3 2" /><path d="M8 15 L16 8" fill="none" /><polygon points="25,11 19,8 19,14" /></svg>
             </button>
           </div>
+        </section>
+      )}
+      {pointListDisplayAvailable && onPointListDisplayChange && (
+        <section className="appearance-section">
+          <h3>Connection</h3>
+          <div className="bivector-shape-grid" role="group" aria-label="Point list display">
+            <button type="button" aria-label="No connection" aria-pressed={pointListDisplay === 'none'}
+              onClick={() => onPointListDisplayChange('none')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><circle cx="14" cy="11" r="7" fill="none" /><path d="M9 16 L19 6" fill="none" /></svg>
+            </button>
+            <button type="button" aria-label="Open polyline" aria-pressed={pointListDisplay === 'open-polyline'}
+              onClick={() => onPointListDisplayChange('open-polyline')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><path d="M5 16 L14 5 L23 16" fill="none" /><circle cx="5" cy="16" r="2.5" /><circle cx="14" cy="5" r="2.5" /><circle cx="23" cy="16" r="2.5" /></svg>
+            </button>
+            <button type="button" aria-label="Closed loop" aria-pressed={pointListDisplay === 'closed-loop'}
+              onClick={() => onPointListDisplayChange('closed-loop')}>
+              <svg viewBox="0 0 28 22" aria-hidden="true"><path d="M5 16 L14 5 L23 16 Z" fill="none" /><circle cx="5" cy="16" r="2.5" /><circle cx="14" cy="5" r="2.5" /><circle cx="23" cy="16" r="2.5" /></svg>
+            </button>
+          </div>
+          {onPointMarkersVisibleChange && (
+            <label className="appearance-toggle-row">
+              <span>{pointMarkersVisible || pointListDisplay === 'none' ? 'Markers visible' : 'Markers hidden'}</span>
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label="Show point markers"
+                checked={pointMarkersVisible || pointListDisplay === 'none'}
+                disabled={pointListDisplay === 'none'}
+                onChange={(event) => onPointMarkersVisibleChange(event.target.checked)}
+              />
+            </label>
+          )}
         </section>
       )}
       {(kind === 'Bivector' || kind === 'Line') && onOrientationVisibleChange && (

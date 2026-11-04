@@ -1,4 +1,4 @@
-import type { ExpressionAppearance } from '../document/expressionDocument'
+import type { ExpressionAppearance, PointListDisplay } from '../document/expressionDocument'
 
 const ramps = {
   red: ['#FADADF', '#F5A9B8', '#E8637F', '#C30A3A', '#92072B', '#60041C'],
@@ -90,6 +90,8 @@ export type ResolvedAppearance = Readonly<{
   orientationVisible: boolean
   bivectorShape: 'from-vectors' | 'disk' | 'square'
   idealPointDisplay: 'vector' | 'ideal' | 'both'
+  pointListDisplay: PointListDisplay
+  pointMarkersVisible: boolean
 }>
 
 /**
@@ -115,5 +117,7 @@ export function resolveItemAppearance(
     orientationVisible: appearance?.orientationVisible ?? true,
     bivectorShape: appearance?.bivectorShape ?? 'from-vectors',
     idealPointDisplay: appearance?.idealPointDisplay ?? 'vector',
+    pointListDisplay: appearance?.pointListDisplay ?? 'none',
+    pointMarkersVisible: appearance?.pointMarkersVisible ?? true,
   }
 }
