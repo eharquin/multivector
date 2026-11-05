@@ -7,6 +7,17 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Scene sharing
+
+- Added self-contained scene links and iframe snippets carrying the canonical
+  document, including sources, appearance, algebra, theme, and viewport.
+- Shared scenes open as temporary sessions without reading or writing browser
+  storage. An explicit **Save local copy** creates a new document identity;
+  JSON export remains available when storage is blocked or a link is too large.
+- Scene links use a versioned, integrity-checked envelope with bounded
+  decompression. Links over 8 KiB display a compatibility warning; fragments
+  over 64 KiB are rejected without generating a partial link.
+
 ### Product identity and compatibility
 
 - Renamed the product from **MultiVector** to **GAMUT — Geometric Algebra

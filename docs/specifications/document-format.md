@@ -278,6 +278,9 @@ byte-stable.
 Shared fragments and raw JSON imports have distinct bounded preprocessing
 pipelines.
 
+The concrete envelope and its temporary-session behavior are defined in
+[Self-contained scene links](scene-links.md).
+
 A shared fragment is processed in this order:
 
 1. enforce the encoded shared-fragment size limit before decoding;

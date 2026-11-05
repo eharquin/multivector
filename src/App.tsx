@@ -68,9 +68,11 @@ import {
   resolveCanonicalImport,
   serializeCanonicalDocument,
   toCanonicalDocument,
+  type CanonicalDocument,
   type ThemeMode,
 } from './document/canonicalDocument'
 import { browserDocumentStorage } from './document/documentStorage'
+import { createSceneLink, decodeSceneFragment, hasSceneFragment, sceneIframeCode, SHARE_URL_WARNING_LENGTH } from './document/sceneLink'
 import {
   formatDisplayMultivector,
   formatDisplayNumber,
@@ -193,18 +195,56 @@ function persistViewportLock(locked: boolean): void {
   }
 }
 
+type SharedDocument = ReturnType<typeof fromCanonicalDocument>
+
+function SharedScene() {
+  const [result, setResult] = useState<{ document?: SharedDocument; diagnostic?: string } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const canonical = await decodeSceneFragment(window.location.hash)
+        const restored = fromCanonicalDocument(canonical, restoreOptions)
+        requireAvailableAlgebra(algebraRegistry, restored.document.algebra)
+        if (!cancelled) setResult({ document: restored })
+      } catch (error) {
+        if (!cancelled) setResult({ diagnostic: error instanceof DocumentFormatError
+          ? error.code + ': ' + error.message
+          : 'SHARE_LOAD_FAILED: The scene link could not be opened.' })
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [])
+  if (!result) return <p role="status">Opening shared scene…</p>
+  return <Editor sharedDocument={result.document} sceneDiagnostic={result.diagnostic} sharedSession />
+}
+
 function App() {
+  return hasSceneFragment(window.location.hash) ? <SharedScene /> : <Editor />
+}
+
+function Editor({ sharedDocument, sceneDiagnostic, sharedSession = false }: {
+  sharedDocument?: SharedDocument
+  sceneDiagnostic?: string
+  sharedSession?: boolean
+}) {
+  const [ephemeral, setEphemeral] = useState(sharedSession)
   const persistence = useMemo(
-    () => browserDocumentStorage(window.localStorage),
+    () => ({
+      load: () => browserDocumentStorage(window.localStorage).load(),
+      save: (document: CanonicalDocument) => browserDocumentStorage(window.localStorage).save(document),
+    }),
     [],
   )
   const [initial] = useState(() => {
+    if (sharedDocument) return { ...sharedDocument, diagnostic: sharedDocument.recoveryDiagnostic }
     const fallback = {
       document: import.meta.env.MODE === 'test'
         ? expressionDocument([{ id: 'item-1', source: 'vector(2, 1)' }])
         : vga2FoundationExampleDocument(),
       theme: 'system' as ThemeMode,
-      diagnostic: null as string | null,
+      diagnostic: (sceneDiagnostic ?? null) as string | null,
     }
     if (import.meta.env.MODE === 'test') return fallback
     try {
@@ -212,13 +252,13 @@ function App() {
       if (stored === null) return fallback
       const restored = fromCanonicalDocument(stored, restoreOptions)
       requireAvailableAlgebra(algebraRegistry, restored.document.algebra)
-      return { ...restored, diagnostic: restored.recoveryDiagnostic }
+      return { ...restored, diagnostic: sceneDiagnostic ?? restored.recoveryDiagnostic }
     } catch (error) {
       return {
         ...fallback,
-        diagnostic: error instanceof DocumentFormatError
+        diagnostic: sceneDiagnostic ?? (error instanceof DocumentFormatError
           ? error.code + ': ' + error.message
-          : 'STORE_READ_FAILED: The saved document could not be restored.',
+          : 'STORE_READ_FAILED: The saved document could not be restored.'),
       }
     }
   })
@@ -360,7 +400,9 @@ function App() {
   const [reorderAnnouncement, setReorderAnnouncement] = useState('')
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [anchorPreview, setAnchorPreview] = useState<AnchorCandidate | null>(null)
-  const [viewportLocked, setViewportLocked] = useState(restoredViewportLock)
+  const [viewportLocked, setViewportLocked] = useState(() => sharedSession ? false : restoredViewportLock())
+  const [shareResult, setShareResult] = useState<{ content: string; label: string; message: string } | null>(null)
+  const [sharing, setSharing] = useState(false)
   const [activePlaybacks, setActivePlaybacks] = useState<
     ReadonlyMap<string, ActiveScalarPlayback>
   >(() => new Map())
@@ -991,7 +1033,7 @@ function App() {
     viewportPan.current = null
     setViewportLocked(locked)
     setViewportAnnouncement(locked ? 'Viewport locked.' : 'Viewport unlocked.')
-    persistViewportLock(locked)
+    if (!ephemeral) persistViewportLock(locked)
   }
 
   const createVectorFromViewport = (event: ReactMouseEvent<SVGSVGElement>) => {
@@ -1298,14 +1340,14 @@ function App() {
   }, [history.lastResult])
 
   useEffect(() => {
-    if (import.meta.env.MODE === 'test') return
+    if (ephemeral || import.meta.env.MODE === 'test') return
     try {
       persistence.save(toCanonicalDocument(expressionDoc, theme, resolvedStyles))
       setDocumentDiagnostic((current) => current?.startsWith('DOCUMENT_VIEW_UNSUPPORTED') ? current : null)
     } catch {
       setDocumentDiagnostic('STORE_WRITE_FAILED: Changes remain open, but the last saved revision was retained.')
     }
-  }, [expressionDoc, persistence, resolvedStyles, theme])
+  }, [expressionDoc, persistence, resolvedStyles, theme, ephemeral])
 
   const origin = toScreen(viewport, { x: 0, y: 0 })
   // The Studio-sized glyphs are the 1× baseline exposed to users. The
@@ -1630,6 +1672,37 @@ function App() {
     }
   }
 
+  const copyScene = async (iframe: boolean) => {
+    setSharing(true)
+    setShareResult(null)
+    try {
+      const url = await createSceneLink(toCanonicalDocument(expressionDoc, theme, resolvedStyles), new URL(import.meta.env.BASE_URL, window.location.href).href)
+      const content = iframe ? sceneIframeCode(url) : url
+      let copied = false
+      try { await navigator.clipboard.writeText(content); copied = true } catch { /* The selectable text remains available when clipboard access is blocked. */ }
+      setShareResult({
+        content,
+        label: iframe ? 'Scene iframe code' : 'Scene link',
+        message: (copied ? 'Copied.' : 'Select and copy the text below.') + (url.length > SHARE_URL_WARNING_LENGTH
+          ? ' This link exceeds 8 KiB and some presentation tools may reject it. JSON export is also available.' : ''),
+      })
+    } catch (error) {
+      setDocumentDiagnostic(error instanceof DocumentFormatError ? error.code + ': ' + error.message : 'SHARE_EXPORT_FAILED: The scene link could not be created. Use JSON export instead.')
+    } finally { setSharing(false) }
+  }
+
+  const saveLocalCopy = () => {
+    try {
+      const copy = { ...expressionDoc, id: crypto.randomUUID() }
+      persistence.save(toCanonicalDocument(copy, theme, resolvedStyles))
+      dispatchHistory({ type: 'replace', document: copy })
+      setEphemeral(false)
+      setDocumentDiagnostic(null)
+    } catch {
+      setDocumentDiagnostic('STORE_WRITE_FAILED: The local copy could not be saved. This session remains temporary; JSON export is available.')
+    }
+  }
+
   const exportDocument = () => {
     try {
       const source = serializeCanonicalDocument(
@@ -1805,6 +1878,8 @@ function App() {
         <button type="button" className="document-command" onClick={exportDocument}>
           Export
         </button>
+        <button type="button" className="document-command" disabled={sharing} onClick={() => void copyScene(false)}>Copy link</button>
+        <button type="button" className="document-command" disabled={sharing} onClick={() => void copyScene(true)}>Copy iframe code</button>
         <DisplaySettingsMenu
           display={expressionDoc.view.display}
           theme={theme}
@@ -1812,6 +1887,20 @@ function App() {
           onThemeChange={setTheme}
         />
       </header>
+
+      {ephemeral && (
+        <div className="shared-session-notice">
+          <span>Temporary session. Changes are not saved automatically.</span>
+          <button type="button" className="document-command" onClick={saveLocalCopy}>Save local copy</button>
+        </div>
+      )}
+      {shareResult && (
+        <section className="share-result" aria-label="Share scene">
+          <p role="status">{shareResult.message}</p>
+          <label>{shareResult.label}<textarea readOnly value={shareResult.content} onFocus={(event) => event.currentTarget.select()} /></label>
+          <button type="button" onClick={() => setShareResult(null)}>Close sharing</button>
+        </section>
+      )}
 
       {documentDiagnostic && (
         <div className="document-diagnostic" role="alert">
