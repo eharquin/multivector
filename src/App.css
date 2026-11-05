@@ -14,6 +14,46 @@
   padding: 0 22px;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding-block: 8px;
+}
+
+.shared-session-notice,
+.share-result {
+  padding: 8px 22px;
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.shared-session-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shared-session-notice .document-command {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.share-result {
+  flex-shrink: 0;
+  max-height: 35svh;
+  overflow: auto;
+}
+
+.share-result p { margin: 0 0 6px; }
+.share-result textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3em;
+  color: var(--text);
+  background: var(--surface);
+  font-family: var(--font-mono);
 }
 
 .app-title {
