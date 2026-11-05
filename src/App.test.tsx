@@ -2434,6 +2434,9 @@ describe('VGA 2D vertical slice', () => {
     expect(dialog).toHaveTextContent('A.dual')
     expect(dialog).toHaveTextContent('V = (2, 1)')
     expect(dialog).toHaveTextContent('L[[2, 0, 2]]')
+    // The position field is labelled "position"; "@" was its original prefix.
+    expect(dialog).toHaveTextContent('position (0, 0)')
+    expect(dialog).not.toHaveTextContent('@')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
