@@ -1031,6 +1031,35 @@ describe('VGA 2D vertical slice', () => {
     expect(screen.getByText('1.50×')).toBeInTheDocument()
   })
 
+  it('places the appearance menu from its measured height and follows its row', () => {
+    vi.stubGlobal('innerHeight', 600)
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('appearance-popover') ? 480 : 0
+    })
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: 'V = e1' } })
+    const trigger = screen.getByRole('button', { name: /^Open .* menu for V$/ })
+    let rowTop = 560
+    trigger.getBoundingClientRect = () =>
+      ({ top: rowTop, bottom: rowTop + 24, left: 40, right: 64, width: 24, height: 24, x: 40, y: rowTop }) as DOMRect
+
+    // From the last row of a short window, the measured 480 px menu opens above it.
+    fireEvent.click(trigger)
+    const menu = screen.getByRole('dialog', { name: 'Vector' })
+    expect(menu.style.top).toBe(`${560 - 6 - 480}px`)
+
+    // Scrolling the expression list moves the row: the menu follows it below.
+    rowTop = 40
+    fireEvent.scroll(document.querySelector('.expression-panel') ?? document)
+    expect(menu.style.top).toBe(`${40 + 24 + 6}px`)
+
+    // A resize re-places it as well.
+    rowTop = 500
+    fireEvent(window, new Event('resize'))
+    expect(menu.style.top).toBe(`${500 - 6 - 480}px`)
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
   it('configures a direct scalar slider that rewrites source and supports undo', () => {
     render(<App />)
     const source = screen.getByRole<HTMLInputElement>('textbox', {

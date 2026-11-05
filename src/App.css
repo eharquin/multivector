@@ -1272,7 +1272,12 @@ body.reordering-items .reorder-handle {
 .appearance-popover {
   position: fixed;
   z-index: 15;
-  overflow: hidden;
+  /* Capped to the window, less the 8px placement margins, and scrolled inside. */
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -1281,6 +1286,10 @@ body.reordering-items .reorder-handle {
 }
 
 .appearance-header {
+  /* Keeps the title and close button in view while the menu scrolls. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
