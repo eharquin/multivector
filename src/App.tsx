@@ -1925,9 +1925,12 @@ function App() {
               const scalar = valid && evaluation.valueType === 'single' &&
                 evaluation.entity.kind === 'scalar'
               const scalarEdit = scalar ? directScalarEdit(item.source) : null
-              const effectiveControl = item.control ?? (scalarEdit
-                ? DEFAULT_SCALAR_CONTROL
-                : undefined)
+              // A control only acts on a declared numeric literal. On a computed
+              // scalar the stored control stays dormant in the document and
+              // returns with the literal.
+              const effectiveControl = scalarEdit
+                ? item.control ?? DEFAULT_SCALAR_CONTROL
+                : undefined
               const controlEvaluation = effectiveControl
                 ? scalarControlEvaluations.get(item.id) ?? evaluateScalarControl(
                     effectiveControl, evaluatedItems, engine,
@@ -2219,7 +2222,6 @@ function App() {
                           <span>{controlEvaluation.maximum == null
                             ? '—'
                             : displayedNumber(controlEvaluation.maximum)}</span>
-                          {!scalarEdit && <small>Direct control requires a declared numeric literal.</small>}
                           {scalarEdit && controlEvaluation.status === 'valid' &&
                             (scalarEdit.value < controlEvaluation.minimum! ||
                               scalarEdit.value > controlEvaluation.maximum!) &&

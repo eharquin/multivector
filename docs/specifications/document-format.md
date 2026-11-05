@@ -196,7 +196,10 @@ The three sources are stored verbatim and use the common language.
 `durationSeconds`, using the values shown in the diagram. Active playback and
 its source snapshot are not stored. Animation may be configured in either
 control mode; both modes use the same minimum, maximum, step, and animation
-fields, and changing `mode` preserves them.
+fields, and changing `mode` preserves them. A control acts only while the item
+source declares a numeric literal; otherwise it is preserved but dormant, like
+`positionSource` when position support is disabled, and becomes active again
+when the source returns to a literal.
 
 An `Appearance` has exactly `visible`, `labelVisible`, `label`, and `style`. The
 first two fields are booleans. `label` is stored plain text; an empty value uses
