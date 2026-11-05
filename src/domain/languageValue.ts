@@ -1,5 +1,4 @@
-import type { OwnedMultivector } from './multivector'
-import { formatRoundTripNumber } from './numberFormat'
+import { inspectMultivector, type OwnedMultivector } from './multivector'
 
 export const MAX_GENERATED_VALUES = 10_000
 
@@ -42,20 +41,7 @@ export function ownedList(elements: readonly ListElement[]): OwnedList {
 }
 
 export function inspectLanguageValue(value: LanguageValue): string {
-  if (value.kind === 'multivector') {
-    const terms: string[] = []
-    const blades = ['e', 'e1', 'e2', 'e12'] as const
-    value.coefficients.forEach((coefficient, index) => {
-      if (coefficient === 0) return
-      const magnitude = Math.abs(coefficient)
-      const body = index === 0
-        ? formatRoundTripNumber(magnitude)
-        : `${magnitude === 1 ? '' : formatRoundTripNumber(magnitude)}${blades[index]}`
-      terms.push(terms.length === 0
-        ? `${coefficient < 0 ? '-' : ''}${body}`
-        : `${coefficient < 0 ? '-' : '+'} ${body}`)
-    })
-    return terms.join(' ') || '0'
-  }
+  // Blade names come from the value's own basis, so every algebra inspects alike.
+  if (value.kind === 'multivector') return inspectMultivector(value)
   return `[${value.elements.map((element) => inspectLanguageValue(element.value)).join(', ')}]`
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { createPga2Engine } from '../algebra/pgaEngine'
 import { createVga2Engine } from '../algebra/vgaEngine'
+import { PGA_2D_INTERPRETATION } from '../geometry/pga2Interpretation'
 import { VGA_2D_INTERPRETATION, type Vector2dEntity } from '../geometry/vga2Interpretation'
 import { expressionDocument } from '../document/expressionDocument'
 import type { ExpressionItem } from '../document/expressionDocument'
@@ -572,5 +574,41 @@ describe('document dependency evaluation', () => {
     const entity = vector.entity as Vector2dEntity
     expect(entity.x).toBeCloseTo(0, 14)
     expect(entity.y).toBeCloseTo(1, 14)
+  })
+})
+
+describe('PGA(2) list positions', () => {
+  const pgaContext = { engine: createPga2Engine(), interpretation: PGA_2D_INTERPRETATION }
+  const evaluatePga = (items: readonly ExpressionItem[]) =>
+    evaluateDocument(expressionDocument(items), pgaContext)
+
+  it('resolves the position and head of an unpositioned list of ideal points', () => {
+    const [, position, head] = evaluatePga([
+      { id: 'list', source: 'L = [e01, e02]' },
+      { id: 'position', source: 'P = L.position' },
+      { id: 'head', source: 'H = L.head' },
+    ])
+    // Without a position, every ideal point sits at the origin point e12.
+    expect(position.evaluation).toMatchObject({ status: 'valid', inspection: '[e12, e12]' })
+    expect(head.evaluation).toMatchObject({ status: 'valid', inspection: '[e01 + e12, e02 + e12]' })
+  })
+
+  it('inspects PGA lists with the PGA blade names', () => {
+    const [list] = evaluatePga([{ id: 'list', source: 'Q = [point(1, 2), e12]' }])
+    expect(list.evaluation).toMatchObject({ status: 'valid', inspection: '[2e01 - e02 + e12, e12]' })
+  })
+
+  it('inherits the positions of named ideal points collected in a list', () => {
+    const results = evaluatePga([
+      { id: 'd1', source: 'D1 = ipoint(1, 0)', positionSource: 'point(1, 2)' },
+      { id: 'd2', source: 'D2 = ipoint(0, 1)', positionSource: 'point(-3, 0)' },
+      { id: 'list', source: 'L = [D1, D2]' },
+      { id: 'position', source: 'P = L.position' },
+    ])
+    const position = results[3].evaluation
+    if (position?.status !== 'valid' || position.valueType !== 'list')
+      throw new Error('Expected a valid list of positions')
+    expect(position.elements.map((element) => PGA_2D_INTERPRETATION.positionOf(element.value)))
+      .toEqual([{ x: 1, y: 2 }, { x: -3, y: 0 }])
   })
 })

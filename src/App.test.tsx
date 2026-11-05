@@ -2471,6 +2471,19 @@ describe('PGA 2D foundation workflow', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Expression 1' }), { target: { value: '' } })
   }
 
+  it('reads position and head on a list of ideal points without crashing', () => {
+    selectPga()
+    const first = screen.getByRole('textbox', { name: 'Expression 1' })
+    fireEvent.change(first, { target: { value: 'L = [e01, e02]' } })
+    fireEvent.keyDown(first, { key: 'Enter' })
+    const second = screen.getByRole('textbox', { name: 'Expression 2' })
+    fireEvent.change(second, { target: { value: 'P = L.position' } })
+    expect(second).toHaveAttribute('aria-invalid', 'false')
+    fireEvent.change(second, { target: { value: 'H = L.head' } })
+    expect(second).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByRole('button', { name: 'PGA · 2D. Change algebra' })).toBeInTheDocument()
+  })
+
   it('evaluates, classifies, and draws points, lines, and ideal points', () => {
     selectPga()
     const first = screen.getByRole('textbox', { name: 'Expression 1' })
