@@ -1,11 +1,12 @@
-import { useEffect, useRef, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { RAMP_ORDER, STUDIO_COLORS } from './appearancePalette'
 import { popoverPosition } from './popoverPosition'
 import type { ExpressionControl, PointListDisplay } from '../document/expressionDocument'
 
 const POPOVER_WIDTH = 272
-const POPOVER_HEIGHT = 300
+/** Height assumed before the menu is measured, and where layout is unavailable. */
+const ESTIMATED_POPOVER_HEIGHT = 300
 
 type AppearancePopoverProps = Readonly<{
   kind: string
@@ -74,11 +75,37 @@ export function AppearancePopover({
   const ref = useRef<HTMLDivElement>(null)
   const visibilityRef = useRef<HTMLInputElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
-  const placement = popoverPosition(
+  const [placement, setPlacement] = useState(() => popoverPosition(
     anchorRef.current,
     POPOVER_WIDTH,
-    POPOVER_HEIGHT,
-  )
+    ESTIMATED_POPOVER_HEIGHT,
+  ))
+  // The menu's height depends on the object kind and its current settings, so
+  // it is measured rather than estimated; scrollHeight is the full content
+  // height even when the menu is capped to the window and scrolls.
+  const place = useCallback(() => {
+    const measured = ref.current?.scrollHeight ?? 0
+    const next = popoverPosition(
+      anchorRef.current,
+      POPOVER_WIDTH,
+      measured > 0 ? measured : ESTIMATED_POPOVER_HEIGHT,
+    )
+    setPlacement((current) =>
+      current.top === next.top && current.left === next.left ? current : next)
+  }, [anchorRef])
+
+  // Re-measure after every render: sections appear or disappear with the settings.
+  useLayoutEffect(place)
+
+  // Follow the anchor when the window is resized or any container scrolls.
+  useEffect(() => {
+    window.addEventListener('resize', place)
+    document.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      document.removeEventListener('scroll', place, true)
+    }
+  }, [place])
 
   useEffect(() => {
     const returnFocusTarget = anchorRef.current

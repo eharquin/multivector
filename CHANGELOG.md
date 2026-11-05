@@ -146,6 +146,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Corrections
 
+- The appearance menu stays inside the window: it is placed from its measured
+  height, opens above its row when it does not fit below, scrolls inside when
+  it is taller than the window, and follows its row when the window is
+  resized or the expression list scrolls.
 - A scalar whose value is computed, such as `t = 2*v*s - v`, no longer shows
   a disabled slider, interval fields, play button, or animation settings. A
   control stored while it was a literal stays dormant in the document and
