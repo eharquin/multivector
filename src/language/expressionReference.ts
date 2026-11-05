@@ -81,9 +81,15 @@ export const EXPRESSION_REFERENCE = Object.freeze([
   {
     title: 'Positioning',
     entries: [
-      ['@ (0, 0)', 'optional position field; an empty field also uses the origin'],
-      ['@ P', 'position may reference another named vector expression'],
-      ['@ [P, Q]', 'list positions distribute element by element'],
+      [
+        'position (0, 0)',
+        'optional field under a vector or bivector row, or point(x, y) under a PGA ideal point; an empty field uses the origin',
+      ],
+      [
+        'position P.head',
+        'the position may reference a named expression or its position or head; anchoring a base by dragging writes such a reference',
+      ],
+      ['L.position, L.head', 'a list has no position field; each element keeps the position of the value it comes from'],
       ['invalid position', 'keeps the object value valid and reports a position diagnostic'],
     ],
   },
