@@ -52,10 +52,34 @@ browser storage keys `multivector.document.active.v1` and
 the `.gamut.json` suffix and `gamut-document` fallback basename; imports remain
 filename-independent and accept historical `.multivector.json` downloads.
 
-The repository stays at `eharquin/multivector`, the Vite base stays
-`/multivector/`, and the public GitHub Pages URL remains stable. Any later
-repository and Pages migration is a separate infrastructure decision tracked
-by issue #193.
+The repository and Pages migration was decided separately in issue #193; see
+the next section.
+
+## Repository and public URL
+
+**Decision status:** Accepted
+
+The repository is renamed from `eharquin/multivector` to `eharquin/gamut`
+before the first release shipped as GAMUT (0.2.0). The Vite base becomes
+`/gamut/` and the public application moves from
+`https://eharquin.github.io/multivector/` to `https://eharquin.github.io/gamut/`.
+
+GitHub redirects repository pages and Git operations from the former name for
+as long as no repository reuses it, so the name `multivector` must never be
+reused by another repository of this account. GitHub does not redirect a
+project site's Pages path. Continuity for the former application URL is
+provided by the account's user site, `eharquin.github.io`, which serves the
+`/multivector/` path once no project site claims it: a static redirect page
+there forwards to `/gamut/` and preserves the query and fragment, so shared
+links keep working. The user site and the project site share the
+`https://eharquin.github.io` origin, so browser storage, including the saved
+document, carries over unchanged.
+
+Historical records keep their original links: the 0.1.0 release notes,
+acceptance records, and changelog entries still name `eharquin/multivector`
+and `https://eharquin.github.io/multivector/`, which the redirects above keep
+resolvable. The canonical `org.multivector.*` namespaces and the browser
+storage keys are unchanged.
 
 ## Initial language and algebra runtime
 

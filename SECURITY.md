@@ -12,7 +12,7 @@ Please do not disclose suspected vulnerabilities in a public issue, discussion,
 or pull request.
 
 Use GitHub's private vulnerability reporting from the repository's
-[Security advisories](https://github.com/eharquin/multivector/security/advisories)
+[Security advisories](https://github.com/eharquin/gamut/security/advisories)
 page. If private reporting is unavailable, contact the maintainer privately
 using the contact information on the
 [maintainer's GitHub profile](https://github.com/eharquin).

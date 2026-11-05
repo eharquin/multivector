@@ -12,7 +12,7 @@ and is intended for geometric-algebra research, exploration, and learning.
 > contract. Current development introduces the GAMUT name and the first PGA(2)
 > workflow while preserving existing documents and browser sessions.
 
-[Open the public application](https://eharquin.github.io/multivector/)
+[Open the public application](https://eharquin.github.io/gamut/)
 
 ## About the name
 
@@ -63,8 +63,8 @@ matrix and evidence are recorded in the
 ### Run locally
 
 ```sh
-git clone https://github.com/eharquin/multivector.git
-cd multivector
+git clone https://github.com/eharquin/gamut.git
+cd gamut
 npm ci
 npm run dev
 ```

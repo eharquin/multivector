@@ -11,8 +11,11 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Renamed the product from **MultiVector** to **GAMUT — Geometric Algebra
   Multivector Unveiling Tool**. Mathematical uses of *multivector*, stable
-  `org.multivector.*` identifiers, browser storage keys, the repository slug,
-  and the deployed Pages path remain unchanged.
+  `org.multivector.*` identifiers and browser storage keys remain unchanged.
+- The repository moves to `eharquin/gamut` and the application to
+  <https://eharquin.github.io/gamut/>. Former repository links redirect, and
+  the former application URL forwards to the new one with its query and
+  fragment; saved documents carry over, since both URLs share one origin.
 - New downloads use `*.gamut.json`; existing `*.multivector.json` documents
   remain importable without a format or identifier migration.
 
