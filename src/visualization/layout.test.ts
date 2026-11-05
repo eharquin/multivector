@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutUnboundedLine, lineOrientationTicks } from './layout'
+import { layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutPointListConnection, layoutUnboundedLine, lineOrientationTicks, pointListSegments, pointListVertices } from './layout'
 import type { Viewport2d } from './viewport'
 
 const viewport: Viewport2d = { width: 800, height: 600, centerX: 0, centerY: 0, pixelsPerUnit: 50 }
@@ -82,5 +82,102 @@ describe('PGA primitive layouts', () => {
     expect(arrow.start).toEqual({ x: 450, y: 250 })
     expect(arrow.end).toEqual({ x: 450, y: 150 })
     expect(arrow.arrowPoints).not.toBeNull()
+  })
+})
+
+describe('point-list connections', () => {
+  const marker = (x: number, y: number) => ({ primitive: { kind: 'point-marker', point: { x, y }, accessibleName: 'P' } as const })
+  const ideal = (x: number, y: number) => ({
+    primitive: { kind: 'ideal-point', position: { x: 0, y: 0 }, direction: { x, y }, magnitude: 1, accessibleName: 'V' } as const,
+  })
+  const finite = (x: number, y: number) => ({ kind: 'finite', point: { x, y } } as const)
+  const toward = (x: number, y: number) => ({ kind: 'ideal', direction: { x, y } } as const)
+  const segment = (a: readonly [number, number], b: readonly [number, number]) =>
+    ({ kind: 'segment', start: { x: a[0], y: a[1] }, end: { x: b[0], y: b[1] } } as const)
+  const ray = (origin: readonly [number, number], direction: readonly [number, number]) =>
+    ({ kind: 'ray', origin: { x: origin[0], y: origin[1] }, direction: { x: direction[0], y: direction[1] } } as const)
+  const square = [marker(0, 0), marker(1, 0), marker(1, 1), marker(0, 1)]
+
+  it('accepts only lists of finite and ideal points holding a finite point', () => {
+    expect(pointListVertices(square)).toEqual([finite(0, 0), finite(1, 0), finite(1, 1), finite(0, 1)])
+    expect(pointListVertices([marker(2, 3)])).toEqual([finite(2, 3)])
+    expect(pointListVertices([marker(0, 0), ideal(0, 1)])).toEqual([finite(0, 0), toward(0, 1)])
+    expect(pointListVertices([])).toBeNull()
+    expect(pointListVertices([ideal(0, 1), ideal(1, 0)])).toBeNull()
+    expect(pointListVertices([marker(0, 0), { primitive: null }])).toBeNull()
+    expect(pointListVertices([marker(0, 0), marker(Number.NaN, 1)])).toBeNull()
+    expect(pointListVertices([marker(0, 0), marker(Number.POSITIVE_INFINITY, 1)])).toBeNull()
+    expect(pointListVertices([marker(0, 0), {
+      primitive: { kind: 'oriented-segment', start: { x: 0, y: 0 }, end: { x: 1, y: 0 }, accessibleName: 'V' },
+    }])).toBeNull()
+  })
+
+  it('draws nothing without a connection', () => {
+    expect(pointListSegments(pointListVertices(square)!, 'none')).toEqual([])
+  })
+
+  it('joins consecutive points in list order for an open polyline', () => {
+    expect(pointListSegments(pointListVertices(square)!, 'open-polyline')).toEqual([
+      segment([0, 0], [1, 0]), segment([1, 0], [1, 1]), segment([1, 1], [0, 1]),
+    ])
+  })
+
+  it('closes a loop of at least three points back to the first', () => {
+    const segments = pointListSegments(pointListVertices(square)!, 'closed-loop')
+    expect(segments).toHaveLength(4)
+    expect(segments[3]).toEqual(segment([0, 1], [0, 0]))
+  })
+
+  it('draws one segment for two points and none for zero or one', () => {
+    const pair = [finite(0, 0), finite(2, 1)]
+    expect(pointListSegments(pair, 'open-polyline')).toEqual([segment([0, 0], [2, 1])])
+    expect(pointListSegments(pair, 'closed-loop')).toEqual([segment([0, 0], [2, 1])])
+    for (const display of ['open-polyline', 'closed-loop'] as const) {
+      expect(pointListSegments([], display)).toEqual([])
+      expect(pointListSegments([finite(1, 1)], display)).toEqual([])
+    }
+  })
+
+  it('joins a finite and an ideal point as the ray from the finite point', () => {
+    // [e12, e01]: the vertical half-line leaving the origin upwards.
+    expect(pointListSegments([finite(0, 0), toward(0, 1)], 'open-polyline')).toEqual([ray([0, 0], [0, 1])])
+    // [A, V, B]: two parallel rays, and the segment B A once the loop closes.
+    const avb = [finite(-1, 0), toward(0, 1), finite(1, 0)]
+    expect(pointListSegments(avb, 'open-polyline')).toEqual([ray([-1, 0], [0, 1]), ray([1, 0], [0, 1])])
+    expect(pointListSegments(avb, 'closed-loop')).toEqual([
+      ray([-1, 0], [0, 1]), ray([1, 0], [0, 1]), segment([1, 0], [-1, 0]),
+    ])
+  })
+
+  it('draws nothing between two consecutive ideal points', () => {
+    expect(pointListSegments([finite(0, 0), toward(1, 0), toward(0, 1)], 'open-polyline'))
+      .toEqual([ray([0, 0], [1, 0])])
+  })
+
+  it('keeps repeated points as finite zero-length segments', () => {
+    const repeated = [finite(1, 1), finite(1, 1), finite(1, 1)]
+    const segments = pointListSegments(repeated, 'closed-loop')
+    expect(segments).toHaveLength(3)
+    const path = layoutPointListConnection(segments, viewport)
+    expect(path).toBe('M 450 250 L 450 250 M 450 250 L 450 250 M 450 250 L 450 250')
+    expect(path).not.toMatch(/NaN|Infinity/)
+  })
+
+  it('lays the segments out in screen space', () => {
+    const segments = pointListSegments([finite(0, 0), finite(2, 1)], 'open-polyline')
+    expect(layoutPointListConnection(segments, viewport)).toBe('M 400 300 L 500 250')
+    expect(layoutPointListConnection([], viewport)).toBe('')
+  })
+
+  it('clips a ray to the viewport edge in its direction', () => {
+    expect(layoutPointListConnection([ray([0, 0], [0, 1])], viewport)).toBe('M 400 300 L 400 0')
+    expect(layoutPointListConnection([ray([0, 0], [-1, 0])], viewport)).toBe('M 400 300 L 0 300')
+    // A ray starting off screen enters the viewport where it crosses an edge.
+    expect(layoutPointListConnection([ray([-10, 0], [1, 0])], viewport)).toBe('M 0 300 L 800 300')
+    // A ray pointing away from the viewport draws nothing.
+    expect(layoutPointListConnection([ray([-10, 0], [-1, 0])], viewport)).toBe('')
+    // An axis-parallel ray beside the viewport never crosses it.
+    expect(layoutPointListConnection([ray([0, 100], [1, 0])], viewport)).toBe('')
+    expect(layoutPointListConnection([ray([-100, 0], [0, 1])], viewport)).toBe('')
   })
 })

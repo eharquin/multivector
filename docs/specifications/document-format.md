@@ -317,6 +317,7 @@ previous one; the implementation records the migrations in
 | 3 | `Appearance.orientationVisible` and `Appearance.bivectorShape` (`from-vectors`, `disk`, `square`). |
 | 4 | `ViewState.display.showApproximatedResidue`; earlier documents always showed residue. |
 | 5 | `Appearance.idealPointDisplay` (`vector`, `ideal`, `both`): how an ideal PGA point is drawn; earlier documents default to `vector`. |
+| 6 | `Appearance.pointListDisplay` (`none`, `open-polyline`, `closed-loop`) and `Appearance.pointMarkersVisible`: how the elements of a list of finite and ideal points are connected, and whether a connected one keeps its point markers; earlier documents default to `none` with markers. |
 
 All bounds used by these steps are owned by the
 [limits and interaction constants](limits-and-constants.md).

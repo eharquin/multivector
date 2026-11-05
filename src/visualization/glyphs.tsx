@@ -266,19 +266,21 @@ export type PointMarkerGlyphProps = Readonly<{
   scale: number
   itemPresent: boolean
   movable: boolean
+  /** False when a connected point list shows its segments alone; the label stays. */
+  markerVisible?: boolean
   controller: HandleController
 }>
 
 /** A located point: a filled marker whose handle moves the point itself. */
 export function PointMarkerGlyph({
-  id, primitive, point, color, label, scale, itemPresent, movable, controller,
+  id, primitive, point, color, label, scale, itemPresent, movable, markerVisible = true, controller,
 }: PointMarkerGlyphProps) {
   return <g style={{ color }}>
-    <circle
+    {markerVisible && <circle
       className="point-marker"
       cx={point.x} cy={point.y} r={4.5 * scale}
       aria-label={primitive.accessibleName}
-    />
+    />}
     {itemPresent && <BaseHandle
       itemId={id}
       point={point}
@@ -291,6 +293,26 @@ export function PointMarkerGlyph({
     />}
     {label && <text className="object-label" x={point.x + 8} y={point.y - 8}>{label}</text>}
   </g>
+}
+
+export type PointListConnectionGlyphProps = Readonly<{
+  path: string
+  color: string
+  scale: number
+}>
+
+/**
+ * The segments joining a connected point list, drawn beneath its markers.
+ * They carry no handle: the markers keep the list's labels and manipulation.
+ */
+export function PointListConnectionGlyph({ path, color, scale }: PointListConnectionGlyphProps) {
+  return <path
+    className="point-list-connection"
+    d={path}
+    style={{ color }}
+    strokeWidth={2 * scale}
+    aria-hidden="true"
+  />
 }
 
 export type LineSelection = Readonly<{

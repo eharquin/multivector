@@ -57,9 +57,9 @@ import {
   nextObjectName,
 } from './visualization/viewportCreation'
 import { describeViewport } from './visualization/viewportDescription'
-import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
+import { DirectionMarkerGlyph, LineAtInfinityGlyph, OrientedAreaGlyph, OrientedSegmentGlyph, PointListConnectionGlyph, PointMarkerGlyph, UnboundedLineGlyph, type HandleController } from './visualization/glyphs'
 import { findAnchorCandidates, selectAnchor, type AnchorCandidate } from './visualization/anchoring'
-import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutUnboundedLine, lineNormalLength, lineOrientationTicks } from './visualization/layout'
+import { collectRenderedPrimitives, layoutIdealArrow, layoutIdealMarker, layoutLineAtInfinity, layoutLineSelection, layoutOrientedArea, layoutOrientedSegment, layoutPointListConnection, layoutUnboundedLine, lineNormalLength, pointListVertices, lineOrientationTicks } from './visualization/layout'
 import { requireAvailableAlgebra } from './application/algebraAvailability'
 import {
   DocumentFormatError,
@@ -1312,7 +1312,7 @@ function App() {
   // historical renderer used 1.5 as that baseline, so keep the visual size
   // while restoring a meaningful multiplicative setting.
   const objectRenderScale = expressionDoc.view.display.objectScale * 1.5
-  const { rendered: renderedPrimitives, omitted: omittedRenderElements } = collectRenderedPrimitives(
+  const { rendered: renderedPrimitives, connections: renderedConnections, omitted: omittedRenderElements } = collectRenderedPrimitives(
     evaluatedItems, expressionDoc.appearance, interpretation, declaredName,
   )
   const renderedVectors = renderedPrimitives.flatMap((entry) =>
@@ -1332,8 +1332,9 @@ function App() {
     const layout = layoutUnboundedLine(entry.primitive, viewport)
     return layout ? [{ ...entry, primitive: entry.primitive, layout }] : []
   })
+  // A connected list showing its links alone hides its ideal points as well.
   const renderedIdealPoints = renderedPrimitives.flatMap((entry) =>
-    entry.primitive.kind === 'ideal-point'
+    entry.primitive.kind === 'ideal-point' && entry.markerVisible
       ? [{
           ...entry,
           primitive: entry.primitive,
@@ -2398,6 +2399,11 @@ function App() {
                       orientationVisible={expressionDoc.appearance[item.id]?.orientationVisible ?? true}
                       bivectorShape={expressionDoc.appearance[item.id]?.bivectorShape ?? 'from-vectors'}
                       idealPointDisplay={expressionDoc.appearance[item.id]?.idealPointDisplay ?? 'vector'}
+                      pointListDisplay={expressionDoc.appearance[item.id]?.pointListDisplay ?? 'none'}
+                      pointMarkersVisible={expressionDoc.appearance[item.id]?.pointMarkersVisible ?? true}
+                      pointListDisplayAvailable={evaluation?.status === 'valid' &&
+                        evaluation.valueType === 'list' &&
+                        pointListVertices(evaluation.elements) !== null}
                       parallelogramAvailable={evaluation?.status === 'valid' &&
                         evaluation.valueType === 'single' &&
                         evaluation.primitive?.kind === 'oriented-area' &&
@@ -2429,6 +2435,12 @@ function App() {
                       })}
                       onIdealPointDisplayChange={(idealPointDisplay) => executeCommand({
                         kind: 'update-appearance', itemId: item.id, appearance: { idealPointDisplay },
+                      })}
+                      onPointListDisplayChange={(pointListDisplay) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { pointListDisplay },
+                      })}
+                      onPointMarkersVisibleChange={(pointMarkersVisible) => executeCommand({
+                        kind: 'update-appearance', itemId: item.id, appearance: { pointMarkersVisible },
                       })}
                       onControlChange={(control) => {
                         if (isPlaying) stopPlayback(item.id)
@@ -2693,7 +2705,15 @@ function App() {
                   />}
                 </g>
               })}
-              {renderedPoints.map(({ id, primitive, entity, point, color, label }) => {
+              {renderedConnections.map(({ id, segments, color }) => (
+                <PointListConnectionGlyph
+                  key={`connection-${id}`}
+                  path={layoutPointListConnection(segments, viewport)}
+                  color={color}
+                  scale={objectRenderScale}
+                />
+              ))}
+              {renderedPoints.map(({ id, primitive, entity, point, color, label, markerVisible }) => {
                 const item = expressionDoc.items.find((candidate) => candidate.id === id)
                 return <PointMarkerGlyph
                   key={id}
@@ -2705,6 +2725,7 @@ function App() {
                   scale={objectRenderScale}
                   itemPresent={!!item}
                   movable={!!item && objectBaseMovable(item, entity)}
+                  markerVisible={markerVisible}
                   controller={handleController}
                 />
               })}

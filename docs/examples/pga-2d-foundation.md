@@ -105,6 +105,21 @@ as a scalar
    field and the arrow moves with it; `D.head` is the Euclidean point at the
    arrow's tip. Drag its head: `D = ipoint(x, y)` is rewritten.
 
+## Connect a point list
+
+1. Add `T = point([0, 2, 1], [0, 0, 2])`: a list of three points, drawn as
+   independent markers.
+2. Open the appearance menu of `T` and choose *Open polyline*: two segments
+   join `T[0]` to `T[1]` and `T[1]` to `T[2]`. *Closed loop* adds the segment
+   from `T[2]` back to `T[0]`, drawing the triangle. Turn off *Show point
+   markers* to keep only the segments.
+3. Add `U = T[[2, 0, 1]]` and connect it: the segments follow the gathered
+   order. A list mixing points with lines offers no connection.
+4. Add `R = [point(-1, 0), e01, point(1, 0)]` and choose *Open polyline*: an
+   ideal point joins its neighbours with rays, here the two vertical half-lines
+   rising from `R[0]` and `R[2]`. *Closed loop* adds the segment from `R[2]`
+   back to `R[0]`.
+
 ## Move a point directly
 
 1. Drag the marker of `A`: `A = point(x, y)` is rewritten with the pointer's

@@ -1,5 +1,5 @@
 import type { EvaluatedDocumentItem } from '../application/evaluateDocument'
-import type { ExpressionAppearance } from '../document/expressionDocument'
+import type { ExpressionAppearance, PointListDisplay } from '../document/expressionDocument'
 import { resolveItemAppearance } from '../components/appearancePalette'
 import type { AnyInterpretation, InterpretedEntity } from '../geometry/interpretation'
 import type { Point2d } from '../geometry/interpretation'
@@ -24,25 +24,168 @@ export type RenderedPrimitive = Readonly<{
   orientationVisible: boolean
   bivectorShape: 'from-vectors' | 'disk' | 'square'
   idealPointDisplay: 'vector' | 'ideal' | 'both'
+  /** False only for the finite and ideal points of a connected list drawn as links alone. */
+  markerVisible: boolean
 }>
+
+/**
+ * One vertex of a connected point list: a finite point, or an ideal point
+ * (a direction at infinity) given by its unit direction.
+ */
+export type PointListVertex =
+  | Readonly<{ kind: 'finite'; point: Point2d }>
+  | Readonly<{ kind: 'ideal'; direction: Point2d }>
+
+/**
+ * The join of two consecutive vertices: a segment between two finite points,
+ * or the ray from a finite point towards an ideal point's direction. Two ideal
+ * points join along the line at infinity and draw nothing.
+ */
+export type PointListLink =
+  | Readonly<{ kind: 'segment'; start: Point2d; end: Point2d }>
+  | Readonly<{ kind: 'ray'; origin: Point2d; direction: Point2d }>
+
+/** The links joining the points of one list item, in list order. */
+export type RenderedPointListConnection = Readonly<{
+  id: string
+  color: string
+  segments: readonly PointListLink[]
+}>
+
+const finitePoint = (point: Point2d) => Number.isFinite(point.x) && Number.isFinite(point.y)
+
+/**
+ * The vertices of a list whose elements are all finite or ideal points, in
+ * evaluated list order, or `null` when the list is empty, holds no finite
+ * point, or holds any other entity. Only such lists offer connected displays.
+ */
+export function pointListVertices(
+  elements: readonly Readonly<{ primitive: VisualizationPrimitive | null }>[],
+): readonly PointListVertex[] | null {
+  const vertices: PointListVertex[] = []
+  for (const { primitive } of elements) {
+    if (primitive?.kind === 'point-marker' && finitePoint(primitive.point))
+      vertices.push({ kind: 'finite', point: primitive.point })
+    else if (primitive?.kind === 'ideal-point' && finitePoint(primitive.direction))
+      vertices.push({ kind: 'ideal', direction: primitive.direction })
+    else return null
+  }
+  return vertices.some((vertex) => vertex.kind === 'finite') ? vertices : null
+}
+
+function joinVertices(from: PointListVertex, to: PointListVertex): PointListLink | null {
+  if (from.kind === 'finite' && to.kind === 'finite')
+    return { kind: 'segment', start: from.point, end: to.point }
+  if (from.kind === 'finite' && to.kind === 'ideal')
+    return { kind: 'ray', origin: from.point, direction: to.direction }
+  if (from.kind === 'ideal' && to.kind === 'finite')
+    return { kind: 'ray', origin: to.point, direction: from.direction }
+  return null
+}
+
+/**
+ * Joins consecutive vertices: `n - 1` links for an open polyline, plus the
+ * last-to-first link for a closed loop of at least three points, so that
+ * two points never draw the same link twice. A finite point and an ideal
+ * point join as the ray from the finite point in the ideal direction; two
+ * ideal points draw nothing. Repeated finite points give zero-length
+ * segments, which remain valid geometry.
+ */
+export function pointListSegments(
+  vertices: readonly PointListVertex[],
+  display: PointListDisplay,
+): readonly PointListLink[] {
+  if (display === 'none') return []
+  const pairs = vertices.slice(1).map((end, index) => [vertices[index], end] as const)
+  if (display === 'closed-loop' && vertices.length >= 3)
+    pairs.push([vertices[vertices.length - 1], vertices[0]])
+  return pairs.flatMap(([from, to]) => {
+    const link = joinVertices(from, to)
+    return link ? [link] : []
+  })
+}
+
+/**
+ * The screen point where a ray from `origin` (screen space) along the screen
+ * direction `(dx, dy)` leaves the viewport, or `null` when the ray misses it.
+ */
+function rayExit(
+  origin: Point2d,
+  dx: number,
+  dy: number,
+  viewport: Viewport2d,
+): Readonly<{ start: Point2d; end: Point2d }> | null {
+  let tMin = 0
+  let tMax = Infinity
+  for (const [p, q] of [
+    [-dx, origin.x], [dx, viewport.width - origin.x],
+    [-dy, origin.y], [dy, viewport.height - origin.y],
+  ]) {
+    if (p === 0) {
+      if (q < 0) return null
+      continue
+    }
+    const t = q / p
+    if (p < 0) tMin = Math.max(tMin, t)
+    else tMax = Math.min(tMax, t)
+  }
+  if (!Number.isFinite(tMax) || tMin > tMax) return null
+  return {
+    start: { x: origin.x + tMin * dx, y: origin.y + tMin * dy },
+    end: { x: origin.x + tMax * dx, y: origin.y + tMax * dy },
+  }
+}
+
+/**
+ * Screen-space path drawing every link of a point-list connection; rays are
+ * clipped to the viewport and omitted when they do not cross it.
+ */
+export function layoutPointListConnection(
+  segments: RenderedPointListConnection['segments'],
+  viewport: Viewport2d,
+): string {
+  return segments.flatMap((link) => {
+    if (link.kind === 'segment') {
+      const from = toScreen(viewport, link.start)
+      const to = toScreen(viewport, link.end)
+      return [`M ${from.x} ${from.y} L ${to.x} ${to.y}`]
+    }
+    const origin = toScreen(viewport, link.origin)
+    const along = toScreen(viewport, {
+      x: link.origin.x + link.direction.x,
+      y: link.origin.y + link.direction.y,
+    })
+    const clipped = rayExit(origin, along.x - origin.x, along.y - origin.y, viewport)
+    return clipped
+      ? [`M ${clipped.start.x} ${clipped.start.y} L ${clipped.end.x} ${clipped.end.y}`]
+      : []
+  }).join(' ')
+}
 
 /**
  * Selects the visible primitives of every valid item in document order,
  * applying appearance, label, and list-truncation rules. List elements get
- * composite identifiers `itemId:elementId`.
+ * composite identifiers `itemId:elementId`. Connected point lists also yield
+ * their segments, joining only the rendered prefix of a truncated list, and
+ * may hide their markers to show the segments alone.
  */
 export function collectRenderedPrimitives(
   evaluatedItems: readonly EvaluatedDocumentItem[],
   appearance: Readonly<Record<string, ExpressionAppearance | undefined>>,
   interpretation: AnyInterpretation,
   declaredName: (source: string) => string | null,
-): Readonly<{ rendered: readonly RenderedPrimitive[]; omitted: number }> {
+): Readonly<{
+  rendered: readonly RenderedPrimitive[]
+  connections: readonly RenderedPointListConnection[]
+  omitted: number
+}> {
+  const connections: RenderedPointListConnection[] = []
   const rendered = evaluatedItems.flatMap((evaluated): RenderedPrimitive[] => {
     if (evaluated.evaluation?.status !== 'valid') return []
     const kind = evaluated.evaluation.valueType === 'list'
       ? `List (${evaluated.evaluation.value.elements.length})`
       : interpretation.describe(evaluated.evaluation.entity)
-    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape, idealPointDisplay } = resolveItemAppearance(
+    const { visible, color, labelVisible, displayLabel, borderVisible, orientationVisible, bivectorShape, idealPointDisplay, pointListDisplay, pointMarkersVisible } = resolveItemAppearance(
       appearance[evaluated.item.id],
       kind,
       declaredName(evaluated.item.source),
@@ -50,9 +193,20 @@ export function collectRenderedPrimitives(
     if (!visible) return []
     const baseLabel = displayLabel
     if (evaluated.evaluation.valueType === 'list') {
-      return limitRenderedListElements(
+      const elements = limitRenderedListElements(
         evaluated.evaluation.elements.filter((element) => element.primitive),
-      ).visible.flatMap((element, elementIndex) => element.primitive
+      ).visible
+      // Eligibility is decided on the whole list, so that a mixed list whose
+      // other entities have no primitive is never connected.
+      const vertices = pointListDisplay === 'none'
+        ? null
+        : pointListVertices(evaluated.evaluation.elements)
+      const segments = vertices
+        ? pointListSegments(vertices.slice(0, elements.length), pointListDisplay)
+        : []
+      if (segments.length > 0) connections.push({ id: evaluated.item.id, color, segments })
+      const markerVisible = vertices === null || pointMarkersVisible
+      return elements.flatMap((element, elementIndex) => element.primitive
         ? [{
             id: `${evaluated.item.id}:${element.id}`,
             entity: element.entity,
@@ -62,6 +216,7 @@ export function collectRenderedPrimitives(
             orientationVisible,
             bivectorShape,
             idealPointDisplay,
+            markerVisible,
             label: labelVisible ? (baseLabel ? `${baseLabel}[${elementIndex}]` : element.primitive.accessibleName) : null,
           }]
         : [])
@@ -76,6 +231,7 @@ export function collectRenderedPrimitives(
           orientationVisible,
           bivectorShape,
           idealPointDisplay,
+          markerVisible: true,
           label: labelVisible ? (baseLabel ?? evaluated.evaluation.primitive.accessibleName) : null,
         }]
       : []
@@ -87,7 +243,7 @@ export function collectRenderedPrimitives(
       evaluated.evaluation.elements.filter((element) => element.primitive),
     ).omitted
   }, 0)
-  return { rendered, omitted }
+  return { rendered, connections, omitted }
 }
 
 export type SegmentLayout = Readonly<{

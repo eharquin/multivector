@@ -2105,6 +2105,13 @@ body.canvas-gesture .expression-panel {
   pointer-events: none;
 }
 
+.point-list-connection {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
 .unbounded-line {
   stroke: currentColor;
   stroke-linecap: round;

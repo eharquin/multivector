@@ -10,7 +10,16 @@ export type ExpressionAppearance = Readonly<{
   bivectorShape?: 'from-vectors' | 'disk' | 'square'
   /** How an ideal point is drawn: as a positioned arrow, as an edge marker, or both. */
   idealPointDisplay?: 'vector' | 'ideal' | 'both'
+  /**
+   * How a list of finite points is drawn: independent markers, or markers
+   * joined in evaluated list order as an open polyline or a closed loop.
+   */
+  pointListDisplay?: PointListDisplay
+  /** Whether a connected point list keeps its markers or shows its segments alone. */
+  pointMarkersVisible?: boolean
 }>
+
+export type PointListDisplay = 'none' | 'open-polyline' | 'closed-loop'
 
 export type ExpressionControl = Readonly<{
   mode: 'number' | 'slider'
