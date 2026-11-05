@@ -146,6 +146,10 @@ use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Corrections
 
+- A scalar whose value is computed, such as `t = 2*v*s - v`, no longer shows
+  a disabled slider, interval fields, play button, or animation settings. A
+  control stored while it was a literal stays dormant in the document and
+  returns when the source is a literal again.
 - Reading `position` or `head` on a PGA list, such as `L.position` for
   `L = [e01, e02]`, no longer blanks the application: inherited list
   positions are built in the active algebra's basis.

@@ -1291,6 +1291,53 @@ describe('VGA 2D vertical slice', () => {
     expect(source).toHaveValue('a = 20')
   })
 
+  it('keeps a stored control dormant while its scalar is computed', () => {
+    render(<App />)
+    const source = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'translation = 0' } })
+    // Store a control: a custom minimum and a loop animation.
+    fireEvent.change(screen.getByRole('textbox', { name: 'Minimum source' }), { target: { value: '-3' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Open Scalar menu for translation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Loop' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    // A computed value shows no control at all.
+    fireEvent.change(source, { target: { value: 'translation = 2*3 - 1' } })
+    expect(screen.queryByRole('slider', { name: 'Value for translation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Interval of translation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Minimum source' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Play scalar animation' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Direct control requires/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Scalar menu for translation' }))
+    expect(screen.getByRole('dialog', { name: 'Scalar' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Slider' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Loop' })).not.toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    // Back to a literal: the stored interval and animation return.
+    fireEvent.change(source, { target: { value: 'translation = 0' } })
+    expect(screen.getByRole('slider', { name: 'Value for translation' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: 'Minimum source' })).toHaveValue('-3')
+    fireEvent.click(screen.getByRole('button', { name: 'Open Scalar menu for translation' }))
+    expect(screen.getByRole('button', { name: 'Loop' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.keyDown(document, { key: 'Escape' })
+  })
+
+  it('stops playback when the played scalar becomes computed', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    const source = screen.getByRole<HTMLInputElement>('textbox', { name: 'Expression 1' })
+    fireEvent.change(source, { target: { value: 'a = 2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Play scalar animation' }))
+    act(() => vi.advanceTimersByTime(500))
+    expect(screen.getByRole('button', { name: 'Pause scalar animation' })).toBeInTheDocument()
+
+    fireEvent.change(source, { target: { value: 'a = 2*3' } })
+    act(() => vi.advanceTimersByTime(1000))
+    expect(source).toHaveValue('a = 2*3')
+    expect(screen.queryByRole('button', { name: /scalar animation$/ })).not.toBeInTheDocument()
+  })
+
   it('plays scalar animation as one transaction and cancels through Escape', () => {
     vi.useFakeTimers()
     render(<App />)
