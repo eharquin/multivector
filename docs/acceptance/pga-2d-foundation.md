@@ -20,7 +20,7 @@ and deployed evidence is complete where the milestone requires it.
 | P2D-005 — Visualization and manipulation | Point markers, clipped lines, ideal points as positioned arrows or edge markers (#157), textual reporting, literal point dragging as one history entry, creation by double-click, connected point lists with rays to ideal points (#205), list `position` and `head` (#207) (`layout.test.ts`, `App.test.tsx`, `evaluateDocument.test.ts`) | Deployed workflow on the supported browsers | Pending manual validation |
 | P2D-006 — Document compatibility | PGA canonical round trip and 0.1.0 documents unchanged (`canonicalDocument.test.ts`, existing fixtures) | Reload of a 0.1.0 export on the deployed application | Pending manual validation |
 | P2D-007 — Accessibility and release | `npm run verify` passed on `047cd05` (typecheck, lint, 642 tests, build); appearance menu kept inside the window, including at 200 % zoom on a short window (#211) | `npm run verify` on the accepted commit; manual accessibility checklist and documented example on the deployed application | Pending manual validation |
-| P2D-008 — Design feedback | — | Record confirmed, revised, and removed requirements | Pending |
+| P2D-008 — Design feedback | Draft below, proposed from the implementation evidence | Maintainer confirmation | Draft for review |
 
 ## P2D-001 review of `App.tsx`
 
@@ -84,4 +84,55 @@ To be completed on the supported browsers of the 0.1.0 record with the
 
 ## Design feedback
 
-Recorded at acceptance.
+**Draft for review.** Proposed from the implementation evidence; to be
+confirmed by the maintainer at acceptance.
+
+### Confirmed
+
+- **Registered boundary.** A second algebra was added through a definition,
+  an interpretation, and a visualizer resolved by `algebraRegistry`, with no
+  algebra branch in the application shell (P2D-001).
+- **Basis-driven values and engine contract** (#147). Owned values carry
+  their basis; PGA(2) reuses the common language, evaluation, and history.
+- **Capability-gated language** (#139). `inorm` and the PGA constructors are
+  provided by the PGA definition, and VGA(2) reports the common capability
+  diagnostic for them.
+- **Model-independent visualization primitives.** Rendering branches only on
+  primitive kinds (`point-marker`, `unbounded-line`, `ideal-point`,
+  `line-at-infinity`), not on entities of a given algebra.
+- **Document identifiers.** The algebra, interpretation, and visualizer
+  identifiers were enough to store PGA(2) documents; later format versions
+  changed appearance only.
+
+### Revised
+
+- **Algebra selection.** The milestone switched only an empty document. The
+  header capsule menu switches any document after confirmation, replaces it
+  with the selected algebra's example, and undoes in one step (#155, #156).
+  Algebra definitions therefore gained a `showcase`.
+- **Ideal points.** The milestone required edge direction markers. Ideal points
+  are drawn by default as positioned arrows, with the edge marker as an
+  option (`idealPointDisplay`, #157). Position and `head` thus extend from VGA
+  vectors to PGA ideal points, and interpretations gained `positionValue`,
+  `formatPosition`, and `literalEdit` to write sources back in their own
+  syntax.
+- **Exclusions delivered early.** Line translation and rotation (#158) and
+  unit-motor `log` and `sqrt` (#186) were listed as excluded and are now
+  implemented.
+- **Normalization.** `natural` normalization picks `norm` or `inorm`
+  automatically, but the choice is neither shown nor selectable, and the engine
+  does not yet follow the interpretation's classification (#185).
+- **Second-algebra coverage of list operations.** Two VGA(2) layouts survived
+  in list positions and list inspection until PGA lists exercised them
+  (#206, fixed by #207). List operations now have PGA(2) fixtures.
+
+### Removed
+
+- The requirement that algebra selection be disabled once a document has
+  content, replaced by the confirmed switch above.
+
+### Deferred
+
+- Building the first-run document from the default definition (#217).
+- An algebra-aware expression reference documenting PGA(2) (#209).
+- Making a coordinate tuple the active algebra's constructor (#180).
